@@ -238,6 +238,37 @@ namespace NSoup.Nodes
             }
         }
 
+        /// <summary>
+        /// Remove (delete) this node from the DOM tree. If this node has children, they are also removed.
+        /// </summary>
+        public void Remove()
+        {
+            if (ParentNode == null)
+            {
+                throw new InvalidOperationException("Parent node is null.");
+            }
+
+            ParentNode.RemoveChild(this);
+        }
+        
+        /// <summary>
+        /// Replace this node in the DOM with the supplied node.
+        /// </summary>
+        /// <param name="input">in the node that will will replace the existing node.</param>
+        public void ReplaceWith(Node input)
+        {
+            if (input == null)
+            {
+                throw new ArgumentNullException("input");
+            }
+            if (ParentNode == null)
+            {
+                throw new InvalidOperationException("Parent node is null.");
+            }
+
+            ParentNode.ReplaceChild(this, input);
+        }
+
         public void ReplaceChild(Node output, Node input)
         {
             if (output._parentNode != this)

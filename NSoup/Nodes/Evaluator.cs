@@ -26,7 +26,7 @@ namespace NSoup.Nodes
         public sealed class Tag : Evaluator
         {
             private string tagName;
-            
+
             public Tag(string tagName)
             {
                 this.tagName = tagName;
@@ -41,7 +41,7 @@ namespace NSoup.Nodes
         public sealed class Id : Evaluator
         {
             private string id;
-            
+
             public Id(string id)
             {
                 this.id = id;
@@ -56,7 +56,7 @@ namespace NSoup.Nodes
         public sealed class Class : Evaluator
         {
             private string className;
-            
+
             public Class(string className)
             {
                 this.className = className;
@@ -174,6 +174,55 @@ namespace NSoup.Nodes
             public override bool Matches(Element element)
             {
                 return true;
+            }
+        }
+
+        public sealed class IndexLessThan : IndexEvaluator
+        {
+            public IndexLessThan(int index)
+                : base(index)
+            {
+            }
+
+            public override bool Matches(Element element)
+            {
+                return element.ElementSiblingIndex < index;
+            }
+        }
+
+        public sealed class IndexGreaterThan : IndexEvaluator
+        {
+            public IndexGreaterThan(int index)
+                : base(index)
+            {
+            }
+
+            public override bool Matches(Element element)
+            {
+                return element.ElementSiblingIndex > index;
+            }
+        }
+
+        public sealed class IndexEquals : IndexEvaluator
+        {
+            public IndexEquals(int index)
+                : base(index)
+            {
+            }
+
+            public override bool Matches(Element element)
+            {
+                return element.ElementSiblingIndex == index;
+            }
+        }
+
+        public abstract class IndexEvaluator : Evaluator
+        {
+            protected int index;
+
+            protected IndexEvaluator(int index)
+            {
+                this.index = index;
             }
         }
     }

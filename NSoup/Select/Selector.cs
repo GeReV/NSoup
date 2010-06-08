@@ -36,6 +36,10 @@ namespace NSoup.Select
     /// <tr><td><code>E + F</code></td><td>an F element immediately preceded by sibling E</td><td><code>li + li</code>, <code>div.head + div</code></td></tr>
     /// <tr><td><code>E ~ F</code></td><td>an F element preceded by sibling E</td><td><code>h1 ~ p</code></td></tr>
     /// <tr><td><code>E, F, G</code></td><td>any matching element E, F, or G</td><td><code>a[href], div, h3</code></td></tr>
+    /// <tr><td><td colspan="3"><h3>Pseudo selectors</h3></td></tr>
+    /// <tr><td><code>E:lt(<em>n</em>)</code></td><td>an Element whose sibling index is less than <em>n</em></td><td><code>td:lt(3)</code> finds the first 2 cells of each row</td></tr>
+    /// <tr><td><code>E:gt(<em>n</em>)</code></td><td>an Element whose sibling index is greater than <em>n</em></td><td><code>td:gt(1)</code> finds cells after skipping the first two</td></tr>
+    /// <tr><td><code>E:eq(<em>n</em>)</code></td><td>an Element whose sibling index is equal to <em>n</em></td><td><code>td:eq(1)</code> finds the first cell of each row</td></tr>
     /// </table>
     /// </remarks>
     /// <!--
@@ -118,10 +122,20 @@ namespace NSoup.Select
         private Elements Select()
         {
             _tq.ConsumeWhitespace();
-            AddElements(FindElements()); // chomp first matcher off queue        
+
+            if (_tq.MatchesAny(combinators))
+            { // if starts with a combinator, use root as elements
+                _elements.Add(_root);
+                Combinator(_tq.Consume().ToString());
+            }
+            else
+            {
+                AddElements(FindElements()); // chomp first element matcher off queue 
+            }
+
             while (!_tq.IsEmpty)
             {
-                // hierarchy and extras (todo: implement +, ~)
+                // hierarchy and extras
                 bool seenWhite = _tq.ConsumeWhitespace();
 
                 if (_tq.MatchChomp(","))
@@ -199,6 +213,14 @@ namespace NSoup.Select
             else if (_tq.MatchChomp("*"))
             {
                 return AllElements();
+            } else if (_tq.MatchChomp(":lt(")) {
+            return IndexLessThan();
+        } else if (_tq.MatchChomp(":gt(")) {
+            return IndexGreaterThan();
+        }
+            else if (_tq.MatchChomp(":eq("))
+            {
+                return IndexEquals();
             }
             else
             { // unhandled
@@ -221,7 +243,7 @@ namespace NSoup.Select
 
         private Elements ById()
         {
-            string id = _tq.ConsumeWord();
+            string id = _tq.ConsumeCssIdentifier();
 
             if (string.IsNullOrEmpty(id))
             {
@@ -239,7 +261,7 @@ namespace NSoup.Select
 
         private Elements ByClass()
         {
-            string className = _tq.ConsumeClassName();
+            string className = _tq.ConsumeCssIdentifier();
 
             if (string.IsNullOrEmpty(className))
             {
@@ -306,6 +328,35 @@ namespace NSoup.Select
         private Elements AllElements()
         {
             return _root.GetAllElements();
+        }
+
+        // pseudo selectors :lt, :gt, :eq
+        private Elements IndexLessThan()
+        {
+            return _root.GetElementsByIndexLessThan(ConsumeIndex());
+        }
+
+        private Elements IndexGreaterThan()
+        {
+            return _root.GetElementsByIndexGreaterThan(ConsumeIndex());
+        }
+
+        private Elements IndexEquals()
+        {
+            return _root.GetElementsByIndexEquals(ConsumeIndex());
+        }
+
+        private int ConsumeIndex()
+        {
+            string indexS = _tq.ChompTo(")").Trim();
+            int index = 0;
+
+            if (!int.TryParse(indexS, out index))
+            {
+                throw new InvalidOperationException("Index must be numeric");
+            }
+
+            return index;
         }
 
         // direct child descendants

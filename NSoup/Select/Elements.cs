@@ -164,6 +164,37 @@ namespace NSoup.Select
         }
 
         /// <summary>
+        /// Get the form element's value of the first matched element.
+        /// </summary>
+        /// <returns>The form element's value, or empty if not set.</returns>
+        /// <seealso cref="Element.Val()"/>
+        public string Val()
+        {
+            if (Count > 0)
+            {
+                return First.Val();
+            }
+            else
+            {
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Set the form element's value in each of the matched elements.
+        /// </summary>
+        /// <param name="value">The value to set into each matched element</param>
+        /// <returns>this (for chaining)</returns>
+        public Elements Val(string value)
+        {
+            foreach (Element element in _contents)
+            {
+                element.Val(value);
+            }
+            return this;
+        }
+
+        /// <summary>
         /// Gets the combined text of all the matched elements.
         /// </summary>
         /// <remarks>

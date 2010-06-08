@@ -344,11 +344,10 @@ namespace NSoup.Safety
             return _tagNames.Contains(TagName.ValueOf(tag));
         }
 
-        public bool IsSafeAttribute(string tagName, NSoup.Nodes.Attribute attr)
+        public bool IsSafeAttribute(string tagName, Element el, NSoup.Nodes.Attribute attr)
         {
             TagName tag = TagName.ValueOf(tagName);
             AttributeKey key = AttributeKey.ValueOf(attr.Key);
-            AttributeValue value = AttributeValue.ValueOf(attr.Value);
 
             if (_attributes.ContainsKey(tag))
             {
@@ -358,7 +357,7 @@ namespace NSoup.Safety
                     {
                         Dictionary<AttributeKey, HashSet<Protocol>> attrProts = _protocols[tag];
                         // ok if not defined protocol; otherwise test
-                        return !attrProts.ContainsKey(key) || TestValidProtocol(value, attrProts[key]);
+                        return !attrProts.ContainsKey(key) || TestValidProtocol(el, attr, attrProts[key]);
                     }
                     else
                     { // attribute found, no protocols defined, so OK
@@ -368,14 +367,18 @@ namespace NSoup.Safety
             }
             else
             { // no attributes defined for tag, try :all tag
-                return !tagName.Equals(":all") && IsSafeAttribute(":all", attr);
+                return !tagName.Equals(":all") && IsSafeAttribute(":all", el, attr);
             }
             return false;
         }
 
-        private bool TestValidProtocol(AttributeValue value, HashSet<Protocol> protocols)
+        private bool TestValidProtocol(Element el, NSoup.Nodes.Attribute attr, HashSet<Protocol> protocols)
         {
-            // todo: use the absUrl method and test this is a good URL
+            // resolve relative urls to abs, and update the attribute so output html has abs.
+            // rels without a baseuri get removed
+            string value = el.AbsUrl(attr.Key);
+            attr.Value = value;
+
             foreach (Protocol protocol in protocols)
             {
                 string prot = protocol.ToString() + ":";

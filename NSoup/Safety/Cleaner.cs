@@ -96,7 +96,7 @@ namespace NSoup.Safety
 
                     if (_whitelist.IsSafeTag(sourceEl.TagName))
                     { // safe, clone and copy safe attrs
-                        ElementMeta meta = createSafeElement(sourceEl);
+                        ElementMeta meta = CreateSafeElement(sourceEl);
                         Element destChild = meta.Element;
                         dest.AppendChild(destChild);
 
@@ -119,7 +119,7 @@ namespace NSoup.Safety
             return numDiscarded;
         }
 
-        private ElementMeta createSafeElement(Element sourceEl)
+        private ElementMeta CreateSafeElement(Element sourceEl)
         {
             string sourceTag = sourceEl.TagName;
             Attributes destAttrs = new Attributes();
@@ -129,7 +129,7 @@ namespace NSoup.Safety
             Attributes sourceAttrs = sourceEl.Attributes;
             foreach (NSoup.Nodes.Attribute sourceAttr in sourceAttrs)
             {
-                if (_whitelist.IsSafeAttribute(sourceTag, sourceAttr))
+                if (_whitelist.IsSafeAttribute(sourceTag, sourceEl, sourceAttr))
                     destAttrs.Add(sourceAttr);
                 else
                     numDiscarded++;
