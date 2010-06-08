@@ -22,6 +22,7 @@ namespace NSoup.Parse
         private static readonly Tag _headTag = Tag.ValueOf("head");
         private static readonly Tag _bodyTag = Tag.ValueOf("body");
         private static readonly Tag _titleTag = Tag.ValueOf("title");
+        private static readonly Tag _textareaTag = Tag.ValueOf("textarea");
 
         private readonly LinkedList<Element> _stack;
         private readonly TokenQueue _tq;
@@ -188,10 +189,14 @@ namespace NSoup.Parse
                 _tq.ChompTo(">");
 
                 Node dataNode;
-                if (tag.Equals(_titleTag)) // want to show as text, but not contain inside tags (so not a data tag?)
+                if (tag.Equals(_titleTag) || tag.Equals(_textareaTag))
+                { // want to show as text, but not contain inside tags (so not a data tag?)
                     dataNode = TextNode.CreateFromEncoded(data, _baseUri);
+                }
                 else
+                {
                     dataNode = new DataNode(data, _baseUri); // data not encoded but raw (for " in script)
+                }
                 child.AppendChild(dataNode);
             }
 

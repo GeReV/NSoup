@@ -453,7 +453,15 @@ namespace NSoup.Nodes
         /// </summary>
         public int ElementSiblingIndex
         {
-            get { return Parent.Children.IndexOf(this); }
+            get
+            {
+                if (Parent == null)
+                {
+                    return 0;
+                }
+
+                return Parent.Children.IndexOf(this);
+            }
         }
 
         /// <summary>
@@ -605,6 +613,36 @@ namespace NSoup.Nodes
         public Elements GetElementsByAttributeValueContaining(string key, string match)
         {
             return Collector.Collect(new Evaluator.AttributeWithValueContaining(key, match), this);
+        }
+
+        /// <summary>
+        /// Find elements whose sibling index is less than the supplied index.
+        /// </summary>
+        /// <param name="index">0-based index</param>
+        /// <returns>elements less than index</returns>
+        public Elements GetElementsByIndexLessThan(int index)
+        {
+            return Collector.Collect(new Evaluator.IndexLessThan(index), this);
+        }
+
+        /// <summary>
+        /// Find elements whose sibling index is greater than the supplied index.
+        /// </summary>
+        /// <param name="index">0-based index</param>
+        /// <returns>elements greater than index</returns>
+        public Elements GetElementsByIndexGreaterThan(int index)
+        {
+            return Collector.Collect(new Evaluator.IndexGreaterThan(index), this);
+        }
+
+        /// <summary>
+        /// Find elements whose sibling index is equal to the supplied index.
+        /// </summary>
+        /// <param name="index">0-based index</param>
+        /// <returns>elements equal to index</returns>
+        public Elements GetElementsByIndexEquals(int index)
+        {
+            return Collector.Collect(new Evaluator.IndexEquals(index), this);
         }
 
         /// <summary>
@@ -867,6 +905,40 @@ namespace NSoup.Nodes
             }
             GetClassNames(classes);
 
+            return this;
+        }
+
+        /// <summary>
+        /// Get the value of a form element (input, textarea, etc).
+        /// </summary>
+        /// <returns>the value of the form element, or empty string if not set.</returns>
+        public String Val()
+        {
+            if (TagName.Equals("textarea", StringComparison.InvariantCultureIgnoreCase))
+            {
+                return Text;
+            }
+            else
+            {
+                return Attr("value");
+            }
+        }
+
+        /// <summary>
+        /// Set the value of a form element (input, textarea, etc).
+        /// </summary>
+        /// <param name="value">value to set</param>
+        /// <returns>this element (for chaining)</returns>
+        public Element Val(String value)
+        {
+            if (TagName.Equals("textarea", StringComparison.InvariantCultureIgnoreCase))
+            {
+                Text = value;
+            }
+            else
+            {
+                Attr("value", value);
+            }
             return this;
         }
 

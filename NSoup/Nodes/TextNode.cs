@@ -37,6 +37,26 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
+        /// Get the unencoded, normalised text content of this text node.
+        /// </summary>
+        /// <seealso cref="TextNode.GetWholeText()"/>
+        public string Text()
+        {
+            return OuterHtml();
+        }
+
+        /// <summary>
+        /// Set the text content of this text node.
+        /// </summary>
+        /// <param name="text">unencoded text</param>
+        /// <returns>this, for chaining</returns>
+        public TextNode Text(string text)
+        {
+            Attributes.Add(TEXT_KEY, text);
+            return this;
+        }
+
+        /// <summary>
         /// Get the (unencoded) text of this text node, including any newlines and spaces present in the original.
         /// </summary>
         /// <returns>text</returns>
