@@ -323,15 +323,45 @@ namespace NSoup.Select
             return this;
         }
 
-        /**
-         Wrap the supplied HTML around each matched elements. For example, with HTML
-         {@code <p><b>This</b> is <b>Jsoup</b></p>},
-         <code>doc.select("b").wrap("&lt;i&gt;&lt;/i&gt;");</code>
-         becomes {@code <p><i><b>This</b></i> is <i><b>jsoup</b></i></p>}
-         @param html HTML to wrap around each element, e.g. {@code <div class="head"></div>}. Can be arbitralily deep.
-         @return this (for chaining)
-         @see Element#wrap
-         */
+        /// <summary>
+        /// Insert the supplied HTML before each matched element's outer HTML.
+        /// </summary>
+        /// <param name="html">HTML to insert before each element</param>
+        /// <returns>this, for chaining</returns>
+        /// <seealso cref="Element.Before(string)"/>
+        public Elements Before(string html)
+        {
+            foreach (Element element in _contents)
+            {
+                element.Before(html);
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// Insert the supplied HTML after each matched element's outer HTML.
+        /// </summary>
+        /// <param name="html">HTML to insert after each element</param>
+        /// <returns>this, for chaining</returns>
+        /// <seealso cref="Element.After(string)"/>
+        public Elements after(string html)
+        {
+            foreach (Element element in _contents)
+            {
+                element.After(html);
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// Wrap the supplied HTML around each matched elements. For example, with HTML 
+        /// <code><p><b>This</b> is <b>Jsoup</b></p></code>,
+        /// <code>doc.select("b").wrap("&lt;i&gt;&lt;/i&gt;");</code> 
+        /// becomes <code><p><i><b>This</b></i> is <i><b>jsoup</b></i></p></code>
+        /// </summary>
+        /// <param name="html">HTML to wrap around each element, e.g. <code><div class="head"></div></code>. Can be arbitrarily deep.</param>
+        /// <returns>this (for chaining)</returns>
+        /// <seealso cref="Element.Wrap()"/>
         public Elements Wrap(string html)
         {
             if (string.IsNullOrEmpty(html))
@@ -383,6 +413,25 @@ namespace NSoup.Select
         {
             Elements children = this.Select(query);
             return !children.IsEmpty;
+        }
+
+        /// <summary>
+        /// Gets all of the parents and ancestor elements of the matched elements.
+        /// </summary>
+        public Elements Parents
+        {
+            get
+            {
+                HashSet<Element> combo = new HashSet<Element>();
+                foreach (Element e in _contents)
+                {
+                    foreach (Element item in e.Parents)
+                    {
+                        combo.Add(item);
+                    }
+                }
+                return new Elements(combo);
+            }
         }
 
         // list-like methods

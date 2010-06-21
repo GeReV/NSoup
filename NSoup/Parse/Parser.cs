@@ -7,7 +7,7 @@ using NSoup.Nodes;
 namespace NSoup.Parse
 {
     /// <summary>
-    /// Parses HTML into a {@link Document}. Generally best to use one of the  more convenient parse methods in <see cref="NSoup"/>.
+    /// Parses HTML into a <see cref="Document"/>. Generally best to use one of the  more convenient parse methods in <see cref="NSoup"/>.
     /// </summary>
     /// <!--
     /// Original Author: Jonathan Hedley, jonathan@hedley.net
@@ -29,6 +29,8 @@ namespace NSoup.Parse
         private readonly Document _doc;
         private string _baseUri;
 
+        public bool Relaxed { get; set; }
+
         private Parser(string html, string baseUri, bool isBodyFragment)
         {
             if (html == null)
@@ -39,6 +41,8 @@ namespace NSoup.Parse
             {
                 throw new ArgumentNullException("baseUri");
             }
+
+            Relaxed = false;
 
             _stack = new LinkedList<Element>();
             _tq = new TokenQueue(html);
@@ -77,6 +81,20 @@ namespace NSoup.Parse
         public static Document ParseBodyFragment(string bodyHtml, string baseUri)
         {
             Parser parser = new Parser(bodyHtml, baseUri, true);
+            return parser.Parse();
+        }
+
+        /// <summary>
+        /// Parse a fragment of HTML into the {@code body} of a Document, with relaxed parsing enabled. Relaxed, in this 
+        /// context, means that implicit tags are not automatically created when missing.
+        /// </summary>
+        /// <param name="bodyHtml">fragment of HTML</param>
+        /// <param name="baseUri">base URI of document (i.e. original fetch location), for resolving relative URLs.</param>
+        /// <returns>Document, with empty head, and HTML parsed into body</returns>
+        public static Document ParseBodyFragmentRelaxed(string bodyHtml, string baseUri)
+        {
+            Parser parser = new Parser(bodyHtml, baseUri, true);
+            parser.Relaxed = true;
             return parser.Parse();
         }
 
@@ -181,12 +199,14 @@ namespace NSoup.Parse
             {
                 _tq.MatchChomp(">");
             }
+            AddChildToParent(child, isEmptyElement);
 
             // pc data only tags (textarea, script): chomp to end tag, add content as text node
             if (tag.IsData)
             {
                 string data = _tq.ChompTo("</" + tagName);
                 _tq.ChompTo(">");
+                PopStackToClose(tag);
 
                 Node dataNode;
                 if (tag.Equals(_titleTag) || tag.Equals(_textareaTag))
@@ -210,8 +230,6 @@ namespace NSoup.Parse
                     _doc.BaseUri = href; // set on the doc so doc.createElement(Tag) will get updated base
                 }
             }
-
-            AddChildToParent(child, isEmptyElement);
         }
 
         private NSoup.Nodes.Attribute ParseAttribute()
@@ -274,7 +292,7 @@ namespace NSoup.Parse
             Tag childTag = child.Tag;
             bool validAncestor = StackHasValidParent(childTag);
 
-            if (!validAncestor)
+            if (!validAncestor && !Relaxed)
             {
                 // create implicit parent around this child
                 Tag parentTag = childTag.GetImplicitParent();
@@ -306,13 +324,21 @@ namespace NSoup.Parse
         private bool StackHasValidParent(Tag childTag)
         {
             if (_stack.Count == 1 && childTag.Equals(_htmlTag))
+            {
                 return true; // root is valid for html node
+            }
 
+            if (childTag.RequiresSpecificParent)
+            {
+                return _stack.Last.Value.Tag.IsValidParent(childTag);
+            }
+
+            // otherwise, look up the stack for valid ancestors
             for (int i = _stack.Count - 1; i >= 0; i--)
             {
                 Element el = _stack.ElementAt(i);
                 Tag parent2 = el.Tag;
-                if (parent2.IsValidParent(childTag))
+                if (parent2.IsValidAncestor(childTag))
                 {
                     return true;
                 }
