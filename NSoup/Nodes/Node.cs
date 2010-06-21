@@ -221,11 +221,6 @@ namespace NSoup.Nodes
             get { return _childNodes.AsReadOnly(); }
         }
 
-        public Node[] ChildNodesAsArray()
-        {
-            return ChildNodes.ToArray();
-        }
-
         /// <summary>
         /// Gets or sets this node's parent node.
         /// </summary>
@@ -237,7 +232,7 @@ namespace NSoup.Nodes
                 // TODO: Originally - protected SetParentNode(...).
                 if (this._parentNode != null)
                 {
-                    this._parentNode.RemoveChild(this);
+                    throw new NotImplementedException("Cannot (yet) move nodes in tree"); // TODO: remove from prev node children
                 }
                 this._parentNode = value;
             }
@@ -306,29 +301,19 @@ namespace NSoup.Nodes
             output._parentNode = null;
         }
 
-        public void AddChildren(params Node[] children)
+        protected void AddChild(Node input)
         {
-            AddChildren(ChildNodes.Count, children);
-        }
-
-        public void AddChildren(int index, params Node[] children)
-        {
-            if (children.Any(n => n == null))
+            if (input == null)
             {
-                throw new ArgumentException("`children` array cannot contain null objects.");
+                throw new ArgumentNullException("input");
+            }
+            if (input._parentNode != null)
+            {
+                input._parentNode.RemoveChild(input);
             }
 
-            for (int i = children.Length - 1; i >= 0; i--)
-            {
-                Node input = children[i];
-                if (input.ParentNode != null)
-                {
-                    input.ParentNode.RemoveChild(input);
-                }
-
-                ChildNodes.Insert(index, input);
-                input.ParentNode = this;
-            }
+            _childNodes.Add(input);
+            input._parentNode = this;
         }
 
         protected int NodeDepth
