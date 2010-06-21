@@ -118,6 +118,29 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
+        /// Gets this element's parent and ancestors, up to the document root.
+        /// </summary>
+        public Elements Parents
+        {
+            get
+            {
+                Elements parents = new Elements();
+                AccumulateParents(this, parents);
+                return parents;
+            }
+        }
+
+        private static void AccumulateParents(Element el, Elements parents)
+        {
+            Element parent = el.Parent;
+            if (parent != null && !parent.TagName.Equals("#root"))
+            {
+                parents.Add(parent);
+                AccumulateParents(parent, parents);
+            }
+        }
+
+        /// <summary>
         /// Get a child element of this element, by its 0-based index number.
         /// 
         /// * @param index the index number of the element to retrieve
@@ -192,8 +215,7 @@ namespace NSoup.Nodes
                 throw new ArgumentNullException("child");
             }
 
-            child.ParentNode = this;
-            _childNodes.Add(child);
+            AddChildren(child);
 
             return this;
         }
@@ -210,8 +232,7 @@ namespace NSoup.Nodes
                 throw new ArgumentNullException("child");
             }
 
-            child.ParentNode = this;
-            _childNodes.Insert(0, child);
+            AddChildren(0, child);
 
             return this;
         }
@@ -282,18 +303,14 @@ namespace NSoup.Nodes
                 throw new ArgumentNullException("html");
             }
 
-            Element fragment = NSoup.Parse.Parser.ParseBodyFragment(html, BaseUri).Body;
-            // TODO: must parse without implicit elements, so you can e.g. add <td> to a <tr> (without creating a whole new table)
-            foreach (Node node in fragment.ChildNodes)
-            {
-                node.ParentNode = null;
-                AppendChild(node);
-            }
+            Element fragment = Parser.ParseBodyFragmentRelaxed(html, BaseUri).Body;
+            AddChildren(fragment.ChildNodesAsArray());
+
             return this;
         }
 
         /// <summary>
-        /// Add inner HTML to this element. The supplied HTML will be parsed, and each node prepended to the start of the children.
+        /// Add inner HTML into this element. The supplied HTML will be parsed, and each node prepended to the start of the children.
         /// </summary>
         /// <param name="html">HTML to add inside this element, before the existing HTML</param>
         /// <returns>this element</returns>
@@ -305,16 +322,48 @@ namespace NSoup.Nodes
                 throw new ArgumentNullException("html");
             }
 
-            Element fragment = NSoup.Parse.Parser.ParseBodyFragment(html, BaseUri).Body;
-            // TODO: must parse without implicit elements, so you can e.g. add <td> to a <tr> (without creating a whole new table)
-            List<Node> nodes = fragment.ChildNodes.ToList();
-            for (int i = nodes.Count - 1; i >= 0; i--)
-            {
-                Node node = nodes[i];
-                node.ParentNode = null;
-                PrependChild(node);
-            }
+            Element fragment = Parser.ParseBodyFragmentRelaxed(html, BaseUri).Body;
+            AddChildren(0, fragment.ChildNodesAsArray());
             return this;
+        }
+
+        /// <summary>
+        /// Insert the specified HTML into the DOM before this element (i.e. as a preceeding sibling).
+        /// </summary>
+        /// <param name="html">HTML to add before this element</param>
+        /// <returns>this element, for chaining</returns>
+        /// <seealso cref="After(string)"/>
+        public Element Before(string html)
+        {
+            AddSiblingHtml(SiblingIndex, html);
+            return this;
+        }
+
+        /// <summary>
+        /// Insert the specified HTML into the DOM after this element (i.e. as a following sibling).
+        /// </summary>
+        /// <param name="html">HTML to add after this element</param>
+        /// <returns>this element, for chaining</returns>
+        /// <seealso cref="Before(string)"/>
+        public Element After(string html)
+        {
+            AddSiblingHtml(SiblingIndex + 1, html);
+            return this;
+        }
+
+        private void AddSiblingHtml(int index, string html)
+        {
+            if (html == null)
+            {
+                throw new ArgumentNullException("html");
+            }
+            if (ParentNode == null)
+            {
+                throw new Exception("ParentNode is null");
+            }
+
+            Element fragment = Parser.ParseBodyFragmentRelaxed(html, BaseUri).Body;
+            ParentNode.AddChildren(index, fragment.ChildNodesAsArray());
         }
 
         /// <summary>
@@ -339,7 +388,7 @@ namespace NSoup.Nodes
                 throw new ArgumentNullException("html");
             }
 
-            Element wrapBody = NSoup.Parse.Parser.ParseBodyFragment(html, BaseUri).Body;
+            Element wrapBody = NSoup.Parse.Parser.ParseBodyFragmentRelaxed(html, BaseUri).Body;
             Elements wrapChildren = wrapBody.Children;
             Element wrap = wrapChildren.First;
             if (wrap == null)
@@ -349,7 +398,7 @@ namespace NSoup.Nodes
 
             Element deepest = GetDeepChild(wrap);
             ParentNode.ReplaceChild(this, wrap);
-            deepest.AddChild(this);
+            deepest.AddChildren(this);
 
             // remainder (unbalananced wrap, like <div></div><p></p> -- The <p> is remainder
             if (wrapChildren.Count > 1)
@@ -643,6 +692,17 @@ namespace NSoup.Nodes
         public Elements GetElementsByIndexEquals(int index)
         {
             return Collector.Collect(new Evaluator.IndexEquals(index), this);
+        }
+
+        /// <summary>
+        /// Find elements that contain the specified string. The search is case insensitive. The text may appear directly 
+        /// in the element, or in any of its descendants.
+        /// </summary>
+        /// <param name="searchText"></param>
+        /// <returns>elements that contain the string, case insensitive.</returns>
+        public Elements GetElementsContainingText(string searchText)
+        {
+            return Collector.Collect(new Evaluator.ContainsText(searchText), this);
         }
 
         /// <summary>

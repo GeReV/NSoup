@@ -40,6 +40,8 @@ namespace NSoup.Select
     /// <tr><td><code>E:lt(<em>n</em>)</code></td><td>an Element whose sibling index is less than <em>n</em></td><td><code>td:lt(3)</code> finds the first 2 cells of each row</td></tr>
     /// <tr><td><code>E:gt(<em>n</em>)</code></td><td>an Element whose sibling index is greater than <em>n</em></td><td><code>td:gt(1)</code> finds cells after skipping the first two</td></tr>
     /// <tr><td><code>E:eq(<em>n</em>)</code></td><td>an Element whose sibling index is equal to <em>n</em></td><td><code>td:eq(1)</code> finds the first cell of each row</td></tr>
+    /// <tr><td><code>E:has(<em>selector</em>)</code></td><td>an Element that contains at least one element matching the <em>selector</em></td><td><code>div:has(p)</code> finds divs that contain p elements </td></tr>
+    /// <tr><td><code>E:contains(<em>text</em>)</code></td><td>an Element that contains the specified text. The search is case insensitive. The text may appear in the found Element, or any of its descendants.</td><td><code>p:contains(jsoup)</code> finds p elements containing the text "jsoup".</td></tr>
     /// </table>
     /// </remarks>
     /// <!--
@@ -215,12 +217,22 @@ namespace NSoup.Select
                 return AllElements();
             } else if (_tq.MatchChomp(":lt(")) {
             return IndexLessThan();
-        } else if (_tq.MatchChomp(":gt(")) {
-            return IndexGreaterThan();
-        }
+            }
+            else if (_tq.MatchChomp(":gt("))
+            {
+                return IndexGreaterThan();
+            }
             else if (_tq.MatchChomp(":eq("))
             {
                 return IndexEquals();
+            }
+            else if (_tq.MatchChomp(":has("))
+            {
+                return Has();
+            }
+            else if (_tq.MatchChomp(":contains("))
+            {
+                return Contains();
             }
             else
             { // unhandled
@@ -359,6 +371,32 @@ namespace NSoup.Select
             return index;
         }
 
+        // pseudo selector :has(el)
+        private Elements Has()
+        {
+            String subQuery = _tq.ChompTo(")");
+
+            if (string.IsNullOrEmpty(subQuery))
+            {
+                throw new Exception(":has(el) subselect must not be empty");
+            }
+
+            return FilterForParentsOfDescendants(_elements, Select(subQuery, _elements));
+        }
+    
+        // pseudo selector :contains(text)
+        private Elements Contains()
+        {
+            String searchText = _tq.ChompTo(")");
+
+            if (string.IsNullOrEmpty(searchText))
+            {
+                throw new Exception(":contains(text) query must not be empty");
+            }
+
+            return _root.GetElementsContainingText(searchText);
+        }
+
         // direct child descendants
         private static Elements FilterForChildren(IList<Element> parents, IList<Element> candidates)
         {
@@ -409,6 +447,23 @@ namespace NSoup.Select
                 }
             }
             return children;
+        }
+
+        // implements :has(el). Finds elements that contain the matched elements
+        private static Elements FilterForParentsOfDescendants(ICollection<Element> parents, ICollection<Element> children)
+        {
+            Elements filteredParents = new Elements();
+            foreach (Element p in parents)
+            {
+                foreach (Element c in children)
+                {
+                    if (c.Parents.Contains(p))
+                    {
+                        filteredParents.Add(p);
+                    }
+                }
+            }
+            return filteredParents;
         }
 
         // adjacent siblings

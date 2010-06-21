@@ -225,5 +225,20 @@ namespace NSoup.Nodes
                 this.index = index;
             }
         }
+
+        public sealed class ContainsText : Evaluator
+        {
+            private string searchText;
+
+            public ContainsText(string searchText)
+            {
+                this.searchText = searchText.ToLowerInvariant();
+            }
+
+            public override bool Matches(Element element)
+            {
+                return (element.Text.ToLowerInvariant().Contains(searchText));
+            }
+        }
     }
 }

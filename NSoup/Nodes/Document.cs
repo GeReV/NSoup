@@ -118,14 +118,16 @@ namespace NSoup.Nodes
             if (Body == null)
                 Select("html").First.AppendElement("body");
 
-            Normalise(this);
+            // pull text nodes out of root, html, and head els, and push into body. non-text nodes are already taken care
+            // of. do in inverse order to maintain text order.
+            Normalise(Head); 
             Normalise(Select("html").First);
-            Normalise(Head);
+            Normalise(this);
 
             return this;
         }
 
-        // does not recurse. the result order isn't great here (not intuitive); they are in the body though.
+        // does not recurse.
         private void Normalise(Element element)
         {
             List<Node> toMove = new List<Node>();
@@ -141,8 +143,9 @@ namespace NSoup.Nodes
                 }
             }
 
-            foreach (Node node in toMove)
+            for (int i = toMove.Count - 1; i >= 0; i--)
             {
+                Node node = toMove[i];
                 element.RemoveChild(node);
                 Body.AppendChild(new TextNode(" ", string.Empty));
                 Body.AppendChild(node);
