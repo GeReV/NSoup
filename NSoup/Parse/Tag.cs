@@ -31,7 +31,9 @@ namespace NSoup.Parse
         private bool _optionalClosing = false; // If tag is open, and another seen, close previous tag
         private bool _empty = false; // can hold nothing; e.g. img
         private bool _preserveWhitespace = false; // for pre, textarea, script etc
-        private List<Tag> _ancestors;
+        private List<Tag> _ancestors; // elements must be a descendant of one of these ancestors
+
+        public Tag Parent {get;set;} // if not null, elements must be a direct child of parent
 
         private Tag(string tagName)
         {
@@ -117,9 +119,20 @@ namespace NSoup.Parse
 
             // dt and dd (in dl)
             if (this._tagName.Equals("dt") && child._tagName.Equals("dd"))
+            {
                 return false;
+            }
             if (this._tagName.Equals("dd") && child._tagName.Equals("dt"))
+            {
                 return false;
+            }
+
+            // don't allow children to contain their parent (directly)
+            if (this.RequiresSpecificParent && this.GetImplicitParent().Equals(child))
+            {
+                return false;
+            }
+        
 
             return true;
         }
@@ -177,7 +190,17 @@ namespace NSoup.Parse
             return (!(_ancestors.Count <= 0)) ? _ancestors[0] : null;
         }
 
+        public bool RequiresSpecificParent
+        {
+            get { return this.Parent != null; }
+        }
+
         public bool IsValidParent(Tag child)
+        {
+            return this.Equals(child.Parent);
+        }
+
+        public bool IsValidAncestor(Tag child)
         {
             if (child._ancestors == null || child._ancestors.Count <= 0)
             {
@@ -250,8 +273,8 @@ namespace NSoup.Parse
             CreateBlock("TITLE").SetAncestor("HEAD", "BODY").SetContainDataOnly();
             CreateInline("BASE").SetAncestor("HEAD", "BODY").SetEmpty();
 
-            CreateBlock("FRAME").SetAncestor("FRAMESET").SetEmpty();
-            CreateBlock("NOFRAMES").SetAncestor("FRAMESET").SetContainDataOnly();
+            CreateBlock("FRAME").SetParent("FRAMESET").SetEmpty();
+            CreateBlock("NOFRAMES").SetParent("FRAMESET").SetContainDataOnly();
 
 
 
@@ -314,34 +337,34 @@ namespace NSoup.Parse
             CreateInline("TEXTAREA").SetAncestor("FORM").SetContainDataOnly();
             CreateInline("LABEL").SetAncestor("FORM").SetOptionalClosing(); // not self
             CreateInline("BUTTON").SetAncestor("FORM"); // bunch of excludes not defined
-            CreateInline("OPTGROUP").SetAncestor("SELECT"); //  only contain option
-            CreateInline("OPTION").SetAncestor("SELECT").SetContainDataOnly();
+            CreateInline("OPTGROUP").SetParent("SELECT"); //  only contain option
+            CreateInline("OPTION").SetParent("SELECT").SetContainDataOnly();
             CreateBlock("FIELDSET").SetAncestor("FORM");
             CreateInline("LEGEND").SetAncestor("FIELDSET");
 
             // other
             CreateInline("AREA").SetEmpty(); // not an inline per-se
-            CreateInline("PARAM").SetAncestor("OBJECT").SetEmpty();
+            CreateInline("PARAM").SetParent("OBJECT").SetEmpty();
             CreateBlock("INS"); // only within body
             CreateBlock("DEL"); // only within body
 
             CreateBlock("DL");
-            CreateInline("DT").SetAncestor("DL").SetOptionalClosing(); // only within DL.
-            CreateInline("DD").SetAncestor("DL").SetOptionalClosing(); // only within DL.
+            CreateInline("DT").SetParent("DL").SetOptionalClosing(); // only within DL.
+            CreateInline("DD").SetParent("DL").SetOptionalClosing(); // only within DL.
 
             CreateBlock("LI").SetAncestor("UL", "OL").SetOptionalClosing(); // only within OL or UL.
 
             // tables
             CreateBlock("TABLE"); // specific list of only includes (tr, td, thead etc) not implemented
-            CreateBlock("CAPTION").SetAncestor("TABLE");
-            CreateBlock("THEAD").SetAncestor("TABLE").SetOptionalClosing(); // just TR
-            CreateBlock("TFOOT").SetAncestor("TABLE").SetOptionalClosing(); // just TR
-            CreateBlock("TBODY").SetAncestor("TABLE").SetOptionalClosing(); // optional / implicit open too. just TR
-            CreateBlock("COLGROUP").SetAncestor("TABLE").SetOptionalClosing(); // just COL
-            CreateBlock("COL").SetAncestor("COLGROUP").SetEmpty();
-            CreateBlock("TR").SetAncestor("TABLE").SetOptionalClosing(); // just TH, TD
-            CreateBlock("TH").SetAncestor("TR").SetOptionalClosing();
-            CreateBlock("TD").SetAncestor("TR").SetOptionalClosing();
+            CreateBlock("CAPTION").SetParent("TABLE");
+            CreateBlock("THEAD").SetParent("TABLE").SetOptionalClosing(); // just TR
+            CreateBlock("TFOOT").SetParent("TABLE").SetOptionalClosing(); // just TR
+            CreateBlock("TBODY").SetParent("TABLE").SetOptionalClosing(); // optional / implicit open too. just TR
+            CreateBlock("COLGROUP").SetParent("TABLE").SetOptionalClosing(); // just COL
+            CreateBlock("COL").SetParent("COLGROUP").SetEmpty();
+            CreateBlock("TR").SetParent("TABLE").SetOptionalClosing(); // just TH, TD
+            CreateBlock("TH").SetParent("TR").SetOptionalClosing();
+            CreateBlock("TD").SetParent("TR").SetOptionalClosing();
         }
 
         #region IEquatable<Tag> Members
@@ -425,6 +448,13 @@ namespace NSoup.Parse
                     _ancestors.Add(Tag.ValueOf(name));
                 }
             }
+            return this;
+        }
+
+        private Tag SetParent(string tagName)
+        {
+            Parent = Tag.ValueOf(tagName);
+            SetAncestor(tagName);
             return this;
         }
     }
