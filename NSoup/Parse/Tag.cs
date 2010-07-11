@@ -338,7 +338,7 @@ namespace NSoup.Parse
             CreateInline("LABEL").SetAncestor("FORM").SetOptionalClosing(); // not self
             CreateInline("BUTTON").SetAncestor("FORM"); // bunch of excludes not defined
             CreateInline("OPTGROUP").SetParent("SELECT"); //  only contain option
-            CreateInline("OPTION").SetParent("SELECT").SetContainDataOnly();
+            CreateInline("OPTION").SetParent("SELECT").SetOptionalClosing();
             CreateBlock("FIELDSET").SetAncestor("FORM");
             CreateInline("LEGEND").SetAncestor("FIELDSET");
 

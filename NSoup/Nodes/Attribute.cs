@@ -75,9 +75,17 @@ namespace NSoup.Nodes
         /// <summary>
         /// Get the HTML representation of this attribute; e.g. <code>href="index.html"</code>
         /// </summary>
-        public string Html
+        public string Html()
         {
-            get { return string.Format("{0}=\"{1}\"", _key, HttpUtility.HtmlEncode(_value)); }
+            return string.Format("{0}=\"{1}\"", _key, HttpUtility.HtmlEncode(_value));
+        }
+
+        public void Html(StringBuilder accum)
+        {
+            accum.Append(Key)
+                .Append("=\"")
+                .Append(HttpUtility.HtmlEncode(Value))
+                .Append("\"");
         }
 
         /// <summary>
@@ -86,7 +94,7 @@ namespace NSoup.Nodes
         /// <returns>string</returns>
         public override string ToString()
         {
-            return this.Html;
+            return this.Html();
         }
 
         /// <summary>

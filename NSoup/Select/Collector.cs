@@ -25,19 +25,36 @@ namespace NSoup.Select
         public static Elements Collect(Evaluator eval, Element root)
         {
             Elements elements = new Elements();
-            AccumulateMatches(eval, elements, root);
+            new NodeTraversor(new Accumulator(elements, eval)).Traverse(root);
             return elements;
         }
 
-        private static void AccumulateMatches(Evaluator eval, IList<Element> elements, Element element)
+        private class Accumulator : NodeVisitor
         {
-            if (eval.Matches(element))
+            private Elements elements;
+            private Evaluator eval;
+
+            public Accumulator(Elements elements, Evaluator eval)
             {
-                elements.Add(element);
+                this.elements = elements;
+                this.eval = eval;
             }
-            foreach (Element child in element.Children)
+
+            public void Head(Node node, int depth)
             {
-                AccumulateMatches(eval, elements, child);
+                if (node is Element)
+                {
+                    Element el = (Element)node;
+                    if (eval.Matches(el))
+                    {
+                        elements.Add(el);
+                    }
+                }
+            }
+
+            public void Tail(Node node, int depth)
+            {
+                // void
             }
         }
     }

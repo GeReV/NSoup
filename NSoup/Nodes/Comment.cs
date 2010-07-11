@@ -44,16 +44,15 @@ namespace NSoup.Nodes
             return Attributes.GetValue(COMMENT_KEY);
         }
 
-        public override void CreateOuterHtml(StringBuilder accum)
+        public override void OuterHtmlHead(StringBuilder accum, int depth)
         {
-            Indent(accum);
+            Indent(accum, depth);
             accum.Append(string.Format("<!--{0}-->", GetData()));
-        } 
+        }
 
-        /*private void OuterHtml(StringBuilder accum)
+        public override void OuterHtmlTail(StringBuilder accum, int depth)
         {
-            
-        }*/
+        }
 
         public override string ToString()
         {

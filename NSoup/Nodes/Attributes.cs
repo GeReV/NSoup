@@ -20,7 +20,7 @@ namespace NSoup.Nodes
     /// -->
     public class Attributes : IEnumerable<Attribute>, IEquatable<Attributes>
     {
-        private Dictionary<string, Attribute> attributes = new Dictionary<string, Attribute>();
+        private Dictionary<string, Attribute> attributes = new Dictionary<string, Attribute>(2);
         // The order in which items are returned from a Dictionary is undefined. Should find a different solution.
         //private LinkedHashMap<string, Attribute> attributes = new LinkedHashMap<string, Attribute>();
         // linked hash map to preserve insertion order.
@@ -139,23 +139,25 @@ namespace NSoup.Nodes
         /// <summary>
         /// Gets the HTML representation of these attributes.
         /// </summary>
-        public string Html
+        public string Html()
         {
-            get
-            {
                 StringBuilder accum = new StringBuilder();
-                foreach (Attribute attribute in this)
-                {
-                    accum.Append(" ");
-                    accum.Append(attribute.Html);
-                }
+                Html(accum);
                 return accum.ToString();
+        }
+
+        private void Html(StringBuilder accum)
+        {
+            foreach (Attribute attribute in this)
+            {
+                accum.Append(" ");
+                attribute.Html(accum);
             }
         }
 
         public override string ToString()
         {
-            return Html;
+            return Html();
         }
 
         public override bool Equals(object obj)

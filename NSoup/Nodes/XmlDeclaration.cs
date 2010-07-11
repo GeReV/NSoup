@@ -47,15 +47,12 @@ namespace NSoup.Nodes
             return Attributes.GetValue(DECL_KEY);
         }
 
-        public override void CreateOuterHtml(StringBuilder accum)
+        public override void OuterHtmlHead(StringBuilder accum, int depth)
         {
             accum.Append(string.Format("<{0}{1}>", _isProcessingInstruction ? "!" : "?", GetWholeDeclaration()));
         }
 
-        /*void OuterHtml(StringBuilder accum)
-        {
-            
-        }*/
+        public override void OuterHtmlTail(StringBuilder accum, int depth) { }
 
         public override string ToString()
         {
