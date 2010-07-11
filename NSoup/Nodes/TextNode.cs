@@ -18,6 +18,7 @@ namespace NSoup.Nodes
     public class TextNode : Node
     {
         private static readonly string TEXT_KEY = "text";
+        private static readonly Regex _spaceNormaliser = new Regex("\\s{2,}|(\\r\\n|\\r|\\n)", RegexOptions.Compiled);
 
         /// <summary>
         /// Create a new TextNode representing the supplied (unencoded) text).
@@ -73,7 +74,7 @@ namespace NSoup.Nodes
             get { return string.IsNullOrEmpty(NormaliseWhitespace(GetWholeText())); }
         }
 
-        public override void CreateOuterHtml(StringBuilder accum)
+        public override void OuterHtmlHead(StringBuilder accum, int depth)
         {
             string html = HttpUtility.HtmlEncode(GetWholeText());
             if (ParentNode is Element && !((Element)ParentNode).PreserveWhitespace)
@@ -81,12 +82,14 @@ namespace NSoup.Nodes
                 html = NormaliseWhitespace(html);
             }
 
-            if (!IsBlank && ParentNode is Element && ((Element)ParentNode).Tag.CanContainBlock && SiblingIndex == 0)
+            if (SiblingIndex == 0 && ParentNode is Element && ((Element)ParentNode).Tag.CanContainBlock && !IsBlank)
             {
-                Indent(accum);
+                Indent(accum, depth);
             }
             accum.Append(html);
         }
+
+        public override void OuterHtmlTail(StringBuilder accum, int depth) { }
 
         public override string ToString()
         {
@@ -107,7 +110,7 @@ namespace NSoup.Nodes
 
         public static string NormaliseWhitespace(string text)
         {
-            text = Regex.Replace(text, "\\s{2,}|(\\r\\n|\\r|\\n)", " "); // more than one space, and newlines to " "
+            text = _spaceNormaliser.Replace(text, " "); // more than one space, and newlines to " "
             return text;
         }
 

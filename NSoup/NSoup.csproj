@@ -66,6 +66,8 @@
     <Compile Include="Safety\Whitelist.cs" />
     <Compile Include="Select\Collector.cs" />
     <Compile Include="Select\Elements.cs" />
+    <Compile Include="Select\NodeTraversor.cs" />
+    <Compile Include="Select\NodeVisitor.cs" />
     <Compile Include="Select\Selector.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

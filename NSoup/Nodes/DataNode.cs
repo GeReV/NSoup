@@ -45,10 +45,12 @@ namespace NSoup.Nodes
             return Attributes.GetValue(DATA_KEY);
         }
 
-        public override void CreateOuterHtml(StringBuilder accum)
+        public override void OuterHtmlHead(StringBuilder accum, int depth)
         {
             accum.Append(GetWholeData()); // data is not escaped in return from data nodes, so " in script, style is plain
         }
+
+        public override void OuterHtmlTail(StringBuilder accum, int depth) { }
 
         public override string ToString()
         {

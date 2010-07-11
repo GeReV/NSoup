@@ -204,7 +204,7 @@ namespace NSoup.Parse
             // pc data only tags (textarea, script): chomp to end tag, add content as text node
             if (tag.IsData)
             {
-                string data = _tq.ChompTo("</" + tagName);
+                string data = _tq.ChompToIgnoreCase("</" + tagName);
                 _tq.ChompTo(">");
                 PopStackToClose(tag);
 

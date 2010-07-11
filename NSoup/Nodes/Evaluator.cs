@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace NSoup.Nodes
 {
@@ -79,7 +80,7 @@ namespace NSoup.Nodes
 
             public override bool Matches(Element element)
             {
-                return (element.HasAttr(key));
+                return element.HasAttr(key);
             }
         }
 
@@ -92,7 +93,7 @@ namespace NSoup.Nodes
 
             public override bool Matches(Element element)
             {
-                return (value.Equals(element.Attr(key), StringComparison.InvariantCultureIgnoreCase));
+                return element.HasAttr(key) && value.Equals(element.Attr(key), StringComparison.InvariantCultureIgnoreCase);
             }
         }
 
@@ -105,7 +106,7 @@ namespace NSoup.Nodes
 
             public override bool Matches(Element element)
             {
-                return (!value.Equals(element.Attr(key), StringComparison.InvariantCultureIgnoreCase));
+                return !value.Equals(element.Attr(key), StringComparison.InvariantCultureIgnoreCase);
             }
         }
 
@@ -118,7 +119,7 @@ namespace NSoup.Nodes
 
             public override bool Matches(Element element)
             {
-                return element.Attr(key).ToLowerInvariant().StartsWith(value); // value is lower case already
+                return element.HasAttr(key) && element.Attr(key).ToLowerInvariant().StartsWith(value); // value is lower case already
             }
         }
 
@@ -131,7 +132,7 @@ namespace NSoup.Nodes
 
             public override bool Matches(Element element)
             {
-                return element.Attr(key).ToLowerInvariant().EndsWith(value); // value is lower case
+                return element.HasAttr(key) && element.Attr(key).ToLowerInvariant().EndsWith(value); // value is lower case
             }
         }
 
@@ -144,9 +145,25 @@ namespace NSoup.Nodes
 
             public override bool Matches(Element element)
             {
-                return element.Attr(key).ToLowerInvariant().Contains(value); // value is lower case
+                return element.HasAttr(key) && element.Attr(key).ToLowerInvariant().Contains(value); // value is lower case
             }
         }
+
+        public sealed class AttributeWithValueMatching : Evaluator {
+        
+            private string key;
+            private Regex regex;
+
+            public AttributeWithValueMatching(string key, Regex regex)
+            {
+                this.key = key.Trim().ToLowerInvariant();
+                this.regex = regex;
+            }
+
+        public override bool Matches(Element element) {
+            return element.HasAttr(key) && regex.IsMatch(element.Attr(key));
+        }
+    }
 
         public abstract class AttributeKeyPair : Evaluator
         {
@@ -238,6 +255,22 @@ namespace NSoup.Nodes
             public override bool Matches(Element element)
             {
                 return (element.Text.ToLowerInvariant().Contains(searchText));
+            }
+        }
+
+        public sealed class MatchesRegex : Evaluator
+        {
+            private Regex regex;
+
+            public MatchesRegex(Regex regex)
+            {
+                this.regex = regex;
+            }
+
+            // Cannot name function same as class name.
+            public override bool Matches(Element element)
+            {
+                return regex.IsMatch(element.Text);
             }
         }
     }

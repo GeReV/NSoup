@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Collections.ObjectModel;
+using NSoup.Select;
 
 namespace NSoup.Nodes
 {
@@ -19,6 +20,7 @@ namespace NSoup.Nodes
         protected readonly List<Node> _childNodes;
         private readonly Attributes _attributes;
         private string _baseUri;
+        private int _siblingIndex;
 
         /// <summary>
         /// Create a new Node.
@@ -289,9 +291,10 @@ namespace NSoup.Nodes
                 input._parentNode.RemoveChild(input);
             }
 
-            int index = _childNodes.IndexOf(output);
+            int index = output.SiblingIndex;
             _childNodes[index] = input;
             input._parentNode = this;
+            input.SiblingIndex = index;
             output._parentNode = null;
         }
 
@@ -301,8 +304,9 @@ namespace NSoup.Nodes
             {
                 throw new ArgumentException("Output's parent node must be equal to this object.");
             }
-            int index = _childNodes.IndexOf(output);
+            int index = output.SiblingIndex;
             _childNodes.RemoveAt(index);
+            ReIndexChildren();
             output._parentNode = null;
         }
 
@@ -328,6 +332,15 @@ namespace NSoup.Nodes
 
                 ChildNodes.Insert(index, input);
                 input.ParentNode = this;
+            }
+            ReIndexChildren();
+        }
+
+        private void ReIndexChildren()
+        {
+            for (int i = 0; i < _childNodes.Count; i++)
+            {
+                _childNodes[i].SiblingIndex = i;
             }
         }
 
@@ -362,8 +375,12 @@ namespace NSoup.Nodes
         {
             get
             {
+                if (ParentNode == null)
+                {
+                    return null; // root
+                }
                 List<Node> siblings = _parentNode.ChildNodes.ToList();
-                int index = siblings.IndexOf(this);
+                int index = SiblingIndex;
                 //Validate.notNull(index);
                 if (siblings.Count > index + 1)
                 {
@@ -384,7 +401,7 @@ namespace NSoup.Nodes
             get
             {
                 List<Node> siblings = _parentNode.ChildNodes.ToList();
-                int index = siblings.IndexOf(this);
+                int index = SiblingIndex;
                 if (index > 0)
                 {
                     return siblings[index - 1];
@@ -402,7 +419,8 @@ namespace NSoup.Nodes
         /// <seealso cref="Element.ElementSiblingIndex"/>
         public int SiblingIndex
         {
-            get { return ParentNode.ChildNodes.IndexOf(this); }
+            get { return _siblingIndex; }
+            set { this._siblingIndex = value; }
         }
 
         /// <summary>
@@ -411,25 +429,32 @@ namespace NSoup.Nodes
         /// <returns>HTML</returns>
         public virtual string OuterHtml()
         {
-            StringBuilder accum = new StringBuilder();
-            CreateOuterHtml(accum);
+            StringBuilder accum = new StringBuilder(32 * 1024);
+            OuterHtml(accum);
             return accum.ToString();
+        }
+
+        public void OuterHtml(StringBuilder accum)
+        {
+            new NodeTraversor(new OuterHtmlVisitor(accum)).Traverse(this);
         }
 
         /// <summary>
         /// Gets the outer HTML of this node.
         /// </summary>
         /// <param name="accum">accumulator to place HTML into</param>
-        public abstract void CreateOuterHtml(StringBuilder accum);
+        public abstract void OuterHtmlHead(StringBuilder accum, int depth);
+
+        public abstract void OuterHtmlTail(StringBuilder accum, int depth);
 
         public override string ToString()
         {
             return OuterHtml();
         }
 
-        protected void Indent(StringBuilder accum)
+        protected void Indent(StringBuilder accum, int depth)
         {
-            accum.Append("\n").Append(string.Empty.PadLeft(NodeDepth - 1 * 2));
+            accum.Append("\n").Append(string.Empty.PadLeft(depth));
         }
 
         public override bool Equals(object obj)
@@ -444,6 +469,26 @@ namespace NSoup.Nodes
             // not children, or will block stack as they go back up to parent)
             result = 31 * result + (Attributes != null ? Attributes.GetHashCode() : 0);
             return result;
+        }
+
+        private class OuterHtmlVisitor : NodeVisitor
+        {
+            private StringBuilder accum;
+
+            public OuterHtmlVisitor(StringBuilder accum)
+            {
+                this.accum = accum;
+            }
+
+            public void Head(Node node, int depth)
+            {
+                node.OuterHtmlHead(accum, depth);
+            }
+
+            public void Tail(Node node, int depth)
+            {
+                node.OuterHtmlTail(accum, depth);
+            }
         }
     }
 }

@@ -526,6 +526,29 @@ namespace NSoup.Nodes
             }
         }
 
+        private static int? IndexInList<T>(Element search, IList<T> elements) where T : Element {
+
+            if (search == null)
+            {
+                throw new ArgumentNullException("search");
+            }
+
+            if (elements == null)
+            {
+                throw new ArgumentNullException("elements");
+            }
+
+            for (int i = 0; i < elements.Count; i++)
+            {
+                T element = elements[i];
+                if (element.Equals(search))
+                {
+                    return i;
+                }
+            }
+            return null;
+        }
+
         // DOM type methods
 
         /// <summary>
@@ -665,6 +688,37 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
+        /// Find elements that have attributes whose values match the supplied regular expression.
+        /// </summary>
+        /// <param name="key">name of the attribute</param>
+        /// <param name="pattern">regular expression to match against attribute values</param>
+        /// <returns>elements that have attributes matching this regular expression</returns>
+        public Elements GetElementsByAttributeValueMatching(string key, Regex pattern)
+        {
+            return Collector.Collect(new Evaluator.AttributeWithValueMatching(key, pattern), this);
+        }
+
+        /// <summary>
+        /// Find elements that have attributes whose values match the supplied regular expression.
+        /// </summary>
+        /// <param name="key">name of the attribute</param>
+        /// <param name="regex">regular expression to match agaisnt attribute values.</param>
+        /// <returns>elements that have attributes matching this regular expression</returns>
+        public Elements GetElementsByAttributeValueMatching(string key, string regex)
+        {
+            Regex re;
+            try
+            {
+                re = new Regex(regex);
+            }
+            catch (ArgumentException e)
+            {
+                throw new ArgumentException("Pattern syntax error: " + regex, e);
+            }
+            return GetElementsByAttributeValueMatching(key, re);
+        }
+
+        /// <summary>
         /// Find elements whose sibling index is less than the supplied index.
         /// </summary>
         /// <param name="index">0-based index</param>
@@ -703,6 +757,35 @@ namespace NSoup.Nodes
         public Elements GetElementsContainingText(string searchText)
         {
             return Collector.Collect(new Evaluator.ContainsText(searchText), this);
+        }
+
+        /// <summary>
+        /// Find elements whose text matches the supplied regular expression.
+        /// </summary>
+        /// <param name="pattern">regular expression to match text against</param>
+        /// <returns>elements matching the supplied regular expression.</returns>
+        public Elements GetElementsMatchingText(Regex regex)
+        {
+            return Collector.Collect(new Evaluator.MatchesRegex(regex), this);
+        }
+
+        /// <summary>
+        /// Find elements whose text matches the supplied regular expression.
+        /// </summary>
+        /// <param name="regex">regular expression to match text against.</param>
+        /// <returns>elements matching the supplied regular expression.</returns>
+        public Elements GetElementsMatchingText(string regex)
+        {
+            Regex re;
+            try
+            {
+                re = new Regex(regex);
+            }
+            catch (ArgumentException e)
+            {
+                throw new ArgumentException("Pattern syntax error: " + regex, e);
+            }
+            return GetElementsMatchingText(re);
         }
 
         /// <summary>
@@ -1002,14 +1085,16 @@ namespace NSoup.Nodes
             return this;
         }
 
-        public override void CreateOuterHtml(StringBuilder accum)
+        public override void OuterHtmlHead(StringBuilder accum, int depth)
         {
             if (IsBlock || (Parent != null && Parent.Tag.CanContainBlock && SiblingIndex == 0))
-                Indent(accum);
-            accum
-                    .Append("<")
-                    .Append(TagName)
-                    .Append(Attributes.Html);
+            {
+                Indent(accum, depth);
+            }
+            
+            accum.Append("<")
+                 .Append(TagName)
+                 .Append(Attributes.Html());
 
             if (ChildNodes.Count <= 0 && _tag.IsEmpty)
             {
@@ -1018,10 +1103,16 @@ namespace NSoup.Nodes
             else
             {
                 accum.Append(">");
-                Html(accum);
+            }
+        }
+
+        public override void OuterHtmlTail(StringBuilder accum, int depth)
+        {
+            if (_tag.IsEmpty)
+            {
                 if (_tag.CanContainBlock)
                 {
-                    Indent(accum);
+                    Indent(accum, depth);
                 }
                 accum.Append("</").Append(TagName).Append(">");
             }
@@ -1043,7 +1134,7 @@ namespace NSoup.Nodes
         private void Html(StringBuilder accum)
         {
             foreach (Node node in ChildNodes)
-                node.CreateOuterHtml(accum);
+                node.OuterHtml(accum);
         }
 
         /// <summary>

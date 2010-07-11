@@ -29,6 +29,7 @@ namespace NSoup.Select
     /// <tr><td><code>E[attr^=val]</code></td><td>an Element with the attribute named "attr" and value starting with "val"</td><td><code>a[href^=http:]</code></code></td></tr>
     /// <tr><td><code>E[attr$=val]</code></td><td>an Element with the attribute named "attr" and value ending with "val"</td><td><code>img[src$=.png]</code></td></tr>
     /// <tr><td><code>E[attr*=val]</code></td><td>an Element with the attribute named "attr" and value containing "val"</td><td><code>a[href*=/search/]</code></td></tr>
+    /// <tr><td><code>E[attr~=<em>regex</em>]</code></td><td>an Element with the attribute named "attr" and value matching the regular expression</td><td><code>img[src~=(?i)\\.(png|jpe?g)]</code></td></tr>
     /// <tr><td></td><td>The above may be combined in any order</td><td><code>div.header[title]</code></td></tr>
     /// <tr><td><td colspan="3"><h3>Combinators</h3></td></tr>
     /// <tr><td><code>E F</code></td><td>an F element descended from an E element</td><td><code>div a</code>, <code>.logo h1</code></td></tr>
@@ -39,9 +40,10 @@ namespace NSoup.Select
     /// <tr><td><td colspan="3"><h3>Pseudo selectors</h3></td></tr>
     /// <tr><td><code>E:lt(<em>n</em>)</code></td><td>an Element whose sibling index is less than <em>n</em></td><td><code>td:lt(3)</code> finds the first 2 cells of each row</td></tr>
     /// <tr><td><code>E:gt(<em>n</em>)</code></td><td>an Element whose sibling index is greater than <em>n</em></td><td><code>td:gt(1)</code> finds cells after skipping the first two</td></tr>
-    /// <tr><td><code>E:eq(<em>n</em>)</code></td><td>an Element whose sibling index is equal to <em>n</em></td><td><code>td:eq(1)</code> finds the first cell of each row</td></tr>
+    /// <tr><td><code>E:eq(<em>n</em>)</code></td><td>an Element whose sibling index is equal to <em>n</em></td><td><code>td:eq(0)</code> finds the first cell of each row</td></tr>
     /// <tr><td><code>E:has(<em>selector</em>)</code></td><td>an Element that contains at least one element matching the <em>selector</em></td><td><code>div:has(p)</code> finds divs that contain p elements </td></tr>
     /// <tr><td><code>E:contains(<em>text</em>)</code></td><td>an Element that contains the specified text. The search is case insensitive. The text may appear in the found Element, or any of its descendants.</td><td><code>p:contains(jsoup)</code> finds p elements containing the text "jsoup".</td></tr>
+    /// <tr><td><code>E:matches(<em>regex</em>)</code></td><td>an Element whose text matches the specified regular expression. The text may appear in the found Element, or any of its descendants.</td><td><code>td:matches(\\d+)</code> finds table cells containing digits. <code>div:matches((?i)login)</code> finds divs containing the text, case insensitively.</td></tr>
     /// </table>
     /// </remarks>
     /// <!--
@@ -226,17 +228,21 @@ namespace NSoup.Select
             {
                 return IndexEquals();
             }
-            else if (_tq.MatchChomp(":has("))
+            else if (_tq.Matches(":has("))
             {
                 return Has();
             }
-            else if (_tq.MatchChomp(":contains("))
+            else if (_tq.Matches(":contains("))
             {
                 return Contains();
             }
+            else if (_tq.Matches(":matches("))
+            {
+                return Matches();
+            }
             else
             { // unhandled
-                throw new SelectorParseException("Could not parse query " + _query);
+                throw new SelectorParseException("Could not parse query '{0}': unexpected token at '{1}'", _query, _tq.Remainder());
             }
         }
 
@@ -297,7 +303,7 @@ namespace NSoup.Select
 
         private Elements ByAttribute()
         {
-            string key = _tq.ConsumeToAny("=", "!=", "^=", "$=", "*=", "]"); // eq, not, start, end, contain, (no val)
+            string key = _tq.ConsumeToAny("=", "!=", "^=", "$=", "*=", "~=", "]"); // eq, not, start, end, contain, match, (no val)
 
             if (string.IsNullOrEmpty(key))
             {
@@ -330,9 +336,13 @@ namespace NSoup.Select
                 {
                     return _root.GetElementsByAttributeValueContaining(key, _tq.ChompTo("]"));
                 }
+                else if (_tq.MatchChomp("~="))
+                {
+                    return _root.GetElementsByAttributeValueMatching(key, _tq.ChompTo("]"));
+                }
                 else
                 {
-                    throw new SelectorParseException("Could not parse attribute query " + _query);
+                    throw new SelectorParseException("Could not parse attribute query '{0}': unexpected token at '{1}'", _query, _tq.Remainder());
                 }
             }
         }
@@ -374,7 +384,8 @@ namespace NSoup.Select
         // pseudo selector :has(el)
         private Elements Has()
         {
-            String subQuery = _tq.ChompTo(")");
+            _tq.Consume(":has");
+            String subQuery = _tq.ChompBalanced('(', ')');
 
             if (string.IsNullOrEmpty(subQuery))
             {
@@ -387,7 +398,8 @@ namespace NSoup.Select
         // pseudo selector :contains(text)
         private Elements Contains()
         {
-            String searchText = _tq.ChompTo(")");
+            _tq.Consume(":contains");
+            String searchText = TokenQueue.Unescape(_tq.ChompBalanced('(', ')'));
 
             if (string.IsNullOrEmpty(searchText))
             {
@@ -395,6 +407,19 @@ namespace NSoup.Select
             }
 
             return _root.GetElementsContainingText(searchText);
+        }
+
+        // :matches(regex)
+        private Elements Matches()
+        {
+            _tq.Consume(":matches");
+            string regex = _tq.ChompBalanced('(', ')'); // don't unescape, as regex bits will be escaped
+            if (string.IsNullOrEmpty(regex))
+            {
+                throw new Exception(":matches(regex) query must not be empty");
+            }
+
+            return _root.GetElementsMatchingText(regex);
         }
 
         // direct child descendants
@@ -549,8 +574,8 @@ namespace NSoup.Select
 
         public class SelectorParseException : Exception
         {
-            public SelectorParseException(string s)
-                : base(s)
+            public SelectorParseException(string s, params object[] paramaters)
+                : base(string.Format(s, paramaters))
             {
             }
         }
