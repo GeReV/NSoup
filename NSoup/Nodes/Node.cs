@@ -220,7 +220,7 @@ namespace NSoup.Nodes
         /// </summary>
         public IList<Node> ChildNodes
         {
-            get { return _childNodes.AsReadOnly(); }
+            get { return _childNodes; }
         }
 
         public Node[] ChildNodesAsArray()

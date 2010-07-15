@@ -1108,7 +1108,7 @@ namespace NSoup.Nodes
 
         public override void OuterHtmlTail(StringBuilder accum, int depth)
         {
-            if (_tag.IsEmpty)
+            if (!_tag.IsEmpty)
             {
                 if (_tag.CanContainBlock)
                 {
@@ -1134,7 +1134,9 @@ namespace NSoup.Nodes
         private void Html(StringBuilder accum)
         {
             foreach (Node node in ChildNodes)
+            {
                 node.OuterHtml(accum);
+            }
         }
 
         /// <summary>

@@ -81,11 +81,11 @@ namespace NSoup
         /// <returns>sane HTML</returns>
         /// <remarks>if the file could not be found, or read, or if the charsetName is invalid.</remarks>
         /// <seealso cref="parse(string, string, string)"/>
-        public static Document parse(string filename, string charsetName)
+        /*public static Document Parse(string filename, string charsetName)
         {
             string html = DataUtil.Load(filename, charsetName);
             return Parse(html, Path.GetDirectoryName(filename));
-        }
+        }*/
 
         /// <summary>
         /// Parse a fragment of HTML, with the assumption that it forms the {@code body} of the HTML.
