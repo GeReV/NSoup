@@ -22,6 +22,8 @@ namespace NSoup.Parse
         {
             _defaultAncestor = new Tag("BODY");
             _tags.Add(_defaultAncestor._tagName, _defaultAncestor);
+
+            Initialize();
         }
 
         private string _tagName;
@@ -391,10 +393,16 @@ namespace NSoup.Parse
 
         private static Tag Register(Tag tag)
         {
-            tag.SetAncestor(_defaultAncestor._tagName);
             lock (_tags)
             {
-                _tags.Add(tag._tagName, tag);
+                if (_tags.ContainsKey(tag._tagName))
+                {
+                    _tags[tag._tagName].SetAncestor(_defaultAncestor._tagName);
+                }
+                else
+                {
+                    _tags.Add(tag._tagName, tag);
+                }
             }
             return tag;
         }

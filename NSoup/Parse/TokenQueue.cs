@@ -196,7 +196,7 @@ namespace NSoup.Parse
             int offset = _queue.IndexOf(seq, _pos);
             if (offset != -1)
             {
-                string consumed = _queue.Substring(_pos, offset);
+                string consumed = _queue.Substring(_pos, offset - _pos);
                 _pos += consumed.Length;
                 return consumed;
             }
@@ -235,7 +235,7 @@ namespace NSoup.Parse
                 }
             }
 
-            string data = _queue.Substring(start, _pos);
+            string data = _queue.Substring(start, _pos - start);
             return data;
         }
 
@@ -254,7 +254,7 @@ namespace NSoup.Parse
                 _pos++;
             }
 
-            string data = _queue.Substring(start, _pos);
+            string data = _queue.Substring(start, _pos - start);
             return data;
         }
 
@@ -372,7 +372,7 @@ namespace NSoup.Parse
             {
                 _pos++;
             }
-            return _queue.Substring(start, _pos);
+            return _queue.Substring(start, _pos - start);
         }
 
         /// <summary>
@@ -404,7 +404,7 @@ namespace NSoup.Parse
                 _pos++;
             }
 
-            return _queue.Substring(start, _pos);
+            return _queue.Substring(start, _pos - start);
         }
 
         /// <summary>
