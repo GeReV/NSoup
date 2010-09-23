@@ -84,6 +84,29 @@ namespace NSoup.Nodes
             }
         }
 
+        public sealed class AttributeStarting : Evaluator
+        {
+            private string keyPrefix;
+
+            public AttributeStarting(string keyPrefix)
+            {
+                this.keyPrefix = keyPrefix;
+            }
+
+            public override bool Matches(Element element)
+            {
+                IList<NSoup.Nodes.Attribute> values = element.Attributes.AsList;
+                foreach (NSoup.Nodes.Attribute attribute in values)
+                {
+                    if (attribute.Key.StartsWith(keyPrefix))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+
         public sealed class AttributeWithValue : AttributeKeyPair
         {
             public AttributeWithValue(string key, string value)
@@ -254,7 +277,7 @@ namespace NSoup.Nodes
 
             public override bool Matches(Element element)
             {
-                return (element.Text.ToLowerInvariant().Contains(searchText));
+                return (element.Text().ToLowerInvariant().Contains(searchText));
             }
         }
 
@@ -270,7 +293,7 @@ namespace NSoup.Nodes
             // Cannot name function same as class name.
             public override bool Matches(Element element)
             {
-                return regex.IsMatch(element.Text);
+                return regex.IsMatch(element.Text());
             }
         }
     }

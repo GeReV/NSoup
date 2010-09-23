@@ -12,6 +12,8 @@
     <AssemblyName>NSoup</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>NSoup.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -47,12 +49,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DataUtil.cs" />
+    <Compile Include="LinkedHashSet.cs" />
     <Compile Include="Nodes\Attribute.cs" />
     <Compile Include="Nodes\Attributes.cs" />
     <Compile Include="Nodes\Comment.cs" />
     <Compile Include="Nodes\DataNode.cs" />
     <Compile Include="Nodes\Document.cs" />
     <Compile Include="Nodes\Element.cs" />
+    <Compile Include="Nodes\Entities.cs" />
     <Compile Include="Nodes\Evaluator.cs" />
     <Compile Include="Nodes\Node.cs" />
     <Compile Include="Nodes\TextNode.cs" />
@@ -69,6 +73,9 @@
     <Compile Include="Select\NodeTraversor.cs" />
     <Compile Include="Select\NodeVisitor.cs" />
     <Compile Include="Select\Selector.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="NSoup.snk" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

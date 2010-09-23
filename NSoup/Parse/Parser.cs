@@ -155,7 +155,7 @@ namespace NSoup.Parse
         private void ParseEndTag()
         {
             _tq.Consume("</");
-            string tagName = _tq.ConsumeWord();
+            string tagName = _tq.ConsumeTagName();
             _tq.ChompTo(">");
 
             if (!string.IsNullOrEmpty(tagName))
@@ -168,7 +168,7 @@ namespace NSoup.Parse
         private void ParseStartTag()
         {
             _tq.Consume("<");
-            string tagName = _tq.ConsumeWord();
+            string tagName = _tq.ConsumeTagName();
 
             if (string.IsNullOrEmpty(tagName))
             { // doesn't look like a start tag after all; put < back on stack and handle as text
@@ -177,6 +177,7 @@ namespace NSoup.Parse
                 return;
             }
 
+            _tq.ConsumeWhitespace();
             Attributes attributes = new Attributes();
             while (!_tq.MatchesAny("<", "/>", ">") && !_tq.IsEmpty)
             {
@@ -194,6 +195,10 @@ namespace NSoup.Parse
             if (_tq.MatchChomp("/>"))
             { // close empty element or tag
                 isEmptyElement = true;
+                if (!tag.IsKnownTag) // if unknown and a self closed, allow it to be self closed on output. this doesn't force all instances to be empty
+                {
+                    tag.SetSelfClosing();
+                }
             }
             else
             {

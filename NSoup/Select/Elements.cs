@@ -213,7 +213,7 @@ namespace NSoup.Select
                     {
                         sb.Append(" ");
                     }
-                    sb.Append(element.Text);
+                    sb.Append(element.Text());
                 }
                 return sb.ToString();
             }
@@ -239,43 +239,18 @@ namespace NSoup.Select
         /// </summary>
         /// <seealso cref="Text" />
         /// <seealso cref="OuterHtml"/>
-        public string Html
+        public string Html()
         {
-            get
+            StringBuilder sb = new StringBuilder();
+            foreach (Element element in _contents)
             {
-                StringBuilder sb = new StringBuilder();
-                foreach (Element element in _contents)
+                if (sb.Length != 0)
                 {
-                    if (sb.Length != 0)
-                    {
-                        sb.Append("\n");
-                    }
-                    sb.Append(element.Html());
+                    sb.Append("\n");
                 }
-                return sb.ToString();
+                sb.Append(element.Html());
             }
-        }
-
-        /// <summary>
-        /// Get the combined inner HTML of all matched elements.
-        /// </summary>
-        /// <seealso cref="Text"/>
-        /// <seealso cref="Html"/>
-        public string OuterHtml
-        {
-            get
-            {
-                StringBuilder sb = new StringBuilder();
-                foreach (Element element in _contents)
-                {
-                    if (sb.Length != 0)
-                    {
-                        sb.Append("\n");
-                    }
-                    sb.Append(element.OuterHtml());
-                }
-                return sb.ToString();
-            }
+            return sb.ToString();
         }
 
         /// <summary>
@@ -284,13 +259,32 @@ namespace NSoup.Select
         /// <param name="html">HTML to parse and set into each matched element.</param>
         /// <returns>this, for chaining</returns>
         /// <seealso cref="Element.Html(string)"/>
-        public Elements SetHtml(string html)
+        public Elements Html(string html)
         {
             foreach (Element element in _contents)
             {
                 element.Html(html);
             }
             return this;
+        }
+
+        /// <summary>
+        /// Get the combined inner HTML of all matched elements.
+        /// </summary>
+        /// <seealso cref="Text"/>
+        /// <seealso cref="Html"/>
+        public string OuterHtml()
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (Element element in _contents)
+            {
+                if (sb.Length != 0)
+                {
+                    sb.Append("\n");
+                }
+                sb.Append(element.OuterHtml());
+            }
+            return sb.ToString();
         }
 
         /// <summary>
@@ -543,7 +537,7 @@ namespace NSoup.Select
 
         public void CopyTo(Element[] array, int arrayIndex)
         {
-            throw new NotImplementedException();
+            _contents.CopyTo(array, arrayIndex);
         }
 
         public bool IsReadOnly

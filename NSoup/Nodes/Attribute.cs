@@ -13,7 +13,7 @@ namespace NSoup.Nodes
     /// <!-- 
     /// Original Author: Jonathan Hedley, jonathan@hedley.net
     /// Ported to .NET by: Amir Grozki
-    /// -->
+    /// -->   
     public class Attribute : IEquatable<Attribute>
     {
         private string _key;
@@ -64,7 +64,7 @@ namespace NSoup.Nodes
             get { return _value; }
             set
             {
-                if (string.IsNullOrEmpty(value))
+                if (value == null)
                 {
                     throw new ArgumentNullException();
                 }
@@ -73,18 +73,46 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
+        /// Get the attribute value.
+        /// </summary>
+        /// <returns>the attribute value</returns>
+        public string GetValue()
+        {
+            return Value;
+        }
+
+        /// <summary>
+        /// Set the attribute value.
+        /// </summary>
+        /// <param name="value">the new attribute value; must not be null</param>
+        /// <returns>old value</returns>
+        public string SetValue(string value)
+        {
+            if (value == null)
+            {
+                throw new ArgumentNullException("value");
+            }
+
+            string old = this.Value;
+
+            this.Value = value;
+
+            return old;
+        }
+
+        /// <summary>
         /// Get the HTML representation of this attribute; e.g. <code>href="index.html"</code>
         /// </summary>
         public string Html()
         {
-            return string.Format("{0}=\"{1}\"", _key, HttpUtility.HtmlEncode(_value));
+            return string.Format("{0}=\"{1}\"", _key, Entities.Escape(_value, (new Document(string.Empty).Settings)));
         }
 
-        public void Html(StringBuilder accum)
+        public void Html(StringBuilder accum, Document.OutputSettings output)
         {
             accum.Append(Key)
                 .Append("=\"")
-                .Append(HttpUtility.HtmlEncode(Value))
+                .Append(Entities.Escape(Value, output))
                 .Append("\"");
         }
 
@@ -105,8 +133,13 @@ namespace NSoup.Nodes
         /// <returns>attribute</returns>
         public static Attribute CreateFromEncoded(string unencodedKey, string encodedValue)
         {
-            string value = HttpUtility.HtmlEncode(encodedValue);
+            string value = HttpUtility.HtmlDecode(encodedValue);
             return new Attribute(unencodedKey, value);
+        }
+
+        public bool IsDataAttribute
+        {
+            get { return Key.StartsWith(Attributes.DataPrefix) && Key.Length > Attributes.DataPrefix.Length; }
         }
 
         public override int GetHashCode()
