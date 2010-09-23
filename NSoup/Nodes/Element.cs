@@ -110,6 +110,24 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
+        /// Gets this element's HTML5 custom data attributes. Each attribute in the element that has a key 
+        /// starting with "data-" is included the dataset. 
+        /// <p> 
+        /// E.g., the element <code>&lt;div data-package="jsoup" data-language="Java" class="group"&gt;...</code> has the dataset 
+        /// <code>package=jsoup, language=java</code>. 
+        /// <p> 
+        /// This map is a filtered view of the element's attribute map. Changes to one map (add, remove, update) are reflected 
+        /// in the other map. 
+        /// <p> 
+        /// You can find elements that have data attributes using the <code>[^data-]</code> attribute key prefix selector. 
+        /// </summary>
+        /// <returns>a dictionary of <code>key=value</code> custom data attributes.</returns>
+        public IDictionary<string, string> Dataset
+        {
+            get { return Attributes.GetDataset(); }
+        }
+
+        /// <summary>
         /// Gets the parent element.
         /// </summary>
         public Element Parent
@@ -619,7 +637,7 @@ namespace NSoup.Nodes
         /// <summary>
         /// Find elements that have a named attribute set. Case insensitive.
         /// </summary>
-        /// <param name="key">name of the attribute</param>
+        /// <param name="key">name of the attribute, e.g. <code>href</code></param>
         /// <returns>elements that have this attribute, empty if none</returns>
         public Elements GetElementsByAttribute(string key)
         {
@@ -630,6 +648,24 @@ namespace NSoup.Nodes
             }
 
             return Collector.Collect(new Evaluator.Attribute(key), this);
+        }
+
+        /// <summary>
+        /// Find elements that have an attribute name starting with the supplied prefix. Use <code>data-</code> to find elements 
+        /// that have HTML5 datasets. 
+        /// </summary>
+        /// <param name="keyPrefix">name prefix of the attribute e.g. <code>data-</code></param>
+        /// <returns>elements that have attribute names that start with with the prefix, empty if none.</returns>
+        public Elements GetElementsByAttributeStarting(string keyPrefix)
+        {
+            if (string.IsNullOrEmpty(keyPrefix))
+            {
+                throw new ArgumentException("keyPrefix");
+            }
+
+            keyPrefix = keyPrefix.Trim().ToLowerInvariant();
+
+            return Collector.Collect(new Evaluator.AttributeStarting(keyPrefix), this);
         }
 
         /// <summary>
@@ -800,18 +836,30 @@ namespace NSoup.Nodes
         /// <summary>
         /// Gets the combined text of this element and all its children.
         /// </summary>
-        public string Text
+        public string Text()
         {
-            get
+            StringBuilder sb = new StringBuilder();
+            GetText(sb);
+            return sb.ToString().Trim();
+        }
+
+        /// <summary>
+        /// Set the text of this element. Any existing contents (text or elements) will be cleared
+        /// </summary>
+        /// <param name="text">unencoded text</param>
+        /// <returns>this element</returns>
+        public virtual Element Text(string text)
+        {
+            if (text == null)
             {
-                StringBuilder sb = new StringBuilder();
-                GetText(sb);
-                return sb.ToString().Trim();
+                throw new ArgumentNullException("text");
             }
-            set
-            {
-                SetText(value);
-            }
+
+            Empty();
+            TextNode textNode = new TextNode(text, BaseUri);
+            AppendChild(textNode);
+
+            return this;
         }
 
         /// <summary> 
@@ -855,25 +903,6 @@ namespace NSoup.Nodes
             {
                 return _tag.PreserveWhitespace || Parent != null && Parent.PreserveWhitespace;
             }
-        }
-
-        /// <summary>
-        /// Set the text of this element. Any existing contents (text or elements) will be cleared
-        /// </summary>
-        /// <param name="text">unencoded text</param>
-        /// <returns>this element</returns>
-        public virtual Element SetText(string text)
-        {
-            if (text == null)
-            {
-                throw new ArgumentNullException("text");
-            }
-
-            Empty();
-            TextNode textNode = new TextNode(text, BaseUri);
-            AppendChild(textNode);
-
-            return this;
         }
 
         /// <summary>
@@ -1055,11 +1084,11 @@ namespace NSoup.Nodes
         /// Get the value of a form element (input, textarea, etc).
         /// </summary>
         /// <returns>the value of the form element, or empty string if not set.</returns>
-        public String Val()
+        public string Val()
         {
             if (TagName.Equals("textarea", StringComparison.InvariantCultureIgnoreCase))
             {
-                return Text;
+                return Text();
             }
             else
             {
@@ -1072,11 +1101,11 @@ namespace NSoup.Nodes
         /// </summary>
         /// <param name="value">value to set</param>
         /// <returns>this element (for chaining)</returns>
-        public Element Val(String value)
+        public Element Val(string value)
         {
             if (TagName.Equals("textarea", StringComparison.InvariantCultureIgnoreCase))
             {
-                Text = value;
+                Text(value);
             }
             else
             {
@@ -1085,7 +1114,7 @@ namespace NSoup.Nodes
             return this;
         }
 
-        public override void OuterHtmlHead(StringBuilder accum, int depth)
+        public override void OuterHtmlHead(StringBuilder accum, int depth, Document.OutputSettings output)
         {
             if (IsBlock || (Parent != null && Parent.Tag.CanContainBlock && SiblingIndex == 0))
             {
@@ -1093,10 +1122,10 @@ namespace NSoup.Nodes
             }
             
             accum.Append("<")
-                 .Append(TagName)
-                 .Append(Attributes.Html());
+                 .Append(TagName);
+            Attributes.Html(accum, output);
 
-            if (ChildNodes.Count <= 0 && _tag.IsEmpty)
+            if (ChildNodes.Count <= 0 && _tag.IsSelfClosing)
             {
                 accum.Append(" />");
             }
@@ -1106,11 +1135,11 @@ namespace NSoup.Nodes
             }
         }
 
-        public override void OuterHtmlTail(StringBuilder accum, int depth)
+        public override void OuterHtmlTail(StringBuilder accum, int depth, Document.OutputSettings output)
         {
-            if (!_tag.IsEmpty)
+            if (!(ChildNodes.Count == 0 && Tag.IsSelfClosing))
             {
-                if (_tag.CanContainBlock)
+                if (ChildNodes.Count != 0 && Tag.CanContainBlock)
                 {
                     Indent(accum, depth);
                 }

@@ -187,6 +187,25 @@ namespace NSoup.Nodes
                     try
                     {
                         baseUrl = new Uri(_baseUri);
+
+                        // System.Uri will parse invalid schemes (for example, wtf://). An extra validation is added.
+                        string[] schemes = new [] { 
+                            Uri.UriSchemeFile, 
+                            Uri.UriSchemeFtp, 
+                            Uri.UriSchemeGopher, 
+                            Uri.UriSchemeHttp, 
+                            Uri.UriSchemeHttps, 
+                            Uri.UriSchemeMailto, 
+                            Uri.UriSchemeNetPipe, 
+                            Uri.UriSchemeNetTcp, 
+                            Uri.UriSchemeNews, 
+                            Uri.UriSchemeNntp
+                        };
+
+                        if (!schemes.Contains(baseUrl.Scheme)) 
+                        {
+                            throw new UriFormatException("Invalid URI scheme.");
+                        }
                     }
                     catch (UriFormatException)
                     {
@@ -195,7 +214,7 @@ namespace NSoup.Nodes
                         return abs.ToString();
                     }
                     Uri abs2 = new Uri(baseUrl, relUrl);
-                    return abs2.ToString();
+                    return abs2.ToString(); // Using the original string promises no tempering from the internals.
                 }
                 catch (UriFormatException)
                 {
@@ -242,6 +261,29 @@ namespace NSoup.Nodes
                     this._parentNode.RemoveChild(this);
                 }
                 this._parentNode = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets the Document associated with this Node. 
+        /// </summary>
+        /// <returns>the Document associated with this Node, or null if there is no such Document.</returns>
+        public Document OwnerDocument
+        {
+            get
+            {
+                if (this is Document)
+                {
+                    return (Document)this;
+                }
+                else if (ParentNode == null)
+                {
+                    return null;
+                }
+                else
+                {
+                    return ParentNode.OwnerDocument;
+                }
             }
         }
 
@@ -344,21 +386,6 @@ namespace NSoup.Nodes
             }
         }
 
-        protected int NodeDepth
-        {
-            get
-            {
-                if (_parentNode == null)
-                {
-                    return 0;
-                }
-                else
-                {
-                    return _parentNode.NodeDepth + 1;
-                }
-            }
-        }
-
         /// <summary>
         /// Retrieves this node's sibling nodes. Effectively, <see cref="ChildNodes"/>, node.Parent.ChildNodes.
         /// </summary>
@@ -436,16 +463,16 @@ namespace NSoup.Nodes
 
         public void OuterHtml(StringBuilder accum)
         {
-            new NodeTraversor(new OuterHtmlVisitor(accum)).Traverse(this);
+            new NodeTraversor(new OuterHtmlVisitor(accum, OwnerDocument.Settings)).Traverse(this);
         }
 
         /// <summary>
         /// Gets the outer HTML of this node.
         /// </summary>
         /// <param name="accum">accumulator to place HTML into</param>
-        public abstract void OuterHtmlHead(StringBuilder accum, int depth);
+        public abstract void OuterHtmlHead(StringBuilder accum, int depth, Document.OutputSettings output);
 
-        public abstract void OuterHtmlTail(StringBuilder accum, int depth);
+        public abstract void OuterHtmlTail(StringBuilder accum, int depth, Document.OutputSettings output);
 
         public override string ToString()
         {
@@ -473,21 +500,23 @@ namespace NSoup.Nodes
 
         private class OuterHtmlVisitor : NodeVisitor
         {
-            private StringBuilder accum;
+            private StringBuilder _accum;
+            private Document.OutputSettings _output;
 
-            public OuterHtmlVisitor(StringBuilder accum)
+            public OuterHtmlVisitor(StringBuilder accum, Document.OutputSettings output)
             {
-                this.accum = accum;
+                this._accum = accum;
+                this._output = output;
             }
 
             public void Head(Node node, int depth)
             {
-                node.OuterHtmlHead(accum, depth);
+                node.OuterHtmlHead(_accum, depth, _output);
             }
 
             public void Tail(Node node, int depth)
             {
-                node.OuterHtmlTail(accum, depth);
+                node.OuterHtmlTail(_accum, depth, _output);
             }
         }
     }

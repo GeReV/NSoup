@@ -71,12 +71,12 @@ namespace NSoup.Nodes
         /// </summary>
         public bool IsBlank
         {
-            get { return string.IsNullOrEmpty(NormaliseWhitespace(GetWholeText())); }
+            get { return string.IsNullOrEmpty(NormaliseWhitespace(GetWholeText()).Trim()); } // Should actually be IsNullOrWhitespace.
         }
 
-        public override void OuterHtmlHead(StringBuilder accum, int depth)
+        public override void OuterHtmlHead(StringBuilder accum, int depth, Document.OutputSettings output)
         {
-            string html = HttpUtility.HtmlEncode(GetWholeText());
+            string html = Entities.Escape(GetWholeText(), output);
             if (ParentNode is Element && !((Element)ParentNode).PreserveWhitespace)
             {
                 html = NormaliseWhitespace(html);
@@ -89,7 +89,7 @@ namespace NSoup.Nodes
             accum.Append(html);
         }
 
-        public override void OuterHtmlTail(StringBuilder accum, int depth) { }
+        public override void OuterHtmlTail(StringBuilder accum, int depth, Document.OutputSettings output) { }
 
         public override string ToString()
         {
@@ -104,7 +104,7 @@ namespace NSoup.Nodes
         /// <returns>TextNode containing unencoded data (e.g. &lt;)</returns>
         public static TextNode CreateFromEncoded(string encodedText, string baseUri)
         {
-            string text = HttpUtility.HtmlDecode(encodedText);
+            string text = Entities.Unescape(encodedText);
             return new TextNode(text, baseUri);
         }
 

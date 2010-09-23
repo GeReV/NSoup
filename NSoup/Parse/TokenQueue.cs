@@ -154,6 +154,17 @@ namespace NSoup.Parse
         }
 
         /// <summary>
+        /// Drops the next character off the queue.
+        /// </summary>
+        public void Advance()
+        {
+            if (!IsEmpty)
+            {
+                _pos++;
+            }
+        }
+
+        /// <summary>
         /// Consume one character off queue.
         /// </summary>
         /// <returns>first character on queue.</returns>
@@ -372,6 +383,36 @@ namespace NSoup.Parse
             {
                 _pos++;
             }
+            return _queue.Substring(start, _pos - start);
+        }
+
+        /// <summary>
+        /// Consume an tag name off the queue (word or :, _, -)
+        /// </summary>
+        /// <returns>tag name</returns>
+        public string ConsumeTagName()
+        {
+            int start = _pos;
+            while (!IsEmpty && (MatchesWord() || MatchesAny(":", "_", "-")))
+            {
+                _pos++;
+            }
+
+            return _queue.Substring(start, _pos - start);
+        }
+
+        /// <summary>
+        /// Consume a CSS element selector (tag name, but | instead of : for namespaces, to not conflict with :pseudo selects).
+        /// </summary>
+        /// <returns>tag name</returns>
+        public string ConsumeElementSelector()
+        {
+            int start = _pos;
+            while (!IsEmpty && (MatchesWord() || MatchesAny("|", "_", "-")))
+            {
+                _pos++;
+            }
+
             return _queue.Substring(start, _pos - start);
         }
 

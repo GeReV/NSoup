@@ -15,6 +15,7 @@ namespace NSoup.Nodes
     /// -->
     public class Document : Element
     {
+        private OutputSettings outputSettings = new OutputSettings();
 
         /// <summary>
         /// Create a new, empty Document.
@@ -74,7 +75,7 @@ namespace NSoup.Nodes
             get
             {
                 Element titleEl = GetElementsByTag("title").First;
-                return titleEl != null ? titleEl.Text.Trim() : string.Empty;
+                return titleEl != null ? titleEl.Text().Trim() : string.Empty;
             }
             set
             {
@@ -85,11 +86,11 @@ namespace NSoup.Nodes
                 Element titleEl = GetElementsByTag("title").First;
                 if (titleEl == null)
                 { // add to head
-                    Head.AppendElement("title").SetText(value);
+                    Head.AppendElement("title").Text(value);
                 }
                 else
                 {
-                    titleEl.SetText(value);
+                    titleEl.Text(value);
                 }
             }
         }
@@ -120,7 +121,7 @@ namespace NSoup.Nodes
 
             // pull text nodes out of root, html, and head els, and push into body. non-text nodes are already taken care
             // of. do in inverse order to maintain text order.
-            Normalise(Head); 
+            Normalise(Head);
             Normalise(Select("html").First);
             Normalise(this);
 
@@ -147,14 +148,14 @@ namespace NSoup.Nodes
             {
                 Node node = toMove[i];
                 element.RemoveChild(node);
-                Body.AppendChild(new TextNode(" ", string.Empty));
-                Body.AppendChild(node);
+                Body.PrependChild(new TextNode(" ", string.Empty));
+                Body.PrependChild(node);
             }
         }
 
         public override string OuterHtml()
         {
-            return base.OuterHtml();
+            return base.Html();
         }
 
         /// <summary>
@@ -162,9 +163,9 @@ namespace NSoup.Nodes
         /// </summary>
         /// <param name="text">unencoded text</param>
         /// <returns>this document</returns>
-        public override Element SetText(string text)
+        public override Element Text(string text)
         {
-            Body.SetText(text); // overridden to not nuke doc structure
+            Body.Text(text); // overridden to not nuke doc structure
             return this;
         }
 
@@ -177,6 +178,99 @@ namespace NSoup.Nodes
             {
                 return "#document";
             }
+        }
+
+        /**
+     * A Document's output settings control the form of the text() and html() methods.
+     */
+        public class OutputSettings
+        {
+            private Entities.EscapeMode _escapeMode = Entities.EscapeMode.Base;
+            private Encoding _encoding = Encoding.UTF8;
+            private Encoder _encoder = null;
+
+            public OutputSettings()
+            {
+                _encoder = _encoding.GetEncoder();
+            }
+
+            /// <summary>
+            /// Gets or sets the document's current HTML escape mode: <code>base</code>, which provides a limited set of named HTML 
+            /// entities and escapes other characters as numbered entities for maximum compatibility; or <code>extended</code>, 
+            /// which uses the complete set of HTML named entities. 
+            /// <p> 
+            /// The default escape mode is <code>base</code>. 
+            /// </summary>
+            public Entities.EscapeMode EscapeMode
+            {
+                get { return _escapeMode; }
+                set { this._escapeMode = value; }
+            }
+
+            /// <summary>
+            /// Set the document's escape mode
+            /// </summary>
+            /// <param name="escapeMode">the new escape mode to use</param>
+            /// <returns>the document's output settings, for chaining</returns>
+            public OutputSettings SetEscapeMode(Entities.EscapeMode escapeMode)
+            {
+                this._escapeMode = escapeMode;
+                return this;
+            }
+
+            /// <summary>
+            /// Gets or sets the document's current output charset, which is used to control which characters are escaped when 
+            /// generating HTML (via the <code>html()</code> methods), and which are kept intact. 
+            /// <p> 
+            /// Where possible (when parsing from a URL or File), the document's output charset is automatically set to the 
+            /// input charset. Otherwise, it defaults to UTF-8.
+            /// </summary>
+            public Encoding Encoding
+            {
+                get { return _encoding; }
+                set
+                {
+                    this._encoding = value;
+                    this._encoder = value.GetEncoder();
+                }
+            }
+
+            /// <summary>
+            /// Update the document's output charset.
+            /// </summary>
+            /// <param name="encoding">the new encoding to use.</param>
+            /// <returns>the document's output settings, for chaining</returns>
+            public OutputSettings SetEncoding(Encoding encoding)
+            {
+                // todo: this should probably update the doc's meta charset
+                this.Encoding = encoding;
+                return this;
+            }
+
+            /// <summary>
+            /// Update the document's output charset.
+            /// </summary>
+            /// <param name="encoding">the new charset (by name) to use.</param>
+            /// <returns>the document's output settings, for chaining</returns>
+            public OutputSettings SetEncoding(string encoding)
+            {
+                SetEncoding(Encoding.GetEncoding(encoding));
+                return this;
+            }
+
+            public Encoder Encoder
+            {
+                get { return _encoder; }
+            }
+        }
+
+        /// <summary>
+        /// Gets the document's current output settings.
+        /// </summary>
+        /// <remarks>Changed to "Settings" due to ambiguity between property and class.</remarks>
+        public OutputSettings Settings
+        {
+            get { return outputSettings; }
         }
     }
 }

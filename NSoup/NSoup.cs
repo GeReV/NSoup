@@ -48,6 +48,8 @@ namespace NSoup
 
         /// <summary>
         /// Fetch a URL, and parse it as HTML.
+        /// <p> 
+        /// The encoding character set is determined by the content-type header or http-equiv meta tag, or falls back to <code>UTF-8</code>.
         /// </summary>
         /// <param name="url">URL to fetch (with a GET). The protocol must be <code>http</code> or <code>https</code>.</param>
         /// <param name="timeoutMillis">Connection and read timeout, in milliseconds. If exceeded, IOException is thrown.</param>
@@ -55,37 +57,36 @@ namespace NSoup
         /// <remarks>Throws an exception if the final server response != 200 OK (redirects aren't followed), or if there's an error reading the response stream.</remarks>
         public static Document Parse(Uri url, int timeoutMillis)
         {
-            string html = DataUtil.Load(url, timeoutMillis);
-            return Parse(html, url.ToString());
+            return DataUtil.Load(url, timeoutMillis);
         }
 
         /// <summary>
         /// Parse the contents of a file as HTML.
         /// </summary>
         /// <param name="filename">file to load HTML from</param>
-        /// <param name="charsetName">character set of file contents. If you don't know the charset, generally the best guess is <code>UTF-8</code>.</param>
+        /// <param name="charsetName">(optional) character set of file contents. Set to null to determine from http-equiv meta tag, if 
+        /// present, or fall back to <code>UTF-8</code> (which is often safe to do).</param> 
         /// <param name="baseUri">The URL where the HTML was retrieved from, to generate absolute URLs relative to.</param>
         /// <returns>sane HTML</returns>
         /// <remarks>Throws an exception if the file could not be found, or read, or if the charsetName is invalid.</remarks>
-        public static Document Parse(string filename, string charsetName, string baseUri)
+        public static Document Parse(Stream s, string charsetName, string baseUri)
         {
-            string html = DataUtil.Load(filename, charsetName);
-            return Parse(html, baseUri);
+            return DataUtil.Load(s, charsetName, baseUri);
         }
 
         /// <summary>
         /// Parse the contents of a file as HTML. The location of the file is used as the base URI to qualify relative URLs.    
         /// </summary>
         /// <param name="filename">file to load HTML from</param>
-        /// <param name="charsetName">character set of file contents. If you don't know the charset, generally the best guess is <code>UTF-8</code>.</param>
+        /// <param name="charsetName">(optional) character set of file contents. Set to null to determine from http-equiv meta tag, if 
+        /// present, or fall back to <code>UTF-8</code> (which is often safe to do).</param>
         /// <returns>sane HTML</returns>
         /// <remarks>if the file could not be found, or read, or if the charsetName is invalid.</remarks>
         /// <seealso cref="parse(string, string, string)"/>
-        /*public static Document Parse(string filename, string charsetName)
+        public static Document Parse(FileStream file, string encoding)
         {
-            string html = DataUtil.Load(filename, charsetName);
-            return Parse(html, Path.GetDirectoryName(filename));
-        }*/
+            return DataUtil.Load(file, encoding, Path.GetDirectoryName(file.Name));
+        }
 
         /// <summary>
         /// Parse a fragment of HTML, with the assumption that it forms the {@code body} of the HTML.

@@ -22,13 +22,14 @@ namespace NSoup.Select
     /// <tr><th>Pattern</th><th>Matches</th><th>Example</th></tr>
     /// <tr><td><code>*</code></td><td>any element</td><td><code>*</code></td></tr>
     /// <tr><td><code>E</code></td><td>an element of type E</td><td><code>h1</code></td></tr>
+    /// <tr><td><code>ns|E</code></td><td>an element of type E in the namespace <i>ns</i></td><td><code>fb|name</code> finds <code>&lt;fb:name></code> elements</td></tr>
     /// <tr><td><code>E#id</code></td><td>an Element with attribute ID of "id"</td><td><code>div#wrap</code>, <code>#logo</code></td></tr>
     /// <tr><td><code>E.class</code></td><td>an Element with a class name of "class"</td><td><code>div.left</code>, <code>.result</code></td></tr>
     /// <tr><td><code>E[attr]</code></td><td>an Element with the attribute named "attr"</td><td><code>a[href]</code>, <code>[title]</code></td></tr>
     /// <tr><td><code>E[attr=val]</code></td><td>an Element with the attribute named "attr" and value equal to "val"</td><td><code>img[width=500]</code>, <code>a[rel=nofollow]</code></td></tr>
-    /// <tr><td><code>E[attr^=val]</code></td><td>an Element with the attribute named "attr" and value starting with "val"</td><td><code>a[href^=http:]</code></code></td></tr>
-    /// <tr><td><code>E[attr$=val]</code></td><td>an Element with the attribute named "attr" and value ending with "val"</td><td><code>img[src$=.png]</code></td></tr>
-    /// <tr><td><code>E[attr*=val]</code></td><td>an Element with the attribute named "attr" and value containing "val"</td><td><code>a[href*=/search/]</code></td></tr>
+    /// <tr><td><code>E[attr^=valPrefix]</code></td><td>an Element with the attribute named "attr" and value starting with "valPrefix"</td><td><code>a[href^=http:]</code></code></td></tr>
+    /// <tr><td><code>E[attr$=valSuffix]</code></td><td>an Element with the attribute named "attr" and value ending with "valSuffix"</td><td><code>img[src$=.png]</code></td></tr>
+    /// <tr><td><code>E[attr*=valContaining]</code></td><td>an Element with the attribute named "attr" and value containing "valContaining"</td><td><code>a[href*=/search/]</code></td></tr>
     /// <tr><td><code>E[attr~=<em>regex</em>]</code></td><td>an Element with the attribute named "attr" and value matching the regular expression</td><td><code>img[src~=(?i)\\.(png|jpe?g)]</code></td></tr>
     /// <tr><td></td><td>The above may be combined in any order</td><td><code>div.header[title]</code></td></tr>
     /// <tr><td><td colspan="3"><h3>Combinators</h3></td></tr>
@@ -54,7 +55,7 @@ namespace NSoup.Select
     {
         private readonly static string[] combinators = { ",", ">", "+", "~", " " };
         private readonly Element _root;
-        private List<Element> _elements; // LHS for unique and ordered elements
+        private LinkedHashSet<Element> _elements; // LHS for unique and ordered elements
         private readonly string _query;
         private readonly TokenQueue _tq;
 
@@ -74,9 +75,7 @@ namespace NSoup.Select
                 throw new ArgumentNullException("root");
             }
 
-            
-
-            this._elements = new List<Element>();
+            this._elements = new LinkedHashSet<Element>();
             this._query = query;
             this._root = root;
             this._tq = new TokenQueue(query);
@@ -210,7 +209,7 @@ namespace NSoup.Select
             {
                 return ByTag();
             }
-            else if (_tq.MatchChomp("["))
+            else if (_tq.Matches("["))
             {
                 return ByAttribute();
             }
@@ -256,7 +255,7 @@ namespace NSoup.Select
 
         private void IntersectElements(ICollection<Element> intersect)
         {
-            _elements = _elements.Intersect(intersect).ToList();
+            _elements.IntersectWith(intersect);
         }
 
         private Elements ById()
@@ -291,58 +290,66 @@ namespace NSoup.Select
 
         private Elements ByTag()
         {
-            string tagName = _tq.ConsumeWord();
+            string tagName = _tq.ConsumeElementSelector();
 
             if (string.IsNullOrEmpty(tagName))
             {
                 throw new Exception("tagName is empty.");
             }
 
+            // namespaces: if element name is "abc:def", selector must be "abc|def", so flip:
+            if (tagName.Contains("|"))
+            {
+                tagName = tagName.Replace("|", ":");
+            }
             return _root.GetElementsByTag(tagName);
         }
 
         private Elements ByAttribute()
         {
-            string key = _tq.ConsumeToAny("=", "!=", "^=", "$=", "*=", "~=", "]"); // eq, not, start, end, contain, match, (no val)
+            TokenQueue cq = new TokenQueue(_tq.ChompBalanced('[', ']')); // content queue
+            string key = cq.ConsumeToAny("=", "!=", "^=", "$=", "*=", "~="); // eq, not, start, end, contain, match, (no val)
 
             if (string.IsNullOrEmpty(key))
             {
                 throw new Exception("key is empty.");
             }
 
-            if (_tq.MatchChomp("]"))
+            cq.ConsumeWhitespace();
+
+            if (cq.IsEmpty)
             {
-                return _root.GetElementsByAttribute(key);
+                return key.StartsWith("^") ? _root.GetElementsByAttributeStarting(key.Substring(1)) : _root.GetElementsByAttribute(key);
             }
             else
             {
-                if (_tq.MatchChomp("="))
+                if (cq.MatchChomp("="))
                 {
-                    return _root.GetElementsByAttributeValue(key, _tq.ChompTo("]"));
+                    return _root.GetElementsByAttributeValue(key, cq.Remainder());
                 }
-                else if (_tq.MatchChomp("!="))
+                else if (cq.MatchChomp("!="))
                 {
-                    return _root.GetElementsByAttributeValueNot(key, _tq.ChompTo("]"));
+                    return _root.GetElementsByAttributeValueNot(key, cq.Remainder());
                 }
-                else if (_tq.MatchChomp("^="))
+                else if (cq.MatchChomp("^="))
                 {
-                    return _root.GetElementsByAttributeValueStarting(key, _tq.ChompTo("]"));
+                    return _root.GetElementsByAttributeValueStarting(key, cq.Remainder());
                 }
-                else if (_tq.MatchChomp("$="))
+                else if (cq.MatchChomp("$="))
                 {
-                    return _root.GetElementsByAttributeValueEnding(key, _tq.ChompTo("]"));
+                    return _root.GetElementsByAttributeValueEnding(key, cq.Remainder());
                 }
-                else if (_tq.MatchChomp("*="))
+                else if (cq.MatchChomp("*="))
                 {
-                    return _root.GetElementsByAttributeValueContaining(key, _tq.ChompTo("]"));
+                    return _root.GetElementsByAttributeValueContaining(key, cq.Remainder());
                 }
-                else if (_tq.MatchChomp("~="))
+                else if (cq.MatchChomp("~="))
                 {
-                    return _root.GetElementsByAttributeValueMatching(key, _tq.ChompTo("]"));
+                    return _root.GetElementsByAttributeValueMatching(key, cq.Remainder());
                 }
                 else
                 {
-                    throw new SelectorParseException("Could not parse attribute query '{0}': unexpected token at '{1}'", _query, _tq.Remainder());
+                    throw new SelectorParseException(string.Format("Could not parse attribute query '{0}': unexpected token at '{1}'", _query, cq.Remainder()));
                 }
             }
         }
@@ -385,7 +392,7 @@ namespace NSoup.Select
         private Elements Has()
         {
             _tq.Consume(":has");
-            String subQuery = _tq.ChompBalanced('(', ')');
+            string subQuery = _tq.ChompBalanced('(', ')');
 
             if (string.IsNullOrEmpty(subQuery))
             {
@@ -399,7 +406,7 @@ namespace NSoup.Select
         private Elements Contains()
         {
             _tq.Consume(":contains");
-            String searchText = TokenQueue.Unescape(_tq.ChompBalanced('(', ')'));
+            string searchText = TokenQueue.Unescape(_tq.ChompBalanced('(', ')'));
 
             if (string.IsNullOrEmpty(searchText))
             {
@@ -423,18 +430,21 @@ namespace NSoup.Select
         }
 
         // direct child descendants
-        private static Elements FilterForChildren(IList<Element> parents, IList<Element> candidates)
+        private static Elements FilterForChildren(ICollection<Element> parents, ICollection<Element> candidates)
         {
             Elements children = new Elements();
 
-            for (int i = 0; i < candidates.Count; i++)
+            IEnumerator<Element> candidatesEnum = candidates.GetEnumerator();
+
+            while (candidatesEnum.MoveNext())
             {
-                Element c = candidates[i];
+                Element c = candidatesEnum.Current;
                 bool skipStep = false;
 
-                for (int j = 0; j < parents.Count && (!skipStep); j++)
+                IEnumerator<Element> parentsEnum = parents.GetEnumerator();
+                while (parentsEnum.MoveNext() && (!skipStep))
                 {
-                    Element p = parents[j];
+                    Element p = parentsEnum.Current;
                     if (c.Parent != null && c.Parent.Equals(p))
                     {
                         children.Add(c);
@@ -450,17 +460,21 @@ namespace NSoup.Select
 
         // children or lower descendants. input candidates stemmed from found elements, so are either a descendant 
         // or the original element; so check that parent is not child
-        private static Elements FilterForDescendants(IList<Element> parents, IList<Element> candidates)
+        private static Elements FilterForDescendants(ICollection<Element> parents, ICollection<Element> candidates)
         {
             Elements children = new Elements();
+            
+            IEnumerator<Element> candidatesEnum = candidates.GetEnumerator();
 
-            for (int i = 0; i < candidates.Count; i++)
+            while (candidatesEnum.MoveNext())
             {
-                Element c = candidates[i];
+                Element c = candidatesEnum.Current;
                 bool found = false;
-                for (int j = 0; j < parents.Count && (!found); j++)
+
+                IEnumerator<Element> parentsEnum = parents.GetEnumerator();
+                while (parentsEnum.MoveNext() && (!found))
                 {
-                    Element p = parents[j];
+                    Element p = parentsEnum.Current;
                     if (c.Equals(p))
                     {
                         found = true;
@@ -492,17 +506,22 @@ namespace NSoup.Select
         }
 
         // adjacent siblings
-        private static Elements FilterForAdjacentSiblings(IList<Element> elements, IList<Element> candidates)
+        private static Elements FilterForAdjacentSiblings(ICollection<Element> elements, ICollection<Element> candidates)
         {
             Elements siblings = new Elements();
 
-            for (int i = 0; i < candidates.Count; i++)
+            IEnumerator<Element> candidatesEnum = candidates.GetEnumerator();
+
+            while (candidatesEnum.MoveNext())
             {
-                Element c = candidates[i];
+                Element c = candidatesEnum.Current;
                 bool skipStep = false;
-                for (int j = 0; j < elements.Count && (!skipStep); j++)
+
+                IEnumerator<Element> elementsEnum = elements.GetEnumerator();
+
+                while (elementsEnum.MoveNext() && (!skipStep))
                 {
-                    Element e = elements[j];
+                    Element e = elementsEnum.Current;
                     if (!e.Parent.Equals(c.Parent))
                     {
                         continue;
@@ -520,17 +539,22 @@ namespace NSoup.Select
         }
 
         // preceeding siblings
-        private static Elements FilterForGeneralSiblings(IList<Element> elements, IList<Element> candidates)
+        private static Elements FilterForGeneralSiblings(ICollection<Element> elements, ICollection<Element> candidates)
         {
             Elements output = new Elements();
 
-            for (int i = 0; i < candidates.Count; i++)
+            IEnumerator<Element> candidatesEnum = candidates.GetEnumerator();
+
+            while (candidatesEnum.MoveNext())
             {
-                Element c = candidates[i];
+                Element c = candidatesEnum.Current;
                 bool skipStep = false;
-                for (int j = 0; j < elements.Count && (!skipStep); j++)
+
+                IEnumerator<Element> elementsEnum = elements.GetEnumerator();
+
+                while (elementsEnum.MoveNext() && (!skipStep))
                 {
-                    Element e = elements[j];
+                    Element e = elementsEnum.Current;
                     if (!e.Parent.Equals(c.Parent))
                     {
                         continue;
@@ -549,18 +573,21 @@ namespace NSoup.Select
         }
 
         // union of both sets, for e.class type selectors
-        private static Elements FilterForSelf(IList<Element> parents, IList<Element> candidates)
+        private static Elements FilterForSelf(ICollection<Element> parents, ICollection<Element> candidates)
         {
             Elements children = new Elements();
 
-            for (int i = 0; i < candidates.Count; i++)
+            IEnumerator<Element> candidatesEnum = candidates.GetEnumerator();
+            while (candidatesEnum.MoveNext())
             {
-                Element c = candidates[i];
+                Element c = candidatesEnum.Current;
                 bool skipStep = false;
+
+                IEnumerator<Element> parentsEnum = parents.GetEnumerator();
                 
-                for (int j = 0; j < parents.Count && (!skipStep); j++)
+                while (parentsEnum.MoveNext() && (!skipStep))
                 {
-                    Element p = parents[j];
+                    Element p = parentsEnum.Current;
                     if (c.Equals(p))
                     {
                         children.Add(c);

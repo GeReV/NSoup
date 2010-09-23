@@ -20,7 +20,9 @@ namespace NSoup.Nodes
     /// -->
     public class Attributes : IEnumerable<Attribute>, IEquatable<Attributes>
     {
-        private Dictionary<string, Attribute> attributes = new Dictionary<string, Attribute>(2);
+        public static readonly string DataPrefix = "data-";
+
+        protected Dictionary<string, Attribute> attributes = new Dictionary<string, Attribute>(2);
         // The order in which items are returned from a Dictionary is undefined. Should find a different solution.
         //private LinkedHashMap<string, Attribute> attributes = new LinkedHashMap<string, Attribute>();
         // linked hash map to preserve insertion order.
@@ -71,6 +73,12 @@ namespace NSoup.Nodes
             Attribute attr = null;
             attributes.TryGetValue(key.ToLowerInvariant(), out attr);
             return (attr != null) ? attr.Value : string.Empty;
+        }
+
+        public string this[string key]
+        {
+            get { return GetValue(key); }
+            set { Add(key, value); }
         }
 
         /// <summary>
@@ -137,21 +145,31 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
+        /// Retrieves a filtered view of attributes that are HTML5 custom data attributes; that is, attributes with keys
+        /// starting with <code>data-</code>.
+        /// </summary>
+        /// <returns>map of custom data attributes.</returns>
+        public IDictionary<string, string> GetDataset()
+        {
+            return new Dataset(attributes);
+        }
+
+        /// <summary>
         /// Gets the HTML representation of these attributes.
         /// </summary>
         public string Html()
         {
-                StringBuilder accum = new StringBuilder();
-                Html(accum);
-                return accum.ToString();
+            StringBuilder accum = new StringBuilder();
+            Html(accum, (new Document(string.Empty).Settings)); // output settings a bit funky, but this html() seldom used
+            return accum.ToString();
         }
 
-        private void Html(StringBuilder accum)
+        public void Html(StringBuilder accum, Document.OutputSettings output)
         {
             foreach (Attribute attribute in this)
             {
                 accum.Append(" ");
-                attribute.Html(accum);
+                attribute.Html(accum, output);
             }
         }
 
@@ -177,6 +195,234 @@ namespace NSoup.Nodes
             return attributes != null ? attributes.GetHashCode() : 0;
         }
 
+        /// <summary>
+        /// A dictionary which filters through the list of attribute and works only against data attributes (attributes prefixed with "data-").
+        /// </summary>
+        private class Dataset : IDictionary<string, string>
+        {
+            private Dictionary<string, Attribute> _attributes;
+
+            public Dataset(Dictionary<string, Attribute> attributes)
+            {
+                _attributes = attributes;
+            }
+
+            #region IDictionary<string,string> Members
+
+            void IDictionary<string, string>.Add(string key, string value)
+            {
+                string dataKey = DataKey(key);
+                _attributes.Add(dataKey, new Attribute(dataKey, value));
+            }
+
+            bool IDictionary<string, string>.ContainsKey(string key)
+            {
+                return _attributes.ContainsKey(DataKey(key));
+            }
+
+            ICollection<string> IDictionary<string, string>.Keys
+            {
+                get
+                {
+                    return _attributes
+                        .Where(pair => pair.Value.IsDataAttribute) // Get all data attributes;
+                        .Select(k => k.Key.Substring(DataPrefix.Length)) // Filter their prefix;
+                        .ToArray(); // Return as array.
+                }
+            }
+
+            bool IDictionary<string, string>.Remove(string key)
+            {
+                return _attributes.Remove(DataKey(key));
+            }
+
+            bool IDictionary<string, string>.TryGetValue(string key, out string value)
+            {
+                Attribute attr = null;
+                bool success = _attributes.TryGetValue(DataKey(key), out attr);
+
+                value = attr.Value;
+
+                return success;
+            }
+
+            ICollection<string> IDictionary<string, string>.Values
+            {
+                get
+                {
+                    return _attributes
+                        .Where(pair => pair.Value.IsDataAttribute) // Get all data attributes;
+                        .Select(pair => pair.Value.Value) // Get their values;
+                        .ToArray(); // Return as array.
+                }
+            }
+
+            string IDictionary<string, string>.this[string key]
+            {
+                set
+                {
+                    string dataKey = Attributes.DataKey(key);
+                    string oldValue = _attributes.ContainsKey(dataKey) ? _attributes[dataKey].Value : null;
+                    Attribute attr = new Attribute(dataKey, value);
+                    _attributes[dataKey] = attr;
+                }
+                get
+                {
+                    string dataKey = Attributes.DataKey(key);
+
+                    Attribute attr = _attributes[dataKey];
+                    if (attr != null && attr.IsDataAttribute) // If attribute
+                    {
+                        return attr.Value;
+                    }
+                    return null;
+                }
+            }
+
+            #endregion
+
+            #region ICollection<KeyValuePair<string,string>> Members
+
+            void ICollection<KeyValuePair<string, string>>.Add(KeyValuePair<string, string> item)
+            {
+                KeyValuePair<string, Attribute> attr = GetDataAttributeKeyValuePair(item.Key, item.Value);
+                _attributes.Add(attr.Key, attr.Value);
+            }
+
+            void ICollection<KeyValuePair<string, string>>.Clear()
+            {
+                foreach (KeyValuePair<string, Attribute> item in _attributes.Where(pair => pair.Value.IsDataAttribute))
+                {
+                    _attributes.Remove(item.Key);
+                }
+            }
+
+            bool ICollection<KeyValuePair<string, string>>.Contains(KeyValuePair<string, string> item)
+            {
+                return _attributes.Contains(GetDataAttributeKeyValuePair(item.Key, item.Value));
+            }
+
+            void ICollection<KeyValuePair<string, string>>.CopyTo(KeyValuePair<string, string>[] array, int arrayIndex)
+            {
+                throw new NotImplementedException();
+            }
+
+            int ICollection<KeyValuePair<string, string>>.Count
+            {
+                get { return _attributes.Where(pair => pair.Value.IsDataAttribute).Count(); }
+            }
+
+            bool ICollection<KeyValuePair<string, string>>.IsReadOnly
+            {
+                get { return false; }
+            }
+
+            bool ICollection<KeyValuePair<string, string>>.Remove(KeyValuePair<string, string> item)
+            {
+                KeyValuePair<string, Attribute> attr = GetDataAttributeKeyValuePair(item.Key, item.Value);
+                return _attributes.Remove(attr.Key);
+            }
+
+            #endregion
+
+            #region IEnumerable<KeyValuePair<string,string>> Members
+
+            IEnumerator<KeyValuePair<string, string>> IEnumerable<KeyValuePair<string, string>>.GetEnumerator()
+            {
+                return new DatasetEnumerator(_attributes);
+            }
+
+            #endregion
+
+            #region IEnumerable Members
+
+            System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+            {
+                return new DatasetEnumerator(_attributes);
+            }
+
+            #endregion
+
+            /// <summary>
+            /// Creates a KeyValuePair with a data attribute to be inserted into the attribute collection.
+            /// </summary>
+            /// <param name="key">Data attribute key, without the prefix.</param>
+            /// <param name="value">Data attribute's value.</param>
+            /// <returns>Data attribute (KeyValuePair<string, Attribute>) based on passed values.</returns>
+            private KeyValuePair<string, Attribute> GetDataAttributeKeyValuePair(string key, string value)
+            {
+                string dataKey = DataKey(key);
+                return new KeyValuePair<string, Attribute>(dataKey, new Attribute(dataKey, value));
+            }
+
+            private class DatasetEnumerator : IEnumerator<KeyValuePair<string, string>>
+            {
+                private Dictionary<string, Attribute> _attributes;
+                private Attribute _attr;
+                private Dictionary<string, Attribute>.ValueCollection.Enumerator _attrIter;
+
+                public DatasetEnumerator(Dictionary<string, Attribute> attributes)
+                {
+                    _attributes = attributes;
+                    _attrIter = _attributes.Values.GetEnumerator();
+                }
+
+                public void Remove()
+                {
+                    _attributes.Remove(_attr.Key); // TODO: This might become a problem. Can't remove when using an iterator.
+                }
+
+                #region IEnumerator<KeyValuePair<string,string>> Members
+
+                public KeyValuePair<string, string> Current
+                {
+                    get { return new KeyValuePair<string, string>(_attr.Key.Substring(DataPrefix.Length), _attr.Value); }
+                }
+
+                #endregion
+
+                #region IDisposable Members
+
+                public void Dispose()
+                {
+                    return;
+                }
+
+                #endregion
+
+                #region IEnumerator Members
+
+                object System.Collections.IEnumerator.Current
+                {
+                    get { return Current; }
+                }
+
+                public bool MoveNext()
+                {
+                    while (_attrIter.MoveNext())
+                    {
+                        _attr = _attrIter.Current;
+                        if (_attr.IsDataAttribute)
+                        {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
+                public void Reset()
+                {
+                    _attrIter = _attributes.Values.GetEnumerator();
+                }
+
+                #endregion
+            }
+        }
+
+        private static string DataKey(string key)
+        {
+            return DataPrefix + key;
+        }
 
         #region IEnumerable<Attribute> Members
 
