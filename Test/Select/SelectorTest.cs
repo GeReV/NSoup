@@ -580,7 +580,7 @@ namespace Test.Nodes
 
             Elements ps3 = doc.Select("p:contains(the Rain):has(i)");
             Assert.AreEqual(1, ps3.Count);
-            Assert.AreEqual("light", ps3.First.ClassName);
+            Assert.AreEqual("light", ps3.First.ClassName());
         }
 
         [TestMethod]
@@ -595,6 +595,17 @@ namespace Test.Nodes
             Elements ps2 = doc.Select("p:contains(this is bad\\))");
             Assert.AreEqual(1, ps2.Count);
             Assert.AreEqual("2", ps2.First.Id);
+        }
+
+        [TestMethod]
+        public void containsOwn()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<p id=1>Hello <b>there</b> now</p>");
+            Elements ps = doc.Select("p:containsOwn(Hello now)");
+            Assert.AreEqual(1, ps.Count);
+            Assert.AreEqual("1", ps.First.Id);
+
+            Assert.AreEqual(0, doc.Select("p:containsOwn(there)").Count);
         }
 
         [TestMethod]
@@ -624,6 +635,18 @@ namespace Test.Nodes
             Elements p7 = doc.Select("p:matches((?i)the):has(i)"); // multi
             Assert.AreEqual(1, p7.Count);
             Assert.AreEqual("1", p7.First.Id);
+        }
+
+        [TestMethod]
+        public void matchesOwn()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<p id=1>Hello <b>there</b> now</p>");
+
+            Elements p1 = doc.Select("p:matchesOwn((?i)hello now)");
+            Assert.AreEqual(1, p1.Count);
+            Assert.AreEqual("1", p1.First.Id);
+
+            Assert.AreEqual(0, doc.Select("p:matchesOwn(there)").Count);
         }
 
         [TestMethod]

@@ -4,14 +4,16 @@ using System.Linq;
 using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSoup.Nodes;
+using NSoup;
+using NSoup.Helper;
 
 namespace Test.Nodes
 {
 
     [TestClass]
-    public class EntitiesTest
+    public class DataUtilTest
     {
-        public EntitiesTest()
+        public DataUtilTest()
         {
             //
             // TODO: Add constructor logic here
@@ -59,36 +61,13 @@ namespace Test.Nodes
         #endregion
 
         [TestMethod]
-        public void escape()
+        public void testCharset()
         {
-            string text = "Hello &<> Å å π 新 there";
-            string escapedAscii = Entities.Escape(text, Encoding.ASCII, Entities.EscapeMode.Base);
-            string escapedAsciiFull = Entities.Escape(text, Encoding.ASCII, Entities.EscapeMode.Extended);
-            string escapedUtf = Entities.Escape(text, Encoding.UTF8, Entities.EscapeMode.Base);
-
-            Assert.AreEqual("Hello &amp;&lt;&gt; &Aring; &aring; &#960; &#26032; there", escapedAscii);
-            Assert.AreEqual("Hello &amp;&lt;&gt; &angst; &aring; &pi; &#26032; there", escapedAsciiFull);
-            Assert.AreEqual("Hello &amp;&lt;&gt; &Aring; &aring; π 新 there", escapedUtf);
-            // odd that it's defined as aring in base but angst in full
-        }
-
-        [TestMethod]
-        public void unescape()
-        {
-            string text = "Hello &amp;&LT&gt; &angst &#960; &#960 &#x65B0; there &!";
-            Assert.AreEqual("Hello &<> Å π π 新 there &!", Entities.Unescape(text));
-
-            Assert.AreEqual("&0987654321; &unknown", Entities.Unescape("&0987654321; &unknown"));
-        }
-
-        [TestMethod]
-        public void caseSensitive()
-        {
-            String unescaped = "Ü ü & &";
-            Assert.AreEqual("&Uuml; &uuml; &amp; &amp;", Entities.Escape(unescaped, Encoding.ASCII, Entities.EscapeMode.Extended));
-
-            String escaped = "&Uuml; &uuml; &amp; &AMP";
-            Assert.AreEqual("Ü ü & &", Entities.Unescape(escaped));
+            Assert.AreEqual("UTF-8", DataUtil.GetCharsetFromContentType("text/html;charset=utf-8 "));
+            Assert.AreEqual("UTF-8", DataUtil.GetCharsetFromContentType("text/html; charset=UTF-8"));
+            Assert.AreEqual("ISO-8859-1", DataUtil.GetCharsetFromContentType("text/html; charset=ISO-8859-1"));
+            Assert.AreEqual(null, DataUtil.GetCharsetFromContentType("text/html"));
+            Assert.AreEqual(null, DataUtil.GetCharsetFromContentType(null));
         }
     }
 }

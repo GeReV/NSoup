@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using NSoup.Parse;
 using NSoup.Select;
+using NSoup.Helper;
 using System.Text.RegularExpressions;
 
 namespace NSoup.Nodes
@@ -113,7 +114,7 @@ namespace NSoup.Nodes
         /// Gets this element's HTML5 custom data attributes. Each attribute in the element that has a key 
         /// starting with "data-" is included the dataset. 
         /// <p> 
-        /// E.g., the element <code>&lt;div data-package="jsoup" data-language="Java" class="group"&gt;...</code> has the dataset 
+        /// E.g., the element <code><div data-package="jsoup" data-language="Java" class="group">...</code> has the dataset 
         /// <code>package=jsoup, language=java</code>. 
         /// <p> 
         /// This map is a filtered view of the element's attribute map. Changes to one map (add, remove, update) are reflected 
@@ -132,7 +133,7 @@ namespace NSoup.Nodes
         /// </summary>
         public Element Parent
         {
-            get { return (Element)base.ParentNode; }
+            get { return (Element)ParentNode; }
         }
 
         /// <summary>
@@ -260,7 +261,7 @@ namespace NSoup.Nodes
         /// </summary>
         /// <param name="tagName">the name of the tag (e.g. <code>div</code>).</param>
         /// <returns>the new element, to allow you to add content to it, e.g.:
-        /// <code>parent.AppendElement("h1").Attr("id", "header").SetText("Welcome");</code>
+        /// <code>parent.AppendElement("h1").Attr("id", "header").Text("Welcome");</code>
         /// </returns>
         public Element AppendElement(string tagName)
         {
@@ -275,7 +276,7 @@ namespace NSoup.Nodes
         /// <param name="tagName">the name of the tag (e.g. <code>div</code>).</param>
         /// <returns>
         /// the new element, to allow you to add content to it, e.g.: 
-        /// <code>parent.PrependElement("h1").Attr("id", "header").SetText("Welcome");</code>
+        /// <code>parent.PrependElement("h1").Attr("id", "header").Text("Welcome");</code>
         /// </returns>
         public Element PrependElement(string tagName)
         {
@@ -788,11 +789,24 @@ namespace NSoup.Nodes
         /// Find elements that contain the specified string. The search is case insensitive. The text may appear directly 
         /// in the element, or in any of its descendants.
         /// </summary>
-        /// <param name="searchText"></param>
+        /// <param name="searchText">to look for in the element's text</param>
         /// <returns>elements that contain the string, case insensitive.</returns>
+        /// <see cref="Element.Text()"/>
         public Elements GetElementsContainingText(string searchText)
         {
             return Collector.Collect(new Evaluator.ContainsText(searchText), this);
+        }
+
+        /// <summary>
+        /// Find elements that directly contain the specified string. The search is case insensitive. The text must appear directly 
+        /// in the element, not in any of its descendants.
+        /// </summary>
+        /// <param name="searchText">to look for in the element's own text</param>
+        /// <returns>elements that contain the string, case insensitive.</returns>
+        /// <see cref="Element.OwnText()"/>
+        public Elements GetElementsContainingOwnText(string searchText)
+        {
+            return Collector.Collect(new Evaluator.ContainsOwnText(searchText), this);
         }
 
         /// <summary>
@@ -800,6 +814,7 @@ namespace NSoup.Nodes
         /// </summary>
         /// <param name="pattern">regular expression to match text against</param>
         /// <returns>elements matching the supplied regular expression.</returns>
+        /// <see cref="Element.Text()"/>
         public Elements GetElementsMatchingText(Regex regex)
         {
             return Collector.Collect(new Evaluator.MatchesRegex(regex), this);
@@ -810,6 +825,7 @@ namespace NSoup.Nodes
         /// </summary>
         /// <param name="regex">regular expression to match text against.</param>
         /// <returns>elements matching the supplied regular expression.</returns>
+        /// <see cref="Element.Text()"/>
         public Elements GetElementsMatchingText(string regex)
         {
             Regex re;
@@ -825,6 +841,37 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
+        /// Find elements whose own text matches the supplied regular expression.
+        /// </summary>
+        /// <param name="pattern">regular expression to match text against</param>
+        /// <returns>elements matching the supplied regular expression.</returns>
+        /// <see cref="Element.OwnText()"/>
+        public Elements GetElementsMatchingOwnText(Regex pattern)
+        {
+            return Collector.Collect(new Evaluator.MatchesOwn(pattern), this);
+        }
+
+        /// <summary>
+        /// Find elements whose text matches the supplied regular expression.
+        /// </summary>
+        /// <param name="regex">regular expression to match text against. You can use <a href="http://java.sun.com/docs/books/tutorial/essential/regex/pattern.html#embedded">embedded flags</a> (such as (?i) and (?m) to control regex options.</param>
+        /// <returns>elements matching the supplied regular expression.</returns>
+        /// <see cref="Element.OwnText()"/>
+        public Elements GetElementsMatchingOwnText(string regex)
+        {
+            Regex pattern;
+            try
+            {
+                pattern = new Regex(regex);
+            }
+            catch (ArgumentException e)
+            {
+                throw new ArgumentException("Pattern syntax error: " + regex, e);
+            }
+            return GetElementsMatchingOwnText(pattern);
+        }
+
+        /// <summary>
         /// Find all elements under this element (including self, and children of children).
         /// </summary>
         /// <returns>all elements</returns>
@@ -835,7 +882,10 @@ namespace NSoup.Nodes
 
         /// <summary>
         /// Gets the combined text of this element and all its children.
+        /// For example, given HTML <code><p>Hello <b>there</b> now!</p></code>, <code>p.Text()</code> returns <code>"Hello there now!"</code>
         /// </summary>
+        /// <returns>unencoded text, or empty string if none.</returns>
+        /// <see cref="OwnText()"/>
         public string Text()
         {
             StringBuilder sb = new StringBuilder();
@@ -872,15 +922,7 @@ namespace NSoup.Nodes
                 if (child is TextNode)
                 {
                     TextNode textNode = (TextNode)child;
-                    string text = textNode.GetWholeText();
-
-                    if (!PreserveWhitespace)
-                    {
-                        text = TextNode.NormaliseWhitespace(text);
-                        if (TextNode.LastCharIsWhitespace(accum))
-                            text = TextNode.StripLeadingWhitespace(text);
-                    }
-                    accum.Append(text);
+                    AppendNormalisedText(accum, textNode);
                 }
                 else if (child is Element)
                 {
@@ -892,6 +934,47 @@ namespace NSoup.Nodes
                     element.GetText(accum);
                 }
             }
+        }
+
+        /// <summary>
+        /// Gets the text owned by this element only; does not get the combined text of all children.
+        /// For example, given HTML <code><p>Hello <b>there</b> now!</p></code>, <code>p.Text()</code> returns <code>"Hello now!"</code>.
+        /// Note that the text within the <code>b</code> element is not return, as it is not a direct child of the <code>p</code> element.
+        /// </summary>
+        /// <returns>unencoded text, or empty string if none.</returns>
+        /// <see cref="Text()"/>
+        public string OwnText()
+        {
+            StringBuilder sb = new StringBuilder();
+            OwnText(sb);
+            return sb.ToString().Trim();
+        }
+
+        private void OwnText(StringBuilder accum)
+        {
+            foreach (Node child in ChildNodes)
+            {
+                if (child is TextNode)
+                {
+                    TextNode textNode = (TextNode)child;
+                    AppendNormalisedText(accum, textNode);
+                }
+            }
+        }
+
+        private void AppendNormalisedText(StringBuilder accum, TextNode textNode)
+        {
+            String text = textNode.GetWholeText();
+
+            if (!PreserveWhitespace)
+            {
+                text = TextNode.NormaliseWhitespace(text);
+                if (TextNode.LastCharIsWhitespace(accum))
+                {
+                    text = TextNode.StripLeadingWhitespace(text);
+                }
+            }
+            accum.Append(text);
         }
 
         /// <summary>
@@ -964,9 +1047,9 @@ namespace NSoup.Nodes
         /// Gets the literal value of this element's "class" attribute, which may include multiple class names, space 
         /// separated. (E.g. on <code>&lt;div class="header gray"&gt;</code> returns, "<code>header gray</code>")
         /// </summary>
-        public string ClassName
+        public string ClassName()
         {
-            get { return Attributes.ContainsKey("class") ? Attributes.GetValue("class") : string.Empty; }
+            return Attributes.ContainsKey("class") ? Attributes.GetValue("class") : string.Empty;
         }
 
         // TODO: Originally - Set<string>.
@@ -977,17 +1060,14 @@ namespace NSoup.Nodes
         /// returns a set of two elements <code>"header", "gray"</code>. Note that modifications to this set are not pushed to 
         /// the backing <code>class</code> attribute; use the <seealso cref="ClassNames(HashSet)"/> method to persist them. 
         /// </summary>
-        public HashSet<string> ClassNames
+        public HashSet<string> ClassNames()
         {
-            get
+            if (_classNames == null)
             {
-                if (_classNames == null)
-                {
-                    string[] names = Regex.Split(ClassName, "\\s+");
-                    _classNames = new HashSet<string>(names.ToList());
-                }
-                return _classNames;
+                string[] names = Regex.Split(ClassName(), "\\s+");
+                _classNames = new HashSet<string>(names.ToList());
             }
+            return _classNames;
         }
 
         /// <summary>
@@ -995,14 +1075,14 @@ namespace NSoup.Nodes
         /// </summary>
         /// <param name="classNames">set of classes</param>
         /// <returns>this element, for chaining</returns>
-        public Element GetClassNames(HashSet<string> classNames)
+        public Element ClassNames(HashSet<string> classNames)
         {
             if (classNames == null)
             {
                 throw new ArgumentNullException("classNames");
             }
 
-            Attributes.Add("class", string.Join(" ", classNames.ToArray()));
+            Attributes.Add("class", classNames.Join(" "));
             return this;
         }
 
@@ -1013,7 +1093,7 @@ namespace NSoup.Nodes
         /// <returns>true if it does, false if not</returns>
         public bool HasClass(string className)
         {
-            return ClassNames.Contains(className);
+            return ClassNames().Contains(className);
         }
 
         /// <summary>
@@ -1028,9 +1108,9 @@ namespace NSoup.Nodes
                 throw new ArgumentNullException("className");
             }
 
-            HashSet<string> classes = ClassNames;
+            HashSet<string> classes = ClassNames();
             classes.Add(className);
-            GetClassNames(classes);
+            ClassNames(classes);
 
             return this;
         }
@@ -1047,9 +1127,9 @@ namespace NSoup.Nodes
                 throw new ArgumentNullException("className");
             }
 
-            HashSet<string> classes = ClassNames;
+            HashSet<string> classes = ClassNames();
             classes.Remove(className);
-            GetClassNames(classes);
+            ClassNames(classes);
 
             return this;
         }
@@ -1066,7 +1146,7 @@ namespace NSoup.Nodes
                 throw new ArgumentNullException("className");
             }
 
-            HashSet<string> classes = ClassNames;
+            HashSet<string> classes = ClassNames();
             if (classes.Contains(className))
             {
                 classes.Remove(className);
@@ -1075,7 +1155,7 @@ namespace NSoup.Nodes
             {
                 classes.Add(className);
             }
-            GetClassNames(classes);
+            ClassNames(classes);
 
             return this;
         }
@@ -1116,9 +1196,9 @@ namespace NSoup.Nodes
 
         public override void OuterHtmlHead(StringBuilder accum, int depth, Document.OutputSettings output)
         {
-            if (IsBlock || (Parent != null && Parent.Tag.CanContainBlock && SiblingIndex == 0))
+            if (output.PrettyPrint() && (IsBlock || (Parent != null && Parent.Tag.CanContainBlock && SiblingIndex == 0)))
             {
-                Indent(accum, depth);
+                Indent(accum, depth, output);
             }
             
             accum.Append("<")
@@ -1139,9 +1219,9 @@ namespace NSoup.Nodes
         {
             if (!(ChildNodes.Count == 0 && Tag.IsSelfClosing))
             {
-                if (ChildNodes.Count != 0 && Tag.CanContainBlock)
+                if (output.PrettyPrint() && ChildNodes.Count != 0 && Tag.CanContainBlock)
                 {
-                    Indent(accum, depth);
+                    Indent(accum, depth, output);
                 }
                 accum.Append("</").Append(TagName).Append(">");
             }

@@ -46,7 +46,11 @@ namespace NSoup.Nodes
 
         public override void OuterHtmlHead(StringBuilder accum, int depth, Document.OutputSettings output)
         {
-            Indent(accum, depth);
+            if (output.PrettyPrint())
+            {
+                Indent(accum, depth, output);
+            }
+            
             accum
                 .Append("<!--")
                 .Append(GetData())

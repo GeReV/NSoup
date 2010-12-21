@@ -10,9 +10,6 @@ namespace NSoup.Nodes
     /// HMTL entities, and escape routines.
     /// Source: <a href="http://www.w3.org/TR/html5/named-character-references.html#named-character-references">W3C HTML named character references</a>.
     /// </summary>
-    /// <remarks>
-    /// Draft implementation. Do not consume.
-    /// </remarks>
     public class Entities
     {
         public enum EscapeMode
@@ -20,7 +17,6 @@ namespace NSoup.Nodes
             Base, Extended
         }
 
-        private static readonly Dictionary<string, char> _base;
         private static readonly Dictionary<string, char> _full;
         private static readonly Dictionary<char, string> _baseByVal;
         private static readonly Dictionary<char, string> _fullByVal;
@@ -88,7 +84,7 @@ namespace NSoup.Nodes
                 }
                 else
                 {
-                    string name = m.Groups[1].Value.ToLowerInvariant();
+                    string name = m.Groups[1].Value;
 
                     if (_full.ContainsKey(name))
                     {
@@ -2256,17 +2252,14 @@ namespace NSoup.Nodes
 
         static Entities()
         {
-            _base = new Dictionary<string, char>(baseArray.Length);
             _full = new Dictionary<string, char>(fullArray.Length);
             _baseByVal = new Dictionary<char, string>(baseArray.Length);
             _fullByVal = new Dictionary<char, string>(fullArray.Length);
 
             for (int i = 0; i < baseArray.Length / 2; i++)
 			{
-                char c = (char)(int)baseArray[i, 1];
-                _base.Add((string)baseArray[i, 0], c);
-                
-                _baseByVal[c] = ((string)baseArray[i, 0]).ToLowerInvariant();
+                char c = (char)(int)baseArray[i, 1];                
+                _baseByVal[c] = ((string)baseArray[i, 0]);
             }
 
             for (int i = 0; i < fullArray.Length / 2; i++)
@@ -2274,7 +2267,7 @@ namespace NSoup.Nodes
                 char c = (char)(int)fullArray[i, 1];
                 _full.Add((string)fullArray[i, 0], c);
                 
-                _fullByVal[c] = ((string)fullArray[i, 0]).ToLowerInvariant();
+                _fullByVal[c] = ((string)fullArray[i, 0]);
             }
         }
     }

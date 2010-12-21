@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSoup.Nodes;
+using NSoup;
 
 namespace Test.Integration
 {
@@ -15,6 +16,7 @@ namespace Test.Integration
     /// Ported to .NET by: Amir Grozki
     /// -->
     [TestClass]
+    //[Ignore] // ignored by default so tests don't require network access. comment out to enable.
     public class UrlConnectTest
     {
         public UrlConnectTest()
@@ -64,7 +66,9 @@ namespace Test.Integration
         //
         #endregion
 
-        //[TestMethod] // uncomment to enable test
+        private static string echoURL = "http://infohound.net/tools/q.pl";
+
+        [TestMethod]
         public void fetchURl()
         {
             string url = "http://www.google.com"; // no trailing / to force redir
@@ -72,29 +76,68 @@ namespace Test.Integration
             Assert.IsTrue(doc.Title.Contains("Google"));
         }
 
-        //[TestMethod] // uncomment to enble
+        [TestMethod]
         public void fetchBaidu()
         {
-            Document doc = NSoup.NSoupClient.Parse(new Uri("http://www.baidu.com/"), 10 * 1000);
+            IResponse res = NSoup.NSoupClient.Connect("http://www.baidu.com/").Timeout(10 * 1000).Execute();
+            Document doc = res.Parse();
+
             Assert.AreEqual("GB2312", doc.Settings.Encoding.WebName.ToUpperInvariant());
+            Assert.AreEqual("GB2312", res.Charset().ToUpperInvariant());
+            Assert.IsTrue(res.HasCookie("BAIDUID"));
+            Assert.AreEqual("text/html;charset=gb2312", res.ContentType());
         }
 
-        //[TestMethod] // uncomment to enable
+        [TestMethod]
         public void exceptOnUnknownContentType()
         {
             string url = "http://jsoup.org/rez/osi_logo.png"; // not text/* but image/png, should throw
             bool threw = false;
             try
             {
-                Document doc = NSoup.NSoupClient.Parse(new Uri(url), 3000);
+                Document doc = NSoupClient.Parse(new Uri(url), 3000);
             }
-            catch (Exception)
+            catch (System.IO.IOException)
             {
                 threw = true;
             }
             Assert.IsTrue(threw);
         }
 
-        public void noop() { }
+        [TestMethod]
+        public void doesPost()
+        {
+            Document doc = NSoupClient.Connect(echoURL)
+                .Data("uname", "Jsoup", "uname", "Jonathan", "ח™¾", "ו÷¦ה¸€ה¸‹")
+                .Cookie("auth", "token")
+                .Post();
+
+            Assert.AreEqual("POST", ihVal("REQUEST_METHOD", doc));
+            Assert.AreEqual("gzip", ihVal("HTTP_ACCEPT_ENCODING", doc));
+            Assert.AreEqual("auth=token", ihVal("HTTP_COOKIE", doc));
+            Assert.AreEqual("ו÷¦ה¸€ה¸‹", ihVal("ח™¾", doc));
+            Assert.AreEqual("Jsoup, Jonathan", ihVal("uname", doc));
+        }
+
+        [TestMethod]
+        public void doesGet()
+        {
+            IConnection con = NSoupClient.Connect(echoURL + "?what=the")
+                .UserAgent("Mozilla")
+                .Referrer("http://example.com")
+                .Data("what", "about & me?");
+
+            Document doc = con.Get();
+            //Assert.AreEqual("what=the&what=about+%26+me%3F", ihVal("QUERY_STRING", doc));
+            Assert.AreEqual("what=the&what=about+%26+me%3f", ihVal("QUERY_STRING", doc)); // Again, a change due to specific behavior, by HttpUtility.UrlEncode(). Difference is acceptable.
+            Assert.AreEqual("the, about & me?", ihVal("what", doc));
+            Assert.AreEqual("Mozilla", ihVal("HTTP_USER_AGENT", doc));
+            Assert.AreEqual("http://example.com", ihVal("HTTP_REFERER", doc));
+        }
+
+        private static string ihVal(string key, Document doc)
+        {
+            return doc.Select("th:contains(" + key + ") + td").First.Text();
+        }
     }
 }

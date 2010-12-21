@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Collections.ObjectModel;
 using NSoup.Select;
+using NSoup.Helper;
 
 namespace NSoup.Nodes
 {
@@ -17,8 +18,8 @@ namespace NSoup.Nodes
     public abstract class Node
     {
         private Node _parentNode;
-        protected readonly List<Node> _childNodes;
-        private readonly Attributes _attributes;
+        protected List<Node> _childNodes;
+        protected Attributes _attributes;
         private string _baseUri;
         private int _siblingIndex;
 
@@ -48,10 +49,25 @@ namespace NSoup.Nodes
         {
         }
 
+        protected Node()
+        {
+            _childNodes = new List<Node>();
+            _attributes = null;
+        }
+
         /// <summary>
         /// Gets the node name of this node. Use for debugging purposes and not logic switching (for that, use <code>is</code> keyword).
         /// </summary>
         public abstract string NodeName { get; }
+
+        /// <summary>
+        /// Gets all of the element's attributes.
+        /// </summary>
+        public virtual Attributes Attributes
+        {
+            get { return _attributes; }
+            protected set { _attributes = value; }
+        }
 
         /// <summary>
         /// Get an attribute's value by its key.
@@ -66,7 +82,7 @@ namespace NSoup.Nodes
         /// <seealso cref="Attributes()"/>
         /// <seealso cref="HasAttr(string)"/>
         /// <seealso cref="AbsUrl(string)"/>
-        public string Attr(string attributeKey)
+        public virtual string Attr(string attributeKey)
         {
             if (attributeKey == null)
             {
@@ -85,20 +101,12 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
-        /// Gets all of the element's attributes.
-        /// </summary>
-        public Attributes Attributes
-        {
-            get { return _attributes; }
-        }
-
-        /// <summary>
         /// Set an attribute (key=value). If the attribute already exists, it is replaced.
         /// </summary>
         /// <param name="attributeKey">The attribute key.</param>
         /// <param name="attributeValue">The attribute value.</param>
         /// <returns>this (for chaining)</returns>
-        public Node Attr(string attributeKey, string attributeValue)
+        public virtual Node Attr(string attributeKey, string attributeValue)
         {
             _attributes.Add(attributeKey, attributeValue);
             return this;
@@ -109,7 +117,7 @@ namespace NSoup.Nodes
         /// </summary>
         /// <param name="attributeKey">The attribute key to check.</param>
         /// <returns>true if the attribute exists, false if not.</returns>
-        public bool HasAttr(string attributeKey)
+        public virtual bool HasAttr(string attributeKey)
         {
             if (attributeKey == null)
             {
@@ -123,7 +131,7 @@ namespace NSoup.Nodes
         /// </summary>
         /// <param name="attributeKey">The attribute to remove.</param>
         /// <returns>this (for chaining)</returns>
-        public Node RemoveAttr(string attributeKey)
+        public virtual Node RemoveAttr(string attributeKey)
         {
             if (attributeKey == null)
             {
@@ -167,7 +175,7 @@ namespace NSoup.Nodes
         /// </returns>
         /// <seealso cref="Attr()"/>
         /// <seealso cref="System.Uri"/>
-        public string AbsUrl(string attributeKey)
+        public virtual string AbsUrl(string attributeKey)
         {
             if (string.IsNullOrEmpty(attributeKey))
             {
@@ -354,7 +362,13 @@ namespace NSoup.Nodes
 
         public void AddChildren(params Node[] children)
         {
-            AddChildren(ChildNodes.Count, children);
+            //most used. short circuit addChildren(int), which hits reindex children and array copy
+            foreach (Node child in children)
+            {
+                ReParentChild(child);
+                ChildNodes.Add(child);
+                child.SiblingIndex = ChildNodes.Count - 1;
+            }
         }
 
         public void AddChildren(int index, params Node[] children)
@@ -367,15 +381,21 @@ namespace NSoup.Nodes
             for (int i = children.Length - 1; i >= 0; i--)
             {
                 Node input = children[i];
-                if (input.ParentNode != null)
-                {
-                    input.ParentNode.RemoveChild(input);
-                }
+
+                ReParentChild(input);
 
                 ChildNodes.Insert(index, input);
-                input.ParentNode = this;
             }
             ReIndexChildren();
+        }
+
+        private void ReParentChild(Node child)
+        {
+            if (child.ParentNode != null)
+            {
+                child.ParentNode.RemoveChild(child);
+            }
+            child.ParentNode = this;
         }
 
         private void ReIndexChildren()
@@ -479,9 +499,9 @@ namespace NSoup.Nodes
             return OuterHtml();
         }
 
-        protected void Indent(StringBuilder accum, int depth)
+        protected void Indent(StringBuilder accum, int depth, Document.OutputSettings output)
         {
-            accum.Append("\n").Append(string.Empty.PadLeft(depth));
+            accum.Append("\n").Append(StringUtil.Padding(depth * output.IndentAmount()));
         }
 
         public override bool Equals(object obj)
@@ -516,7 +536,10 @@ namespace NSoup.Nodes
 
             public void Tail(Node node, int depth)
             {
-                node.OuterHtmlTail(_accum, depth, _output);
+                if (!node.NodeName.Equals("#text")) // saves a void hit.
+                {
+                    node.OuterHtmlTail(_accum, depth, _output);
+                }
             }
         }
     }

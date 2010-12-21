@@ -83,14 +83,23 @@ namespace Test.Nodes
         [TestMethod]
         public void testTextBean()
         {
-            Document doc = NSoup.NSoupClient.Parse("<p>One <span>two</span> three</p>");
+            Document doc = NSoup.NSoupClient.Parse("<p>One <span>two &amp;</span> three &amp;</p>");
             Element p = doc.Select("p").First;
 
+            Element span = doc.Select("span").First;
+            Assert.AreEqual("two &", span.Text());
+            TextNode spanText = (TextNode)span.ChildNodes[0];
+            Assert.AreEqual("two &", spanText.Text());
+
             TextNode tn = (TextNode)p.ChildNodes[2];
-            Assert.AreEqual(" three", tn.Text());
+            Assert.AreEqual(" three &", tn.Text());
 
             tn.Text(" POW!");
-            Assert.AreEqual("One <span>two</span> POW!", p.Html());
+            Assert.AreEqual("One <span>two &amp;</span> POW!", p.Html());
+
+            tn.Attr("text", "kablam &");
+            Assert.AreEqual("kablam &", tn.Text());
+            Assert.AreEqual("One <span>two &amp;</span>kablam &amp;", p.Html());
         }
     }
 }

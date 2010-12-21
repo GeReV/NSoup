@@ -100,7 +100,21 @@ namespace NSoup.Parse
         }
 
         /// <summary>
-        /// Tests if the next characters match any of the sequences.
+        /// Case sensitive match test.
+        /// </summary>
+        /// <param name="seq"></param>
+        /// <returns></returns>
+        public bool MatchesCS(string seq)
+        {
+            if (seq.Length + _pos > _queue.Length)
+            {
+                return false;
+            }
+            return _queue.Substring(_pos, seq.Length) == seq;
+        }
+
+        /// <summary>
+        /// Tests if the next characters match any of the sequences. Case insensitive.
         /// </summary>
         /// <param name="seq"></param>
         /// <returns></returns>
@@ -116,6 +130,29 @@ namespace NSoup.Parse
             return false;
         }
 
+        public bool MatchesAny(params char[] seq)
+        {
+            if (IsEmpty)
+            {
+                return false;
+            }
+
+            foreach (char c in seq)
+            {
+                if (_queue[_pos] == c)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public bool MatchesStartTag()
+        {
+            // micro opt for matching "<x"
+            return (RemainingLength >= 2 && _queue[_pos] == '<' && char.IsLetterOrDigit(_queue[_pos + 1]));
+        }
+
         /// <summary>
         /// Tests if the queue matches the sequence (as with match), and if they do, removes the matched string from the 
         /// queue.
@@ -126,7 +163,7 @@ namespace NSoup.Parse
         {
             if (Matches(seq))
             {
-                Consume(seq);
+                _pos += seq.Length;
                 return true;
             }
             else
@@ -141,7 +178,7 @@ namespace NSoup.Parse
         /// <returns>if starts with whitespace</returns>
         public bool MatchesWhitespace()
         {
-            return !IsEmpty && char.IsWhiteSpace(Peek());
+            return !IsEmpty && char.IsWhiteSpace(_queue[_pos]);
         }
 
         /// <summary>
@@ -150,7 +187,7 @@ namespace NSoup.Parse
         /// <returns>if matches a word character</returns>
         public bool MatchesWord()
         {
-            return !IsEmpty && char.IsLetterOrDigit(Peek());
+            return !IsEmpty && char.IsLetterOrDigit(_queue[_pos]);
         }
 
         /// <summary>
@@ -285,10 +322,11 @@ namespace NSoup.Parse
             return data;
         }
 
-        public string ChompToIgnoreCase(string seq) {
-        string data = ConsumeToIgnoreCase(seq); // case insensitive scan
-        MatchChomp(seq);
-        return data;
+        public string ChompToIgnoreCase(string seq)
+        {
+            string data = ConsumeToIgnoreCase(seq); // case insensitive scan
+            MatchChomp(seq);
+            return data;
         }
 
         /// <summary>
@@ -330,7 +368,7 @@ namespace NSoup.Parse
             } while (depth > 0);
             return accum.ToString();
         }
-    
+
         /// <summary>
         /// Unescaped a \ escaped string.
         /// </summary>
@@ -366,7 +404,7 @@ namespace NSoup.Parse
             bool seen = false;
             while (MatchesWhitespace())
             {
-                Consume();
+                _pos++;
                 seen = true;
             }
             return seen;
@@ -393,7 +431,7 @@ namespace NSoup.Parse
         public string ConsumeTagName()
         {
             int start = _pos;
-            while (!IsEmpty && (MatchesWord() || MatchesAny(":", "_", "-")))
+            while (!IsEmpty && (MatchesWord() || MatchesAny(':', '_', '-')))
             {
                 _pos++;
             }
@@ -408,7 +446,7 @@ namespace NSoup.Parse
         public string ConsumeElementSelector()
         {
             int start = _pos;
-            while (!IsEmpty && (MatchesWord() || MatchesAny("|", "_", "-")))
+            while (!IsEmpty && (MatchesWord() || MatchesAny('|', '_', '-')))
             {
                 _pos++;
             }
@@ -423,14 +461,13 @@ namespace NSoup.Parse
         /// <returns>identifier</returns>
         public string ConsumeCssIdentifier()
         {
-            StringBuilder accum = new StringBuilder();
-            char c = Peek();
-            while (!IsEmpty && char.IsLetterOrDigit(c) || c.Equals('-') || c.Equals('_'))
+            int start = _pos;
+            while (!IsEmpty && (MatchesWord() || MatchesAny('-', '_')))
             {
-                accum.Append(Consume());
-                c = Peek();
+                _pos++;
             }
-            return accum.ToString();
+
+            return _queue.Substring(start, _pos - start);
         }
 
         /// <summary>
@@ -440,7 +477,7 @@ namespace NSoup.Parse
         public string ConsumeAttributeKey()
         {
             int start = _pos;
-            while (!IsEmpty && (MatchesWord() || MatchesAny("-", "_", ":")))
+            while (!IsEmpty && (MatchesWord() || MatchesAny('-', '_', ':')))
             {
                 _pos++;
             }

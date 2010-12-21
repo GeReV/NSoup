@@ -124,6 +124,15 @@ namespace Test.Nodes
         }
 
         [TestMethod]
+        public void testGetChildText()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<p>Hello <b>there</b> now");
+            Element p = doc.Select("p").First;
+            Assert.AreEqual("Hello there now", p.Text());
+            Assert.AreEqual("Hello now", p.OwnText());
+        }
+
+        [TestMethod]
         public void testNormalisesText()
         {
             string h = "<p>Hello<p>There.</p> \n <p>Here <b>is</b> \n s<b>om</b>e text.";
@@ -235,15 +244,15 @@ namespace Test.Nodes
             Document doc = NSoup.NSoupClient.Parse("<div><span class='mellow yellow'>Hello <b>Yellow</b></span></div>");
             List<Element> els = doc.GetElementsByAttribute("class").ToList();
             Element span = els[0];
-            Assert.AreEqual("mellow yellow", span.ClassName);
+            Assert.AreEqual("mellow yellow", span.ClassName());
             Assert.IsTrue(span.HasClass("mellow"));
             Assert.IsTrue(span.HasClass("yellow"));
-            HashSet<string> classes = span.ClassNames;
+            HashSet<string> classes = span.ClassNames();
             Assert.AreEqual(2, classes.Count);
             Assert.IsTrue(classes.Contains("mellow"));
             Assert.IsTrue(classes.Contains("yellow"));
 
-            Assert.AreEqual("", doc.ClassName);
+            Assert.AreEqual("", doc.ClassName());
             Assert.IsFalse(doc.HasClass("mellow"));
         }
 
@@ -254,12 +263,12 @@ namespace Test.Nodes
             Element div = doc.Select("div").First;
 
             div.AddClass("green");
-            Assert.AreEqual("mellow yellow green", div.ClassName);
+            Assert.AreEqual("mellow yellow green", div.ClassName());
             div.RemoveClass("red"); // noop
             div.RemoveClass("yellow");
-            Assert.AreEqual("mellow green", div.ClassName);
+            Assert.AreEqual("mellow green", div.ClassName());
             div.ToggleClass("green").ToggleClass("red");
-            Assert.AreEqual("mellow red", div.ClassName);
+            Assert.AreEqual("mellow red", div.ClassName());
         }
 
         [TestMethod]
@@ -282,6 +291,22 @@ namespace Test.Nodes
         {
             Document doc = NSoup.NSoupClient.Parse("<div><p>Hello</p></div>");
             Assert.AreEqual("<html>\n <head></head>\n <body>\n  <div>\n   <p>Hello</p>\n  </div>\n </body>\n</html>", doc.Html());
+        }
+
+        [TestMethod]
+        public void testSetIndent()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<div><p>Hello\nthere</p></div>");
+            doc.Settings.IndentAmount(0);
+            Assert.AreEqual("<html>\n<head></head>\n<body>\n<div>\n<p>Hello there</p>\n</div>\n</body>\n</html>", doc.Html());
+        }
+
+        [TestMethod]
+        public void testNotPretty()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<div>   \n<p>Hello\n there</p></div>");
+            doc.Settings.PrettyPrint(false);
+            Assert.AreEqual("<html><head></head><body><div>   \n<p>Hello\n there</p></div></body></html>", doc.Html());
         }
 
         [TestMethod]
@@ -314,6 +339,13 @@ namespace Test.Nodes
             div.AppendElement("P").Attr("class", "second").Text("now");
             Assert.AreEqual("<html><head></head><body><div id=\"1\"><p>Hello</p><p>there</p><p class=\"second\">now</p></div></body></html>",
                     TextUtil.StripNewLines(doc.Html()));
+
+            // check sibling index (with short circuit on reindexChildren):
+            Elements ps = doc.Select("p");
+            for (int i = 0; i < ps.Count; i++)
+            {
+                Assert.AreEqual(i, ps[i].SiblingIndex);
+            }
         }
 
         [TestMethod]
@@ -324,6 +356,13 @@ namespace Test.Nodes
             table.Append("<tr><td>2</td></tr>");
 
             Assert.AreEqual("<table><tr><td>1</td></tr><tr><td>2</td></tr></table>", TextUtil.StripNewLines(doc.Body.Html()));
+
+            // check sibling index (reindexChildren):
+            Elements ps = doc.Select("tr");
+            for (int i = 0; i < ps.Count; i++)
+            {
+                Assert.AreEqual(i, ps[i].SiblingIndex);
+            }
         }
 
         [TestMethod]
@@ -372,6 +411,13 @@ namespace Test.Nodes
             Element div = doc.GetElementById("1");
             div.Append("<p>there</p><p>now</p>");
             Assert.AreEqual("<p>Hello</p><p>there</p><p>now</p>", TextUtil.StripNewLines(div.Html()));
+
+            // check sibling index (no reindexChildren):
+            Elements ps = doc.Select("p");
+            for (int i = 0; i < ps.Count; i++)
+            {
+                Assert.AreEqual(i, ps[i].SiblingIndex);
+            }
         }
 
         [TestMethod]
@@ -381,6 +427,13 @@ namespace Test.Nodes
             Element div = doc.GetElementById("1");
             div.Prepend("<p>there</p><p>now</p>");
             Assert.AreEqual("<p>there</p><p>now</p><p>Hello</p>", TextUtil.StripNewLines(div.Html()));
+
+            // check sibling index (reindexChildren):
+            Elements ps = doc.Select("p");
+            for (int i = 0; i < ps.Count; i++)
+            {
+                Assert.AreEqual(i, ps[i].SiblingIndex);
+            }
         }
 
         [TestMethod]

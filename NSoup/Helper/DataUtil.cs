@@ -7,16 +7,22 @@ using System.Net;
 using System.Text.RegularExpressions;
 using NSoup.Nodes;
 
-namespace NSoup
+namespace NSoup.Helper
 {
     /// <summary>
     /// Internal static utilities for handling data.
     /// </summary>
-    internal class DataUtil
+    public class DataUtil
     {
         private static readonly Regex _charsetPattern = new Regex("(?i)\\bcharset=([^\\s;]*)", RegexOptions.Compiled);
-        private static readonly Encoding _defaultEncoding = Encoding.UTF8; // used if not found in header or meta charset
+        static readonly Encoding _defaultEncoding = Encoding.UTF8; // used if not found in header or meta charset
         private static readonly int _bufferSize = 0x20000; // ~130K.
+
+        public static Encoding DefaultEncoding
+        {
+            get { return _defaultEncoding; }
+        }
+        
         /// <summary>
         /// Loads a file to a string.
         /// </summary>
@@ -25,50 +31,18 @@ namespace NSoup
         /// <returns></returns>
         public static Document Load(Stream input, string charsetName, string baseUri)
         {
-            
-            byte[] data = new byte[input.Length];
+            byte[] data = ReadToByteBuffer(input);
 
-            input.Read(data, 0, Convert.ToInt32(input.Length));
+            Document doc = ParseByteData(data, charsetName, baseUri);
 
-            Document doc = ReadInputStream(data, charsetName, baseUri);
+            input.Close();
 
             return doc;
         }
 
-        /// <summary>
-        /// Fetches a URL and gets as a string.
-        /// </summary>
-        /// <param name="url"></param>
-        /// <param name="timeoutMilliseconds"></param>
-        /// <returns></returns>
-        public static Document Load(Uri url, int timeoutMilliseconds)
-        {
-            string protocol = url.Scheme.ToLowerInvariant();
-
-            if (!protocol.Equals("http") && !protocol.Equals("https"))
-            {
-                throw new InvalidOperationException("Only http & https protocols supported");
-            }
-
-            WebClient wc = new WebClient();
-
-            byte[] data = wc.DownloadData(url);
-
-            string contentType = wc.ResponseHeaders[HttpResponseHeader.ContentType];
-
-            if (contentType == null || !contentType.StartsWith("text/"))
-            {
-                throw new IOException(string.Format("Unhandled content type \"{0}\" on URL {1}. Must be text/*", contentType, url));
-            }
-
-            string charsetName = GetCharsetFromContentType(contentType);
-
-            return ReadInputStream(data, charsetName, url.AbsoluteUri);
-        }
-
         // reads bytes first into a buffer, then decodes with the appropriate charset. done this way to support
         // switching the chartset midstream when a meta http-equiv tag defines the charset.
-        private static Document ReadInputStream(byte[] data, string charsetName, string baseUri)
+        public static Document ParseByteData(byte[] data, string charsetName, string baseUri)
         {
             string docData;
             Document doc = null;
@@ -108,6 +82,25 @@ namespace NSoup
                 doc.Settings.SetEncoding(charsetName);
             }
             return doc;
+        }
+
+        public static byte[] ReadToByteBuffer(Stream input)
+        {
+            using (MemoryStream ms = new MemoryStream())
+            {
+                byte[] buffer = new byte[32768];
+
+                int count = input.Read(buffer, 0, buffer.Length);
+                ms.Write(buffer, 0, count);
+
+                while (count > 0)
+                {
+                    count = input.Read(buffer, 0, buffer.Length);
+                    ms.Write(buffer, 0, count);
+                }
+                
+                return ms.ToArray();
+            }
         }
 
 

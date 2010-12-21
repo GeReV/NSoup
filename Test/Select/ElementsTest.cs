@@ -126,8 +126,8 @@ namespace Test.Nodes
             els.RemoveClass("yellow");
             els.ToggleClass("mellow");
 
-            Assert.AreEqual("blue", els[0].ClassName);
-            Assert.AreEqual("red green blue mellow", els[1].ClassName);
+            Assert.AreEqual("blue", els[0].ClassName());
+            Assert.AreEqual("red green blue mellow", els[1].ClassName());
         }
 
         [TestMethod]

@@ -281,6 +281,21 @@ namespace NSoup.Nodes
             }
         }
 
+        public sealed class ContainsOwnText : Evaluator
+        {
+            private string searchText;
+
+            public ContainsOwnText(string searchText)
+            {
+                this.searchText = searchText.ToLowerInvariant();
+            }
+
+            public override bool Matches(Element element)
+            {
+                return (element.OwnText().ToLowerInvariant().Contains(searchText));
+            }
+        }
+
         public sealed class MatchesRegex : Evaluator
         {
             private Regex regex;
@@ -294,6 +309,21 @@ namespace NSoup.Nodes
             public override bool Matches(Element element)
             {
                 return regex.IsMatch(element.Text());
+            }
+        }
+
+        public sealed class MatchesOwn : Evaluator
+        {
+            private Regex regex;
+            
+            public MatchesOwn(Regex regex)
+            {
+                this.regex = regex;
+            }
+
+            public override bool Matches(Element element)
+            {
+                return regex.IsMatch(element.OwnText());
             }
         }
     }

@@ -54,7 +54,7 @@ namespace NSoup.Nodes
         /// </summary>
         public Element Head
         {
-            get { return GetElementsByTag("head").First; }
+            get { return FindFirstElementByTagName("head", this); }
         }
 
         /// <summary>
@@ -62,7 +62,7 @@ namespace NSoup.Nodes
         /// </summary>
         public Element Body
         {
-            get { return GetElementsByTag("body").First; }
+            get { return FindFirstElementByTagName("body", this); }
         }
 
         /// <summary>
@@ -112,17 +112,24 @@ namespace NSoup.Nodes
         /// <returns>this document after normalisation</returns>
         public Document Normalise()
         {
-            if (Select("html").IsEmpty)
-                AppendElement("html");
+            Element htmlEl = FindFirstElementByTagName("html", this);
+            if (htmlEl == null)
+            {
+                htmlEl = AppendElement("html");
+            }
             if (Head == null)
-                Select("html").First.PrependElement("head");
+            {
+                htmlEl.PrependElement("head");
+            }
             if (Body == null)
-                Select("html").First.AppendElement("body");
+            {
+                htmlEl.AppendElement("body");
+            }
 
             // pull text nodes out of root, html, and head els, and push into body. non-text nodes are already taken care
             // of. do in inverse order to maintain text order.
             Normalise(Head);
-            Normalise(Select("html").First);
+            Normalise(htmlEl);
             Normalise(this);
 
             return this;
@@ -151,6 +158,27 @@ namespace NSoup.Nodes
                 Body.PrependChild(new TextNode(" ", string.Empty));
                 Body.PrependChild(node);
             }
+        }
+
+        // fast method to get first by tag name, used for html, head, body finders
+        private Element FindFirstElementByTagName(string tag, Node node)
+        {
+            if (node.NodeName.Equals(tag))
+            {
+                return (Element)node;
+            }
+            else
+            {
+                foreach (Node child in node.ChildNodes)
+                {
+                    Element found = FindFirstElementByTagName(tag, child);
+                    if (found != null)
+                    {
+                        return found;
+                    }
+                }
+            }
+            return null;
         }
 
         public override string OuterHtml()
@@ -188,6 +216,8 @@ namespace NSoup.Nodes
             private Entities.EscapeMode _escapeMode = Entities.EscapeMode.Base;
             private Encoding _encoding = Encoding.UTF8;
             private Encoder _encoder = null;
+            private bool _prettyPrint = true;
+            private int _indentAmount = 1;
 
             public OutputSettings()
             {
@@ -261,6 +291,51 @@ namespace NSoup.Nodes
             public Encoder Encoder
             {
                 get { return _encoder; }
+            }
+
+            /// <summary>
+            /// Get if pretty printing is enabled. Default is true. If disabled, the HTML output methods will not re-format 
+            /// the output, and the output will generally look like the input.
+            /// </summary>
+            /// <returns>if pretty printing is enabled.</returns>
+            public bool PrettyPrint()
+            {
+                return _prettyPrint;
+            }
+
+            /// <summary>
+            /// Enable or disable pretty printing.
+            /// </summary>
+            /// <param name="pretty">new pretty print setting</param>
+            /// <returns>this, for chaining</returns>
+            public OutputSettings PrettyPrint(bool pretty)
+            {
+                _prettyPrint = pretty;
+                return this;
+            }
+
+            /// <summary>
+            /// Get the current tag indent amount, used when pretty printing.
+            /// </summary>
+            /// <returns>the current indent amount</returns>
+            public int IndentAmount()
+            {
+                return _indentAmount;
+            }
+
+            /// <summary>
+            /// Set the indent amount for pretty printing
+            /// </summary>
+            /// <param name="indentAmount">number of spaces to use for indenting each level. Must be >= 0.</param>
+            /// <returns>this, for chaining</returns>
+            public OutputSettings IndentAmount(int indentAmount)
+            {
+                if (indentAmount < 0)
+                {
+                    throw new ArgumentOutOfRangeException("indentAmount");
+                }
+                this._indentAmount = indentAmount;
+                return this;
             }
         }
 
