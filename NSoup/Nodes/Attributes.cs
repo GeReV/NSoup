@@ -166,7 +166,7 @@ namespace NSoup.Nodes
 
         public void Html(StringBuilder accum, Document.OutputSettings output)
         {
-            foreach (Attribute attribute in this)
+            foreach (Attribute attribute in attributes.Values)
             {
                 accum.Append(" ");
                 attribute.Html(accum, output);

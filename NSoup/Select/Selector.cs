@@ -45,6 +45,8 @@ namespace NSoup.Select
     /// <tr><td><code>E:has(<em>selector</em>)</code></td><td>an Element that contains at least one element matching the <em>selector</em></td><td><code>div:has(p)</code> finds divs that contain p elements </td></tr>
     /// <tr><td><code>E:contains(<em>text</em>)</code></td><td>an Element that contains the specified text. The search is case insensitive. The text may appear in the found Element, or any of its descendants.</td><td><code>p:contains(jsoup)</code> finds p elements containing the text "jsoup".</td></tr>
     /// <tr><td><code>E:matches(<em>regex</em>)</code></td><td>an Element whose text matches the specified regular expression. The text may appear in the found Element, or any of its descendants.</td><td><code>td:matches(\\d+)</code> finds table cells containing digits. <code>div:matches((?i)login)</code> finds divs containing the text, case insensitively.</td></tr>
+    /// <tr><td><code>E:containsOwn(<em>text</em>)</code></td><td>an Element that directly contains the specified text. The search is case insensitive. The text must appear in the found Element, not any of its descendants.</td><td><code>p:containsOwn(jsoup)</code> finds p elements with own text "jsoup".</td></tr>
+    /// <tr><td><code>E:matchesOwn(<em>regex</em>)</code></td><td>an Element whose own text matches the specified regular expression. The text must appear in the found Element, not any of its descendants.</td><td><code>td:matchesOwn(\\d+)</code> finds table cells directly containing digits. <code>div:matchesOwn((?i)login)</code> finds divs containing the text, case insensitively.</td></tr>
     /// </table>
     /// </remarks>
     /// <!--
@@ -216,8 +218,10 @@ namespace NSoup.Select
             else if (_tq.MatchChomp("*"))
             {
                 return AllElements();
-            } else if (_tq.MatchChomp(":lt(")) {
-            return IndexLessThan();
+            }
+            else if (_tq.MatchChomp(":lt("))
+            {
+                return IndexLessThan();
             }
             else if (_tq.MatchChomp(":gt("))
             {
@@ -233,11 +237,19 @@ namespace NSoup.Select
             }
             else if (_tq.Matches(":contains("))
             {
-                return Contains();
+                return Contains(false);
+            }
+            else if (_tq.Matches(":containsOwn("))
+            {
+                return Contains(true);
             }
             else if (_tq.Matches(":matches("))
             {
-                return Matches();
+                return Matches(false);
+            }
+            else if (_tq.Matches(":matchesOwn("))
+            {
+                return Matches(true);
             }
             else
             { // unhandled
@@ -401,11 +413,11 @@ namespace NSoup.Select
 
             return FilterForParentsOfDescendants(_elements, Select(subQuery, _elements));
         }
-    
-        // pseudo selector :contains(text)
-        private Elements Contains()
+
+        // pseudo selector :contains(text), containsOwn(text)
+        private Elements Contains(bool own)
         {
-            _tq.Consume(":contains");
+            _tq.Consume(own ? ":containsOwn" : ":contains");
             string searchText = TokenQueue.Unescape(_tq.ChompBalanced('(', ')'));
 
             if (string.IsNullOrEmpty(searchText))
@@ -413,20 +425,20 @@ namespace NSoup.Select
                 throw new Exception(":contains(text) query must not be empty");
             }
 
-            return _root.GetElementsContainingText(searchText);
+            return own ? _root.GetElementsContainingOwnText(searchText) : _root.GetElementsContainingText(searchText);
         }
 
-        // :matches(regex)
-        private Elements Matches()
+        // :matches(regex), matchesOwn(regex)
+        private Elements Matches(bool own)
         {
-            _tq.Consume(":matches");
+            _tq.Consume(own ? ":matchesOwn" : ":matches");
             string regex = _tq.ChompBalanced('(', ')'); // don't unescape, as regex bits will be escaped
             if (string.IsNullOrEmpty(regex))
             {
                 throw new Exception(":matches(regex) query must not be empty");
             }
 
-            return _root.GetElementsMatchingText(regex);
+            return own ? _root.GetElementsMatchingOwnText(regex) : _root.GetElementsMatchingText(regex);
         }
 
         // direct child descendants
@@ -463,7 +475,7 @@ namespace NSoup.Select
         private static Elements FilterForDescendants(ICollection<Element> parents, ICollection<Element> candidates)
         {
             Elements children = new Elements();
-            
+
             IEnumerator<Element> candidatesEnum = candidates.GetEnumerator();
 
             while (candidatesEnum.MoveNext())
@@ -584,7 +596,7 @@ namespace NSoup.Select
                 bool skipStep = false;
 
                 IEnumerator<Element> parentsEnum = parents.GetEnumerator();
-                
+
                 while (parentsEnum.MoveNext() && (!skipStep))
                 {
                     Element p = parentsEnum.Current;

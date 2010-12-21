@@ -48,8 +48,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DataUtil.cs" />
-    <Compile Include="LinkedHashSet.cs" />
+    <Compile Include="Helper\DataUtil.cs" />
+    <Compile Include="Helper\HttpConnection.cs" />
+    <Compile Include="Helper\LinkedHashSet.cs" />
+    <Compile Include="Helper\StringUtil.cs" />
+    <Compile Include="IConnection.cs" />
     <Compile Include="Nodes\Attribute.cs" />
     <Compile Include="Nodes\Attributes.cs" />
     <Compile Include="Nodes\Comment.cs" />

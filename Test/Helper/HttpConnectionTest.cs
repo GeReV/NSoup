@@ -5,14 +5,15 @@ using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSoup.Nodes;
 using NSoup;
+using NSoup.Helper;
 
 namespace Test.Nodes
 {
 
     [TestClass]
-    public class DataUtilTest
+    public class HttpConnectionTest
     {
-        public DataUtilTest()
+        public HttpConnectionTest()
         {
             //
             // TODO: Add constructor logic here
@@ -59,14 +60,30 @@ namespace Test.Nodes
         //
         #endregion
 
+        /* most actual network http connection tests are in integration */
+
         [TestMethod]
-        public void testCharset()
+        [ExpectedException(typeof(InvalidOperationException))]
+        public void throwsExceptionOnParseWithoutExecute()
         {
-            Assert.AreEqual("UTF-8", DataUtil.GetCharsetFromContentType("text/html;charset=utf-8 "));
-            Assert.AreEqual("UTF-8", DataUtil.GetCharsetFromContentType("text/html; charset=UTF-8"));
-            Assert.AreEqual("ISO-8859-1", DataUtil.GetCharsetFromContentType("text/html; charset=ISO-8859-1"));
-            Assert.AreEqual(null, DataUtil.GetCharsetFromContentType("text/html"));
-            Assert.AreEqual(null, DataUtil.GetCharsetFromContentType(null));
+            IConnection con = HttpConnection.Connect("http://example.com");
+            con.Response().Parse();
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public void throwsExceptionOnBodyWithoutExecute()
+        {
+            IConnection con = HttpConnection.Connect("http://example.com");
+            con.Response().Body();
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public void throwsExceptionOnBodyAsBytesWithoutExecute()
+        {
+            IConnection con = HttpConnection.Connect("http://example.com");
+            con.Response().BodyAsBytes();
         }
     }
 }

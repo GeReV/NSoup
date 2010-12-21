@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Web;
 using System.Text.RegularExpressions;
+using NSoup.Helper;
 
 namespace NSoup.Nodes
 {
@@ -17,8 +18,13 @@ namespace NSoup.Nodes
     /// -->
     public class TextNode : Node
     {
+        /*
+        TextNode is a node, and so by default comes with attributes and children. The attributes are seldom used, but use
+        memory, and the child nodes are never used. So we don't have them, and override accessors to attributes to create
+        them as needed on the fly.
+        */
         private static readonly string TEXT_KEY = "text";
-        private static readonly Regex _spaceNormaliser = new Regex("\\s{2,}|(\\r\\n|\\r|\\n)", RegexOptions.Compiled);
+        private string text;
 
         /// <summary>
         /// Create a new TextNode representing the supplied (unencoded) text).
@@ -27,9 +33,9 @@ namespace NSoup.Nodes
         /// <param name="baseUri">base uri</param>
         /// <seealso cref="CreateFromEncoded(string, string)"/>
         public TextNode(string text, string baseUri)
-            : base(baseUri)
         {
-            Attributes.Add(TEXT_KEY, text);
+            this.BaseUri = baseUri;
+            this.text = text;
         }
 
         public override string NodeName
@@ -43,7 +49,7 @@ namespace NSoup.Nodes
         /// <seealso cref="TextNode.GetWholeText()"/>
         public string Text()
         {
-            return OuterHtml();
+            return NormaliseWhitespace(GetWholeText());
         }
 
         /// <summary>
@@ -53,7 +59,11 @@ namespace NSoup.Nodes
         /// <returns>this, for chaining</returns>
         public TextNode Text(string text)
         {
-            Attributes.Add(TEXT_KEY, text);
+            this.text = text;
+            if (Attributes != null)
+            {
+                Attributes[TEXT_KEY] = text;
+            }
             return this;
         }
 
@@ -63,7 +73,7 @@ namespace NSoup.Nodes
         /// <returns>text</returns>
         public string GetWholeText()
         {
-            return Attributes.GetValue(TEXT_KEY);
+            return Attributes == null ? text : Attributes.GetValue(TEXT_KEY);
         }
 
         /// <summary>
@@ -71,20 +81,20 @@ namespace NSoup.Nodes
         /// </summary>
         public bool IsBlank
         {
-            get { return string.IsNullOrEmpty(NormaliseWhitespace(GetWholeText()).Trim()); } // Should actually be IsNullOrWhitespace.
+            get { return GetWholeText().IsBlank(); }
         }
 
         public override void OuterHtmlHead(StringBuilder accum, int depth, Document.OutputSettings output)
         {
             string html = Entities.Escape(GetWholeText(), output);
-            if (ParentNode is Element && !((Element)ParentNode).PreserveWhitespace)
+            if (output.PrettyPrint() && ParentNode is Element && !((Element)ParentNode).PreserveWhitespace)
             {
                 html = NormaliseWhitespace(html);
             }
 
-            if (SiblingIndex == 0 && ParentNode is Element && ((Element)ParentNode).Tag.CanContainBlock && !IsBlank)
+            if (output.PrettyPrint() && SiblingIndex == 0 && ParentNode is Element && ((Element)ParentNode).Tag.CanContainBlock && !IsBlank)
             {
-                Indent(accum, depth);
+                Indent(accum, depth, output);
             }
             accum.Append(html);
         }
@@ -110,7 +120,7 @@ namespace NSoup.Nodes
 
         public static string NormaliseWhitespace(string text)
         {
-            text = _spaceNormaliser.Replace(text, " "); // more than one space, and newlines to " "
+            text = text.NormaliseWhitespace(); // more than one space, and newlines to " "
             return text;
         }
 
@@ -121,13 +131,57 @@ namespace NSoup.Nodes
 
         public static bool LastCharIsWhitespace(StringBuilder sb)
         {
-            if (sb.Length == 0)
+            return sb.Length != 0 && sb[sb.Length - 1] == ' ';
+        }
+
+        // attribute fiddling. create on first access.
+        private void EnsureAttributes()
+        {
+            if (_attributes == null)
             {
-                return false;
+                this._attributes = new Attributes();
+                _attributes[TEXT_KEY] = text;
             }
-            string lastChar = sb[sb.Length - 1].ToString();
-            //Validate.isTrue(lastChar.length() == 1); // todo: remove check
-            return lastChar.Equals(" ");
+        }
+
+        public override Attributes Attributes
+        {
+            get
+            {
+                EnsureAttributes();
+                return base.Attributes;
+            }
+        }
+
+        public override string Attr(string attributeKey)
+        {
+            EnsureAttributes();
+            return base.Attr(attributeKey);
+        }
+
+        public override Node Attr(string attributeKey, string attributeValue)
+        {
+            EnsureAttributes();
+            return base.Attr(attributeKey, attributeValue);
+        }
+
+        public override bool HasAttr(string attributeKey)
+        {
+            EnsureAttributes();
+            return base.HasAttr(attributeKey);
+        }
+
+
+        public override Node RemoveAttr(string attributeKey)
+        {
+            EnsureAttributes();
+            return base.RemoveAttr(attributeKey);
+        }
+
+        public override string AbsUrl(String attributeKey)
+        {
+            EnsureAttributes();
+            return base.AbsUrl(attributeKey);
         }
     }
 }

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 
 namespace NSoup.Parse
-{    
+{
     /// <summary>
     ///  HTML Tag specifications. This is a very simplistic model without the full expressiveness as the DTD,
     /// but it should capture most of what we need to know to intelligently parse a doc.
@@ -234,11 +234,14 @@ namespace NSoup.Parse
                 return true; // HTML tag
             }
 
-            foreach (Tag tag in child._ancestors)
+            for (int i = 0; i < child._ancestors.Count; i++)
             {
-                if (this.Equals(tag))
+                if (this.Equals(child._ancestors[i]))
+                {
                     return true;
+                }
             }
+
             return false;
         }
 

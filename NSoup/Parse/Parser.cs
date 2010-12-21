@@ -102,7 +102,15 @@ namespace NSoup.Parse
         {
             while (!_tq.IsEmpty)
             {
-                if (_tq.Matches("<!--"))
+                if (_tq.MatchesStartTag())
+                {
+                    ParseStartTag();
+                }
+                else if (_tq.MatchesCS("</"))
+                {
+                    ParseEndTag();
+                }
+                else if (_tq.MatchesCS("<!--"))
                 {
                     ParseComment();
                 }
@@ -110,17 +118,9 @@ namespace NSoup.Parse
                 {
                     ParseCdata();
                 }
-                else if (_tq.Matches("<?") || _tq.Matches("<!"))
+                else if (_tq.MatchesCS("<?") || _tq.MatchesCS("<!"))
                 {
                     ParseXmlDecl();
-                }
-                else if (_tq.Matches("</"))
-                {
-                    ParseEndTag();
-                }
-                else if (_tq.Matches("<"))
-                {
-                    ParseStartTag();
                 }
                 else
                 {
@@ -171,10 +171,8 @@ namespace NSoup.Parse
             string tagName = _tq.ConsumeTagName();
 
             if (string.IsNullOrEmpty(tagName))
-            { // doesn't look like a start tag after all; put < back on stack and handle as text
-                _tq.AddFirst("&lt;");
-                ParseTextNode();
-                return;
+            {
+                throw new Exception("Unexpectedly empty tagname. (This should not occur, please report!)");
             }
 
             _tq.ConsumeWhitespace();
@@ -271,15 +269,30 @@ namespace NSoup.Parse
                 return NSoup.Nodes.Attribute.CreateFromEncoded(key, value);
             else
             {
-                _tq.Consume(); // unknown char, keep popping so not get stuck
+                if (value.Length == 0) // no key, no val; unknown char, keep popping so not get stuck
+                {
+                    _tq.Advance();
+                }
+
                 return null;
             }
         }
 
         private void ParseTextNode()
         {
-            string text = _tq.ConsumeTo("<");
-            TextNode textNode = TextNode.CreateFromEncoded(text, _baseUri);
+            TextNode textNode;
+            // special case: handle string like "hello < there". first char will be "<", because of matchStartTag
+            if (_tq.Peek().Equals('<'))
+            {
+                _tq.Advance();
+                textNode = new TextNode("<", _baseUri);
+            }
+            else
+            {
+                string text = _tq.ConsumeTo("<");
+                textNode = TextNode.CreateFromEncoded(text, _baseUri);
+            }
+
             Last.AppendChild(textNode);
         }
 

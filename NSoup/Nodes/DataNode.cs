@@ -65,7 +65,7 @@ namespace NSoup.Nodes
         /// <returns>new DataNode</returns>
         public static DataNode CreateFromEncoded(string encodedData, string baseUri)
         {
-            string data = HttpUtility.HtmlDecode(encodedData);
+            string data = Entities.Unescape(encodedData);
             return new DataNode(data, baseUri);
         }
     }

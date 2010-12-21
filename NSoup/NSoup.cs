@@ -6,6 +6,7 @@ using NSoup.Nodes;
 using NSoup.Parse;
 using System.IO;
 using NSoup.Safety;
+using NSoup.Helper;
 
 namespace NSoup
 {
@@ -47,24 +48,25 @@ namespace NSoup
         }
 
         /// <summary>
-        /// Fetch a URL, and parse it as HTML.
-        /// <p> 
-        /// The encoding character set is determined by the content-type header or http-equiv meta tag, or falls back to <code>UTF-8</code>.
+        /// Creates a new IConnection to a URL. Use to fetch and parse a HTML page.
+        /// Use examples:
+        /// <ul>
+        /// <li><code>Document doc = NSoupClient.Connect("http://example.com").UserAgent("Mozilla").Data("name", "jsoup").Get();</code></li>
+        /// <li><code>Document doc = NSoupClient.Connect("http://example.com").Cookie("auth", "token").Post();
+        /// </ul>
         /// </summary>
-        /// <param name="url">URL to fetch (with a GET). The protocol must be <code>http</code> or <code>https</code>.</param>
-        /// <param name="timeoutMillis">Connection and read timeout, in milliseconds. If exceeded, IOException is thrown.</param>
-        /// <returns>The parsed HTML.</returns>
-        /// <remarks>Throws an exception if the final server response != 200 OK (redirects aren't followed), or if there's an error reading the response stream.</remarks>
-        public static Document Parse(Uri url, int timeoutMillis)
+        /// <param name="url">URL to connect to. The protocol must be <code>http</code> or <code>https</code>.</param>
+        /// <returns>the connection. You can add data, cookies, and headers; set the user-agent, referrer, method; and then execute.</returns>
+        public static IConnection Connect(string url)
         {
-            return DataUtil.Load(url, timeoutMillis);
+            return HttpConnection.Connect(url);
         }
 
         /// <summary>
         /// Parse the contents of a file as HTML.
         /// </summary>
-        /// <param name="filename">file to load HTML from</param>
-        /// <param name="charsetName">(optional) character set of file contents. Set to null to determine from http-equiv meta tag, if 
+        /// <param name="filename">stream to load HTML from</param>
+        /// <param name="charsetName">(optional) character set of file contents. Set to <code>null</code> to determine from <code>http-equiv</code> meta tag, if 
         /// present, or fall back to <code>UTF-8</code> (which is often safe to do).</param> 
         /// <param name="baseUri">The URL where the HTML was retrieved from, to generate absolute URLs relative to.</param>
         /// <returns>sane HTML</returns>
@@ -72,6 +74,19 @@ namespace NSoup
         public static Document Parse(Stream s, string charsetName, string baseUri)
         {
             return DataUtil.Load(s, charsetName, baseUri);
+        }
+
+        /// <summary>
+        /// Parse the contents of a stream as HTML.
+        /// </summary>
+        /// <param name="filename">stream to load HTML from</param>
+        /// <param name="charsetName">(optional) character set of file contents. Set to <code>null</code> to determine from <code>http-equiv</code> meta tag, if 
+        /// present, or fall back to <code>UTF-8</code> (which is often safe to do).</param> 
+        /// <returns>sane HTML</returns>
+        /// <remarks>Throws an exception if the stream could not be read, or if the charsetName is invalid.</remarks>
+        public static Document Parse(Stream s, string charsetName)
+        {
+            return Parse(s, charsetName, string.Empty);
         }
 
         /// <summary>
@@ -109,6 +124,22 @@ namespace NSoup
         public static Document ParseBodyFragment(string bodyHtml)
         {
             return Parser.ParseBodyFragment(bodyHtml, string.Empty);
+        }
+
+        /// <summary>
+        /// Fetch a URL, and parse it as HTML. Provided for compatibility; in most cases use <code>Connect(string)</code> instead.
+        /// The encoding character set is determined by the content-type header or http-equiv meta tag, or falls back to <code>UTF-8</code>.
+        /// </summary>
+        /// <param name="url">URL to fetch (with a GET). The protocol must be <code>http</code> or <code>https</code>.</param>
+        /// <param name="timeoutMillis">Connection and read timeout, in milliseconds. If exceeded, IOException is thrown.</param>
+        /// <returns>The parsed HTML.</returns>
+        /// <seealso cref="Connect(string)"/>
+        /// <exception cref="IOException">If the final server response != 200 OK (redirects are followed), or if there's an error reading the response stream.</exception>
+        public static Document Parse(Uri url, int timeoutMillis)
+        {
+            IConnection con = HttpConnection.Connect(url);
+            con.Timeout(timeoutMillis);
+            return con.Get();
         }
 
         /// <summary>

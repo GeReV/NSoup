@@ -92,6 +92,20 @@ namespace Test.Parser
         }
 
         [TestMethod]
+        public void parsesQuiteRoughAttributes()
+        {
+            String html = "<p =a>One<a =a";
+            Document doc = NSoup.NSoupClient.Parse(html);
+            Assert.AreEqual("<p>One<a></a></p>", doc.Body.Html());
+
+            doc = NSoup.NSoupClient.Parse("<p .....");
+            Assert.AreEqual("<p></p>", doc.Body.Html());
+
+            doc = NSoup.NSoupClient.Parse("<p .....<p!!");
+            Assert.AreEqual("<p></p>\n<p></p>", doc.Body.Html());
+        }
+
+        [TestMethod]
         public void parsesComments()
         {
             string html = "<html><head></head><body><img src=foo><!-- <table><tr><td></table> --><p>Hello</p></body></html>";
