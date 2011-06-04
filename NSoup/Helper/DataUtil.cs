@@ -14,9 +14,11 @@ namespace NSoup.Helper
     /// </summary>
     public class DataUtil
     {
-        private static readonly Regex _charsetPattern = new Regex("(?i)\\bcharset=([^\\s;]*)", RegexOptions.Compiled);
+        private static readonly Regex _charsetPattern = new Regex("(?i)\\bcharset=\\s*\"?([^\\s;\"]*)", RegexOptions.Compiled);
         static readonly Encoding _defaultEncoding = Encoding.UTF8; // used if not found in header or meta charset
-        private static readonly int _bufferSize = 0x20000; // ~130K.
+        //private static readonly int _bufferSize = 0x20000; // ~130K.
+
+        private DataUtil() {}
 
         public static Encoding DefaultEncoding
         {
@@ -73,6 +75,11 @@ namespace NSoup.Helper
             else
             {
                 // specified by content type header (or by user on file load)
+                if (string.IsNullOrEmpty(charsetName))
+                {
+                    throw new Exception("Must set charset arg to character set of file to parse. Set to null to attempt to detect from HTML");
+                }
+
                 docData = Encoding.GetEncoding(charsetName).GetString(data);
             }
 

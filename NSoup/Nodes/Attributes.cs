@@ -18,7 +18,7 @@ namespace NSoup.Nodes
     /// Original Author: Jonathan Hedley, jonathan@hedley.net
     /// Ported to .NET by: Amir Grozki
     /// -->
-    public class Attributes : IEnumerable<Attribute>, IEquatable<Attributes>
+    public class Attributes : IEnumerable<Attribute>, IEquatable<Attributes>, ICloneable
     {
         public static readonly string DataPrefix = "data-";
 
@@ -447,6 +447,24 @@ namespace NSoup.Nodes
         public bool Equals(Attributes other)
         {
             return Equals(other as object);
+        }
+
+        #endregion
+
+        #region ICloneable Members
+
+        public object Clone()
+        {
+            Attributes clone = new Attributes();
+
+            clone.attributes = new Dictionary<string, Attribute>(attributes.Count);
+
+            foreach (Attribute attribute in this)
+            {
+                clone.attributes[attribute.Key] = (Attribute)attribute.Clone();
+            }
+
+            return clone;
         }
 
         #endregion

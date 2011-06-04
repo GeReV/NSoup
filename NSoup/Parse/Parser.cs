@@ -161,7 +161,11 @@ namespace NSoup.Parse
             if (!string.IsNullOrEmpty(tagName))
             {
                 Tag tag = Tag.ValueOf(tagName);
-                PopStackToClose(tag);
+
+                if (!Last.Tag.IsIgnorableEndTag(tag)) // skips </tr> if in <table>
+                {
+                    PopStackToClose(tag);
+                }
             }
         }
 

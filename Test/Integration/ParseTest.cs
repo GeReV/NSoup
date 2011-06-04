@@ -191,6 +191,15 @@ namespace Test
             }
         }
 
+        [TestMethod]
+        public void testYahooArticle()
+        {
+            Stream input = getFile("Test.htmltests.yahoo-article-1.html");
+            Document doc = NSoup.NSoupClient.Parse(input, "UTF-8", "http://news.yahoo.com/s/nm/20100831/bs_nm/us_gm_china");
+            Element p = doc.Select("p:contains(Volt will be sold in the United States").First;
+            Assert.AreEqual("In July, GM said its electric Chevrolet Volt will be sold in the United States at $41,000 -- $8,000 more than its nearest competitor, the Nissan Leaf.", p.Text());
+        }
+
         Stream getFile(string resourceName)
         {
             try

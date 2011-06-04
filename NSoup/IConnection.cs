@@ -186,15 +186,16 @@ namespace NSoup
 
         /// <summary>
         /// Gets the value of a header. This is a simplified header model, where a header may only have one value.
+        /// Header names are case insensitive.
         /// </summary>
-        /// <param name="name">name of header</param>
+        /// <param name="name">name of header (case insensitive)</param>
         /// <returns>value of header, or null if not set.</returns>
         /// <see cref="HasHeader(string)"/>
         /// <see cref="Cookie(string)"/>
         string Header(string name);
 
         /// <summary>
-        /// Sets a header.
+        /// Sets a header. This method will overwrite any existing header with the same case insensitive name. 
         /// </summary>
         /// <param name="name">Name of header</param>
         /// <param name="value">Value of header</param>
@@ -204,14 +205,14 @@ namespace NSoup
         /// <summary>
         /// Check if a header is present
         /// </summary>
-        /// <param name="name">name of header</param>
+        /// <param name="name">name of header (case insensitive)</param>
         /// <returns>if the header is present in this request/response</returns>
         bool HasHeader(string name);
 
         /// <summary>
         /// Remove a header by name
         /// </summary>
-        /// <param name="name">name of header to remove</param>
+        /// <param name="name">name of header to remove (case insensitive)</param>
         /// <returns>this, for chianing</returns>
         IConnectionBase<T> RemoveHeader(string name);
 

@@ -16,7 +16,7 @@ namespace Test.Integration
     /// Ported to .NET by: Amir Grozki
     /// -->
     [TestClass]
-    //[Ignore] // ignored by default so tests don't require network access. comment out to enable.
+    [Ignore] // ignored by default so tests don't require network access. comment out to enable.
     public class UrlConnectTest
     {
         public UrlConnectTest()
@@ -138,6 +138,23 @@ namespace Test.Integration
         private static string ihVal(string key, Document doc)
         {
             return doc.Select("th:contains(" + key + ") + td").First.Text();
+        }
+
+        [TestMethod]
+        public void followsTempRedirect()
+        {
+            IConnection con = NSoupClient.Connect("http://infohound.net/tools/302.pl"); // http://jsoup.org
+            Document doc = con.Get();
+            Assert.IsTrue(doc.Title.Contains("jsoup"));
+        }
+
+        [TestMethod]
+        public void followsRedirectToHttps()
+        {
+            IConnection con = NSoupClient.Connect("http://infohound.net/tools/302-secure.pl"); // https://www.google.com
+            con.Data("id", "5");
+            Document doc = con.Get();
+            Assert.IsTrue(doc.Title.Contains("Google"));
         }
     }
 }

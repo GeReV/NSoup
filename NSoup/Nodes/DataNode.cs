@@ -45,6 +45,17 @@ namespace NSoup.Nodes
             return Attributes.GetValue(DATA_KEY);
         }
 
+        /// <summary>
+        /// Set the data contents of this node.
+        /// </summary>
+        /// <param name="data">unencoded data</param>
+        /// <returns>this node, for chaining</returns>
+        public DataNode setWholeData(string data)
+        {
+            _attributes[DATA_KEY] = data;
+            return this;
+        }
+
         public override void OuterHtmlHead(StringBuilder accum, int depth, Document.OutputSettings output)
         {
             accum.Append(GetWholeData()); // data is not escaped in return from data nodes, so " in script, style is plain

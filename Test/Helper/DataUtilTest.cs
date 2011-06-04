@@ -69,5 +69,13 @@ namespace Test.Nodes
             Assert.AreEqual(null, DataUtil.GetCharsetFromContentType("text/html"));
             Assert.AreEqual(null, DataUtil.GetCharsetFromContentType(null));
         }
+
+        [TestMethod]
+        public void testQuotedCharset()
+        {
+            Assert.AreEqual("UTF-8", DataUtil.GetCharsetFromContentType("text/html; charset=\"utf-8\""));
+            Assert.AreEqual("UTF-8", DataUtil.GetCharsetFromContentType("text/html;charset=\"utf-8\""));
+            Assert.AreEqual("ISO-8859-1", DataUtil.GetCharsetFromContentType("text/html; charset=\"ISO-8859-1\""));
+        }
     }
 }

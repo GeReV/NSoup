@@ -14,7 +14,7 @@ namespace NSoup.Nodes
     /// Original Author: Jonathan Hedley, jonathan@hedley.net
     /// Ported to .NET by: Amir Grozki
     /// -->   
-    public class Attribute : IEquatable<Attribute>
+    public class Attribute : IEquatable<Attribute>, ICloneable
     {
         private string _key;
         private string _value;
@@ -167,6 +167,22 @@ namespace NSoup.Nodes
         public bool Equals(Attribute other)
         {
             return Equals(other as object);
+        }
+
+        #endregion
+
+        #region ICloneable Members
+
+        public object Clone()
+        {
+            try
+            {
+                return new Attribute(Key, Value); // only fields are immutable strings key and value, so no more deep copy reqd
+            }
+            catch
+            {
+                throw;
+            }
         }
 
         #endregion

@@ -68,7 +68,7 @@ namespace NSoup
         /// <param name="filename">stream to load HTML from</param>
         /// <param name="charsetName">(optional) character set of file contents. Set to <code>null</code> to determine from <code>http-equiv</code> meta tag, if 
         /// present, or fall back to <code>UTF-8</code> (which is often safe to do).</param> 
-        /// <param name="baseUri">The URL where the HTML was retrieved from, to generate absolute URLs relative to.</param>
+        /// <param name="baseUri">The URL where the HTML was retrieved from, to resolve relative links against.</param>
         /// <returns>sane HTML</returns>
         /// <remarks>Throws an exception if the file could not be found, or read, or if the charsetName is invalid.</remarks>
         public static Document Parse(Stream s, string charsetName, string baseUri)

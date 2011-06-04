@@ -119,5 +119,14 @@ namespace Test.Parser
             data = tq.ChompToIgnoreCase("</textarea");
             Assert.AreEqual("<textarea> one two < three </oops>", data);
         }
+
+        [TestMethod]
+        public void addFirst()
+        {
+            TokenQueue tq = new TokenQueue("One Two");
+            tq.ConsumeWord();
+            tq.AddFirst("Three");
+            Assert.AreEqual("Three Two", tq.Remainder());
+        }
     }
 }

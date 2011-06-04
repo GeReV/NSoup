@@ -254,7 +254,7 @@ namespace NSoup.Select
         }
 
         /// <summary>
-        /// Set each matched element's inner HTML.
+        /// Set the inner HTML of each matched element.
         /// </summary>
         /// <param name="html">HTML to parse and set into each matched element.</param>
         /// <returns>this, for chaining</returns>
@@ -269,7 +269,7 @@ namespace NSoup.Select
         }
 
         /// <summary>
-        /// Get the combined inner HTML of all matched elements.
+        /// Get the combined outer HTML of all matched elements.
         /// </summary>
         /// <seealso cref="Text"/>
         /// <seealso cref="Html"/>
@@ -285,6 +285,17 @@ namespace NSoup.Select
                 sb.Append(element.OuterHtml());
             }
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Get the combined outer HTML of all matched elements. Alias of <see cref="OuterHtml()"/>.
+        /// </summary>
+        /// <returns>string of all element's outer HTML.</returns>
+        /// <seealso cref="Text"/>
+        /// <seealso cref="Html"/>
+        public override string ToString()
+        {
+            return OuterHtml();
         }
 
         /// <summary>
@@ -369,12 +380,52 @@ namespace NSoup.Select
             return this;
         }
 
+        /// <summary>
+        /// Empty (remove all child nodes from) each matched element. This is similar to setting the inner HTML of each 
+        /// element to nothing.
+        /// E.g. HTML: <code>&lt;div&gt;&lt;p&gt;Hello &lt;b&gt;there&lt;/b&gt;&lt;/p&gt; &lt;p&gt;now&lt;/p&gt;&lt;/div&gt;&lt;br&gt;</code>
+        /// <code>doc.Select("p").Empty();</code>
+        /// HTML = <code>&lt;div&gt;&lt;p&gt;&lt;/p&gt; &lt;p&gt;&lt;/p&gt;&lt;/div&gt;</code>
+        /// </summary>
+        /// <returns>this, for chaining</returns>
+        /// <seealso cref="Element.Empty()"/>
+        /// <seealso cref="Remove()"/>
+        public Elements Empty()
+        {
+            foreach (Element element in _contents)
+            {
+                element.Empty();
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// Remove each matched element from the DOM. This is similar to setting the outer HTML of each element to nothing.
+        /// E.g. HTML: <code>&lt;div&gt;&lt;p&gt;Hello&lt;/p&gt; &lt;p&gt;there&lt;/p&gt; &lt;img /&gt;&lt;/div&gt;</code>
+        /// <code>doc.Select("p").Remove();</code>
+        /// HTML = <code>&lt;div&gt; &lt;img /&gt;&lt;/div&gt;</code>
+        /// </summary>
+        /// <remarks>
+        /// Note that this method should not be used to clean user-submitted HTML; rather, use <see cref="Cleaner"/> to clean HTML. 
+        /// </remarks>
+        /// <returns>this, for chaining</returns>
+        /// <seealso cref="Element.Empty()"/>
+        /// <seealso cref="Empty()"/>
+        public Elements Remove()
+        {
+            foreach (Element element in _contents)
+            {
+                element.Remove();
+            }
+            return this;
+        }
+
         // filters
 
         /// <summary>
         /// Find matching elements within this element list.
         /// </summary>
-        /// <param name="query">A selector query</param>
+        /// <param name="query">A <see cref="Selector"/> query</param>
         /// <returns>the filtered list of elements, or an empty list if none match.</returns>
         public Elements Select(string query)
         {
@@ -382,20 +433,28 @@ namespace NSoup.Select
         }
 
         /// <summary>
-        /// Reduce the matched elements to one element
+        /// Remove elements from this list that do not match the <see cref="Selector"/> query.
+        /// E.g. HTML: <code>&lt;div class=logo&gt;One&lt;/div&gt; &lt;div&gt;Two&lt;/div&gt;</code>
+        /// <code>Elements divs = doc.Select("div").Not("#logo");</code>
+        /// Result: <code>divs: [&lt;div&gt;Two&lt;/div&gt;]</code>
+        /// </summary>
+        /// <param name="query">query the selector query whose results should be removed from these elements</param>
+        /// <returns>a new elements list that contains only the filtered results</returns>
+        public Elements Not(string query)
+        {
+            Elements output = Selector.Select(query, this);
+            return Selector.FilterOut(this, output);
+        }
+
+        /// <summary>
+        /// Get the <i>nth</i> matched element as an Elements object.
         /// </summary>
         /// <param name="index">the (zero-based) index of the element in the list to retain</param>
         /// <returns>Elements containing only the specified element, or, if that element did not exist, an empty list.</returns>
+        /// <seealso cref="Get(int)"/>
         public Elements Eq(int index)
         {
-            if (_contents.Count > index)
-            {
-                return new Elements(this[index]);
-            }
-            else
-            {
-                return new Elements();
-            }
+            return _contents.Count > index ? new Elements(this[index]) : new Elements();
         }
 
         /// <summary>
@@ -405,7 +464,7 @@ namespace NSoup.Select
         /// <returns>true if at least one element in the list matches the query.</returns>
         public bool Is(string query)
         {
-            Elements children = this.Select(query);
+            Elements children = Select(query);
             return !children.IsEmpty;
         }
 
@@ -434,7 +493,7 @@ namespace NSoup.Select
         /// </summary>
         public Element First
         {
-            get { return _contents.Count > 0 ? _contents[0] : null; }
+            get { return _contents.Count <= 0 ? null : _contents[0]; }
         }
 
         /// <summary>
@@ -442,7 +501,7 @@ namespace NSoup.Select
         /// </summary>
         public Element Last
         {
-            get { return _contents.Count > 0 ? _contents[_contents.Count - 1] : null; }
+            get { return _contents.Count <= 0 ? null : _contents[_contents.Count - 1]; }
         }
 
         // implements List<Element> delegates:

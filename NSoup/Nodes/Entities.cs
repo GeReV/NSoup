@@ -7,20 +7,35 @@ using System.Text.RegularExpressions;
 namespace NSoup.Nodes
 {
     /// <summary>
-    /// HMTL entities, and escape routines.
+    /// HTML entities, and escape routines.
     /// Source: <a href="http://www.w3.org/TR/html5/named-character-references.html#named-character-references">W3C HTML named character references</a>.
     /// </summary>
     public class Entities
     {
-        public enum EscapeMode
+        public class EscapeMode
         {
-            Base, Extended
+            public static readonly EscapeMode Xhtml = new EscapeMode(_xhtmlByVal);
+            public static readonly EscapeMode Base = new EscapeMode(_baseByVal);
+            public static readonly EscapeMode Extended = new EscapeMode(_fullByVal);
+
+            private Dictionary<char, string> _map;
+
+            private EscapeMode(Dictionary<char, string> map)
+            {
+                this._map = map;
+            }
+
+            public Dictionary<char, string> GetMap()
+            {
+                return this._map;
+            }
         }
 
         private static readonly Dictionary<string, char> _full;
+        private static readonly Dictionary<char, string> _xhtmlByVal;
         private static readonly Dictionary<char, string> _baseByVal;
         private static readonly Dictionary<char, string> _fullByVal;
-        private static readonly Regex _unescapePattern = new Regex("&(#(x|X)?([0-9a-fA-F]+)|[a-zA-Z]+);?", RegexOptions.Compiled);
+        private static readonly Regex _unescapePattern = new Regex("&(#(x|X)?([0-9a-fA-F]+)|[a-zA-Z]+\\d*);?", RegexOptions.Compiled);
 
         public static string Escape(string s, Document.OutputSettings output)
         {
@@ -30,7 +45,7 @@ namespace NSoup.Nodes
         public static string Escape(string s, Encoding encoding, EscapeMode escapeMode)
         {
             StringBuilder accum = new StringBuilder(s.Length * 2);
-            Dictionary<char, string> map = (escapeMode == EscapeMode.Extended ? _fullByVal : _baseByVal);
+            Dictionary<char, string> map = escapeMode.GetMap();
 
             for (int pos = 0; pos < s.Length; pos++)
             {
@@ -101,6 +116,15 @@ namespace NSoup.Nodes
                 return m.Groups[0].Value; // replace with original string
             }));
         }
+
+        // xhtml has restricted entities
+        private static readonly object[,] xhtmlArray = {
+            {"quot", 0x00022},
+            {"amp", 0x00026},
+            {"apos", 0x00027},
+            {"lt", 0x0003C},
+            {"gt", 0x0003E}
+        };
 
         // most common, base entities can be unescaped without trailing ;
         // e.g. &amp
@@ -2253,8 +2277,15 @@ namespace NSoup.Nodes
         static Entities()
         {
             _full = new Dictionary<string, char>(fullArray.Length);
+            _xhtmlByVal = new Dictionary<char, string>(xhtmlArray.Length);
             _baseByVal = new Dictionary<char, string>(baseArray.Length);
             _fullByVal = new Dictionary<char, string>(fullArray.Length);
+
+            for (int i = 0; i < xhtmlArray.Length / 2; i++)
+            {
+                char c = (char)(int)xhtmlArray[i, 1];
+                _xhtmlByVal[c] = ((string)xhtmlArray[i, 0]);
+            }
 
             for (int i = 0; i < baseArray.Length / 2; i++)
 			{

@@ -289,8 +289,8 @@ namespace Test.Nodes
         [TestMethod]
         public void testFormatHtml()
         {
-            Document doc = NSoup.NSoupClient.Parse("<div><p>Hello</p></div>");
-            Assert.AreEqual("<html>\n <head></head>\n <body>\n  <div>\n   <p>Hello</p>\n  </div>\n </body>\n</html>", doc.Html());
+            Document doc = NSoup.NSoupClient.Parse("<title>Format test</title><div><p>Hello <span>jsoup <span>users</span></span></p><p>Good.</p></div>");
+            Assert.AreEqual("<html>\n <head>\n  <title>Format test</title>\n </head>\n <body>\n  <div>\n   <p>Hello <span>jsoup <span>users</span></span></p>\n   <p>Good.</p>\n  </div>\n </body>\n</html>", doc.Html());
         }
 
         [TestMethod]
@@ -540,6 +540,39 @@ namespace Test.Nodes
             Element p = doc.Select("p").First;
             Assert.AreEqual(0, p.Dataset.Count);
 
+        }
+
+        [TestMethod]
+        public void parentlessToString()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<img src='foo'>");
+            Element img = doc.Select("img").First;
+            Assert.AreEqual("\n<img src=\"foo\" />", img.ToString());
+
+            img.Remove(); // lost its parent
+            Assert.AreEqual("<img src=\"foo\" />", img.ToString());
+        }
+
+        [TestMethod]
+        public void testClone()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<div><p>One<p><span>Two</div>");
+
+            Element p = doc.Select("p")[1];
+            Element clone = (Element)p.Clone();
+
+            Assert.IsNull(clone.Parent); // should be orphaned
+            Assert.AreEqual(0, clone.SiblingIndex);
+            Assert.AreEqual(1, p.SiblingIndex);
+            Assert.IsNotNull(p.Parent);
+
+            clone.Append("<span>Three");
+            Assert.AreEqual("<p><span>Two</span><span>Three</span></p>", TextUtil.StripNewLines(clone.OuterHtml()));
+            Assert.AreEqual("<div><p>One</p><p><span>Two</span></p></div>", TextUtil.StripNewLines(doc.Body.Html())); // not modified
+
+            doc.Body.AppendChild(clone); // adopt
+            Assert.IsNotNull(clone.Parent);
+            Assert.AreEqual("<div><p>One</p><p><span>Two</span></p></div><p><span>Two</span><span>Three</span></p>", TextUtil.StripNewLines(doc.Body.Html()));
         }
     }
 }

@@ -228,9 +228,21 @@ namespace NSoup.Helper
         protected IDictionary<string, string> _headers;
         protected IDictionary<string, string> _cookies;
 
+        private class CaseInsensitiveComparer : IComparer<string>
+        {
+            #region IComparer<string> Members
+
+            public int Compare(string x, string y)
+            {
+                return string.Compare(x, y, true);
+            }
+
+            #endregion
+        }
+
         protected ConnectionBase()
         {
-            _headers = new SortedDictionary<string, string>();
+            _headers = new SortedDictionary<string, string>(new CaseInsensitiveComparer());
             _cookies = new SortedDictionary<string, string>();
         }
 
@@ -273,7 +285,7 @@ namespace NSoup.Helper
                 throw new ArgumentNullException("name");
             }
 
-            return _headers[name];
+            return GetHeaderCaseInsensitive(name);
         }
 
         public IConnectionBase<T> Header(string name, string value)
@@ -288,6 +300,8 @@ namespace NSoup.Helper
                 throw new ArgumentNullException("value");
             }
 
+            RemoveHeader(name); // ensures we don't get an "accept-encoding" and a "Accept-Encoding"
+
             _headers[name] = value;
 
             return (IConnectionBase<T>)this;
@@ -300,7 +314,7 @@ namespace NSoup.Helper
                 throw new ArgumentException("Header name must not be empty", "name");
             }
 
-            return _headers.ContainsKey(name);
+            return GetHeaderCaseInsensitive(name) != null;
         }
 
         public IConnectionBase<T> RemoveHeader(string name)
@@ -310,7 +324,12 @@ namespace NSoup.Helper
                 throw new ArgumentException("Header name must not be empty", "name");
             }
 
-            _headers.Remove(name);
+            
+            KeyValuePair<string, string>? entry = ScanHeaders(name); // remove is case insensitive too
+            if (entry != null)
+            {
+                _headers.Remove(entry.Value.Key); // ensures correct case
+            }
 
             return (IConnectionBase<T>)this;
         }
@@ -318,6 +337,39 @@ namespace NSoup.Helper
         public IDictionary<string, string> Headers()
         {
             return _headers;
+        }
+
+        private string GetHeaderCaseInsensitive(string name)
+        {
+            if (name == null)
+            {
+                throw new ArgumentNullException("name", "Header name must not be null");
+            }
+            
+            // quick evals for common case of title case, lower case, then scan for mixed
+            string value = null;
+
+            if (!_headers.TryGetValue(name, out value)) // Also case insensitive thanks to the CaseInsensitiveComparer.
+            {
+                KeyValuePair<string, string>? entry = ScanHeaders(name);
+                if (entry != null)
+                {
+                    value = entry.Value.Value;
+                }
+            }
+
+            return value;
+        }
+
+        private KeyValuePair<string, string>? ScanHeaders(string name) {
+            string lc = name.ToLowerInvariant();
+            foreach (KeyValuePair<string, string> entry in _headers) {
+                if (entry.Key.ToLowerInvariant().Equals(lc))
+                {
+                    return entry;
+                }
+            }
+            return null;
         }
 
         public string Cookie(string name)
@@ -377,8 +429,6 @@ namespace NSoup.Helper
 
     public class Response : ConnectionBase<IResponse>, IResponse
     {
-        private static readonly Regex _charsetPattern = new Regex("(?i)\\bcharset=([^\\s;]*)", RegexOptions.Compiled);
-
         private HttpStatusCode _statusCode;
         private string _statusMessage;
         private byte[] _byteData;
@@ -393,8 +443,8 @@ namespace NSoup.Helper
             {
                 throw new ArgumentNullException("req", "Request must not be null");
             }
-            Uri url = req.Url();
-            string protocol = url.Scheme;
+            
+            string protocol = req.Url().Scheme;
 
             if (!protocol.Equals("http") && !protocol.Equals("https"))
             {
@@ -404,44 +454,10 @@ namespace NSoup.Helper
             // set up the request for execution
             if (req.Method() == NSoup.Method.Get && req.Data().Count > 0)
             {
-                url = GetRequestUrl(req); // appends query string
+                SerialiseRequestUrl(req); // appends query string
             }
 
-            HttpWebRequest conn = (HttpWebRequest)HttpWebRequest.Create(url);
-
-            conn.Method = req.Method().ToString();
-            conn.AllowAutoRedirect = true;
-            conn.Timeout = req.Timeout();
-            conn.ReadWriteTimeout = req.Timeout();
-
-            /*if (req.Method() == Method.Post)
-                conn.setDoOutput(true);*/
-
-            if (req.Cookies().Count > 0)
-            {
-                conn.Headers.Add(HttpRequestHeader.Cookie, GetRequestCookieString(req));
-            }
-
-            // Added due to incosistent behavior by .NET when trying to add this header.
-            if (req.HasHeader("Referer"))
-            {
-                conn.Referer = req.Header("Referer");
-                
-                req.RemoveHeader("Referer");
-            }
-
-            // Same as above.
-            if (req.HasHeader("User-Agent"))
-            {
-                conn.UserAgent = req.Header("User-Agent");
-
-                req.RemoveHeader("User-Agent");
-            }
-
-            foreach (KeyValuePair<string, string> header in req.Headers())
-            {
-                conn.Headers.Add(header.Key, header.Value);
-            }
+            HttpWebRequest conn = CreateConnection(req);
 
             if (req.Method() == NSoup.Method.Post)
             {
@@ -453,13 +469,28 @@ namespace NSoup.Helper
 
             // todo: error handling options, allow user to get !200 without exception
             HttpStatusCode status = response.StatusCode;
+            bool needsRedirect = false;
             if (status != HttpStatusCode.OK)
             {
-                throw new IOException(status + " error loading URL " + url.ToString());
+                // java url connection will follow redirects on same protocol, but not switch between http & https, so do that here
+                if (status == HttpStatusCode.Moved || status == HttpStatusCode.MovedPermanently || status == HttpStatusCode.SeeOther)
+                {
+                    needsRedirect = true;
+                }
+                else
+                {
+                    throw new IOException(status + " error loading URL " + req.Url().ToString());
+                }
             }
 
             Response res = new Response();
             res.SetupFromConnection(response);
+
+            if (needsRedirect)
+            {
+                req.Url(new Uri(res.Header("Location")));
+                return Execute(req);
+            }
 
             using (Stream inStream =
                 (res.HasHeader("Content-Encoding") && res.Header("Content-Encoding").Equals("gzip")) ?
@@ -467,7 +498,7 @@ namespace NSoup.Helper
                     response.GetResponseStream())
             {
                 res._byteData = DataUtil.ReadToByteBuffer(inStream);
-                res._charset = GetCharsetFromContentType(res.ContentType()); // may be null, readInputStream deals with it
+                res._charset = DataUtil.GetCharsetFromContentType(res.ContentType()); // may be null, readInputStream deals with it
             }
 
             res._executed = true;
@@ -542,6 +573,50 @@ namespace NSoup.Helper
             return _byteData;
         }
 
+        // set up connection defaults, and details from request
+        private static HttpWebRequest CreateConnection(IRequest req)
+        {
+            HttpWebRequest conn = (HttpWebRequest)HttpWebRequest.Create(req.Url());
+
+            conn.Method = req.Method().ToString();
+            conn.AllowAutoRedirect = true;
+            conn.Timeout = req.Timeout();
+            conn.ReadWriteTimeout = req.Timeout();
+
+            /*if (req.Method() == Method.Post)
+                conn.setDoOutput(true);*/
+
+            if (req.Cookies().Count > 0)
+            {
+                conn.Headers.Add(HttpRequestHeader.Cookie, GetRequestCookieString(req));
+            }
+
+            // Added due to incosistent behavior by .NET when trying to add this header.
+            if (req.HasHeader("Referer"))
+            {
+                conn.Referer = req.Header("Referer");
+                
+                req.RemoveHeader("Referer");
+            }
+
+            // Same as above.
+            if (req.HasHeader("User-Agent"))
+            {
+                conn.UserAgent = req.Header("User-Agent");
+
+                req.RemoveHeader("User-Agent");
+            }
+
+            foreach (KeyValuePair<string, string> header in req.Headers())
+            {
+                conn.Headers.Add(header.Key, header.Value);
+            }
+
+            return conn;
+        }
+
+        
+
         // set up url, method, header, cookies
         private void SetupFromConnection(HttpWebResponse conn)
         {
@@ -563,7 +638,7 @@ namespace NSoup.Helper
 
                 string[] values = resHeaders[name].Split(';');
 
-                if (name.Equals("Set-Cookie"))
+                if (name.Equals("Set-Cookie", StringComparison.InvariantCultureIgnoreCase))
                 {
                     foreach (string value in values)
                     {
@@ -576,7 +651,10 @@ namespace NSoup.Helper
                 }
                 else
                 { // only take the first instance of each header
-                    Header(name, values[0]);
+                    if (values.Length > 1)
+                    {
+                        Header(name, values[0]);
+                    }
                 }
             }
         }
@@ -628,7 +706,8 @@ namespace NSoup.Helper
             return sb.ToString();
         }
 
-        private static Uri GetRequestUrl(IRequest req)
+        // for get url reqs, serialise the data map into the url
+        private static void SerialiseRequestUrl(IRequest req)
         {
             Uri input = req.Url();
             StringBuilder url = new StringBuilder();
@@ -663,24 +742,9 @@ namespace NSoup.Helper
                     .Append('=')
                     .Append(HttpUtility.UrlEncode(keyVal.Value(), DataUtil.DefaultEncoding));
             }
-            return new Uri(url.ToString());
-        }
 
-        /// <summary>
-        /// Parse out a charset from a content type header.
-        /// </summary>
-        /// <param name="contentType">e.g. "text/html; charset=EUC-JP"</param>
-        /// <returns>"EUC-JP", or null if not found. Charset is trimmed and uppercased.</returns>
-        private static string GetCharsetFromContentType(string contentType)
-        {
-            if (contentType == null) return null;
-
-            Match m = _charsetPattern.Match(contentType);
-            if (m.Success)
-            {
-                return m.Groups[1].Value.Trim().ToUpperInvariant();
-            }
-            return null;
+            req.Url(new Uri(url.ToString()));
+            req.Data().Clear(); // moved into url as get params
         }
     }
 
@@ -709,7 +773,7 @@ namespace NSoup.Helper
                 throw new ArgumentOutOfRangeException("Timeout milliseconds must be 0 (infinite) or greater");
             }
 
-            this._timeoutMilliseconds = millis;
+            _timeoutMilliseconds = millis;
 
             return this;
         }

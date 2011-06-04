@@ -53,6 +53,8 @@ namespace NSoup.Nodes
         {
         }
 
+        protected Element() { } // Used for Node.Clone().
+
         /// <summary>
         /// Gets the node's name.
         /// </summary>
@@ -202,7 +204,7 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
-        /// Find elements that match the selector query, with this element as the starting context. Matched elements 
+        /// Find elements that match the <see cref="Selector"/> query, with this element as the starting context. Matched elements 
         /// may include this element, or any of its children.
         /// </summary>
         /// <param name="query">a Selector query</param>
@@ -938,8 +940,9 @@ namespace NSoup.Nodes
 
         /// <summary>
         /// Gets the text owned by this element only; does not get the combined text of all children.
-        /// For example, given HTML <code><p>Hello <b>there</b> now!</p></code>, <code>p.Text()</code> returns <code>"Hello now!"</code>.
-        /// Note that the text within the <code>b</code> element is not return, as it is not a direct child of the <code>p</code> element.
+        /// For example, given HTML <code>&lt;p&gt;Hello &lt;b&gt;there&lt;/b&gt; now!&lt;/p&gt;</code>, <code>p.OwnText()</code> returns <code>"Hello now!"</code>,
+        /// whereas <code>p.Text()</code> returns <code>"Hello there now!"</code>.
+        /// Note that the text within the <code>b</code> element is not returned, as it is not a direct child of the <code>p</code> element.
         /// </summary>
         /// <returns>unencoded text, or empty string if none.</returns>
         /// <see cref="Text()"/>
@@ -1196,7 +1199,7 @@ namespace NSoup.Nodes
 
         public override void OuterHtmlHead(StringBuilder accum, int depth, Document.OutputSettings output)
         {
-            if (output.PrettyPrint() && (IsBlock || (Parent != null && Parent.Tag.CanContainBlock && SiblingIndex == 0)))
+            if (output.PrettyPrint() && (Tag.FormatAsBlock || (Parent != null && Parent.Tag.FormatAsBlock)))
             {
                 Indent(accum, depth, output);
             }
@@ -1219,7 +1222,7 @@ namespace NSoup.Nodes
         {
             if (!(ChildNodes.Count == 0 && Tag.IsSelfClosing))
             {
-                if (output.PrettyPrint() && ChildNodes.Count != 0 && Tag.CanContainBlock)
+                if (output.PrettyPrint() && ChildNodes.Count != 0 && Tag.FormatAsBlock)
                 {
                     Indent(accum, depth, output);
                 }
@@ -1284,6 +1287,13 @@ namespace NSoup.Nodes
             int result = base.GetHashCode();
             result = 31 * result + (_tag != null ? _tag.GetHashCode() : 0);
             return result;
+        }
+
+        public new object Clone()
+        {
+            Element clone = (Element)base.Clone();
+            clone.ClassNames(); // creates linked set of class names from class attribute
+            return clone;
         }
     }
 }

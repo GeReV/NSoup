@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSoup.Nodes;
+using NSoup;
 
 namespace Test.Nodes
 {
@@ -105,6 +106,45 @@ namespace Test.Nodes
 
             doc.Settings.EscapeMode = Entities.EscapeMode.Extended;
             Assert.AreEqual("<p title=\"&pi;\">&pi; &amp; &lt; &gt; </p>", doc.Body.Html());
+        }
+
+        [TestMethod]
+        public void testXhtmlReferences()
+        {
+            Document doc = NSoupClient.Parse("&lt; &gt; &amp; &quot; &apos; &times;");
+            doc.GetOutputSettings().EscapeMode = Entities.EscapeMode.Xhtml;
+            Assert.AreEqual("&lt; &gt; &amp; &quot; &apos; ×", doc.Body.Html());
+        }
+
+        [TestMethod]
+        public void testNormalisesStructure()
+        {
+            Document doc = NSoupClient.Parse("<html><head><script>one</script><noscript><p>two</p></noscript></head><body><p>three</p></body></html>");
+            Assert.AreEqual("<html><head><script>one</script><noscript></noscript></head><body><p>two</p><p>three</p></body></html>", TextUtil.StripNewLines(doc.Html()));
+        }
+
+        [TestMethod]
+        public void testClone()
+        {
+            Document doc = NSoupClient.Parse("<title>Hello</title> <p>One<p>Two");
+            Document clone = (Document)doc.Clone();
+
+            Assert.AreEqual("<html><head><title>Hello</title> </head><body><p>One</p><p>Two</p></body></html>", TextUtil.StripNewLines(clone.Html()));
+            clone.Title = "Hello there";
+            clone.Select("p").First.Text("One more").Attr("id", "1");
+            Assert.AreEqual("<html><head><title>Hello there</title> </head><body><p id=\"1\">One more</p><p>Two</p></body></html>", TextUtil.StripNewLines(clone.Html()));
+            Assert.AreEqual("<html><head><title>Hello</title> </head><body><p>One</p><p>Two</p></body></html>", TextUtil.StripNewLines(doc.Html()));
+        }
+
+        [TestMethod]
+        public void testClonesDeclarations()
+        {
+            Document doc = NSoupClient.Parse("<!DOCTYPE html><html><head><title>Doctype test");
+            Document clone = (Document)doc.Clone();
+
+            Assert.AreEqual(doc.Html(), clone.Html());
+            Assert.AreEqual("<!DOCTYPE html><html><head><title>Doctype test</title></head><body></body></html>",
+                    TextUtil.StripNewLines(clone.Html()));
         }
     }
 }
