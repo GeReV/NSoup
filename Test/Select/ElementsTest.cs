@@ -188,7 +188,7 @@ namespace Test.Nodes
             els.Val("three");
             Assert.AreEqual("three", els.First.Val());
             Assert.AreEqual("three", els.Last.Val());
-            Assert.AreEqual("<textarea>three</textarea>", els.Last.OuterHtml());
+            Assert.AreEqual("\n<textarea>three</textarea>", els.Last.OuterHtml());
         }
 
         [TestMethod]
@@ -196,7 +196,7 @@ namespace Test.Nodes
         {
             Document doc = NSoup.NSoupClient.Parse("<p>This <a>is</a> <a>jsoup</a>.</p>");
             doc.Select("a").Before("<span>foo</span>");
-            Assert.AreEqual("<p>This <span>foo</span><a>is</a> <span>foo</span><a>jsoup</a>.</p>", doc.Body.Html());
+            Assert.AreEqual("<p>This <span>foo</span><a>is</a> <span>foo</span><a>jsoup</a>.</p>", TextUtil.StripNewLines(doc.Body.Html()));
         }
 
         [TestMethod]
@@ -204,7 +204,7 @@ namespace Test.Nodes
         {
             Document doc = NSoup.NSoupClient.Parse("<p>This <a>is</a> <a>jsoup</a>.</p>");
             doc.Select("a").after("<span>foo</span>");
-            Assert.AreEqual("<p>This <a>is</a><span>foo</span> <a>jsoup</a><span>foo</span>.</p>", doc.Body.Html());
+            Assert.AreEqual("<p>This <a>is</a><span>foo</span> <a>jsoup</a><span>foo</span>.</p>", TextUtil.StripNewLines(doc.Body.Html()));
         }
 
         [TestMethod]
@@ -217,11 +217,32 @@ namespace Test.Nodes
         }
 
         [TestMethod]
+        public void empty()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<div><p>Hello <b>there</b></p> <p>now!</p></div>");
+            doc.GetOutputSettings().PrettyPrint(false);
+
+            doc.Select("p").Empty();
+            Assert.AreEqual("<div><p></p> <p></p></div>", doc.Body.Html());
+        }
+
+        [TestMethod]
+        public void remove()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<div><p>Hello <b>there</b></p> jsoup <p>now!</p></div>");
+            doc.GetOutputSettings().PrettyPrint(false);
+
+            doc.Select("p").Remove();
+            Assert.AreEqual("<div> jsoup </div>", doc.Body.Html());
+        }
+
+        [TestMethod]
         public void eq()
         {
             string h = "<p>Hello<p>there<p>world";
             Document doc = NSoup.NSoupClient.Parse(h);
             Assert.AreEqual("there", doc.Select("p").Eq(1).Text);
+            Assert.AreEqual("there", doc.Select("p")[1].Text());
         }
 
         [TestMethod]
@@ -244,6 +265,20 @@ namespace Test.Nodes
             Assert.AreEqual("div", parents[0].TagName);
             Assert.AreEqual("body", parents[1].TagName);
             Assert.AreEqual("html", parents[2].TagName);
+        }
+
+        [TestMethod]
+        public void not()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<div id=1><p>One</p></div> <div id=2><p><span>Two</span></p></div>");
+
+            Elements div1 = doc.Select("div").Not(":has(p > span)");
+            Assert.AreEqual(1, div1.Count);
+            Assert.AreEqual("1", div1.First.Id);
+
+            Elements div2 = doc.Select("div").Not("#1");
+            Assert.AreEqual(1, div2.Count);
+            Assert.AreEqual("2", div2.First.Id);
         }
     }
 }

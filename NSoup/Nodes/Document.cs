@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using NSoup.Parse;
+using NSoup.Select;
 
 namespace NSoup.Nodes
 {
@@ -15,7 +16,7 @@ namespace NSoup.Nodes
     /// -->
     public class Document : Element
     {
-        private OutputSettings outputSettings = new OutputSettings();
+        private OutputSettings _outputSettings = new OutputSettings();
 
         /// <summary>
         /// Create a new, empty Document.
@@ -28,6 +29,8 @@ namespace NSoup.Nodes
             : base(Tag.ValueOf("#root"), baseUri)
         {
         }
+
+        protected Document() { } // Used for Node.Clone().
 
         /// <summary>
         /// Create a valid, empty shell of a document, suitable for adding more elements to.
@@ -96,6 +99,14 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
+        /// Gets the document's output settings.
+        /// </summary>
+        public OutputSettings GetOutputSettings()
+        {
+            return _outputSettings;
+        }
+
+        /// <summary>
         /// Create a new Element, with this document's base uri. Does not make the new element a child of this document.
         /// </summary>
         /// <param name="tagName">element tag name (e.g. <code>a</code>)</param>
@@ -128,15 +139,18 @@ namespace NSoup.Nodes
 
             // pull text nodes out of root, html, and head els, and push into body. non-text nodes are already taken care
             // of. do in inverse order to maintain text order.
-            Normalise(Head);
-            Normalise(htmlEl);
-            Normalise(this);
+            NormaliseTextNodes(Head);
+            NormaliseTextNodes(htmlEl);
+            NormaliseTextNodes(this);
+
+            NormaliseStructure("head", htmlEl);
+            NormaliseStructure("body", htmlEl);
 
             return this;
         }
 
         // does not recurse.
-        private void Normalise(Element element)
+        private void NormaliseTextNodes(Element element)
         {
             List<Node> toMove = new List<Node>();
             foreach (Node node in element.ChildNodes)
@@ -157,6 +171,39 @@ namespace NSoup.Nodes
                 element.RemoveChild(node);
                 Body.PrependChild(new TextNode(" ", string.Empty));
                 Body.PrependChild(node);
+            }
+        }
+
+        // merge multiple <head> or <body> contents into one, delete the remainder, and ensure they are owned by <html>
+        private void NormaliseStructure(string tag, Element htmlEl)
+        {
+            Elements elements = this.GetElementsByTag(tag);
+
+            Element master = elements.First; // will always be available as created above if not existent
+            if (elements.Count > 1)
+            { // dupes, move contents to master
+                List<Node> toMove = new List<Node>();
+
+                for (int i = 1; i < elements.Count; i++)
+                {
+                    Node dupe = elements[i];
+
+                    foreach (Node node in dupe.ChildNodes)
+                    {
+                        toMove.Add(node);
+                    }
+
+                    dupe.Remove();
+                }
+
+                foreach (Node dupe in toMove)
+                    master.AppendChild(dupe);
+            }
+
+            // ensure parented by <html>
+            if (!master.Parent.Equals(htmlEl))
+            {
+                htmlEl.AppendChild(master); // includes remove()            
             }
         }
 
@@ -208,10 +255,17 @@ namespace NSoup.Nodes
             }
         }
 
-        /**
-     * A Document's output settings control the form of the text() and html() methods.
-     */
-        public class OutputSettings
+        public new object Clone()
+        {
+            Document clone = (Document)base.Clone();
+            clone._outputSettings = (OutputSettings)this._outputSettings.Clone();
+            return clone;
+        }
+
+        /// <summary>
+        /// A Document's output settings control the form of the Text() and H   tml() methods.
+        /// </summary>
+        public class OutputSettings : ICloneable
         {
             private Entities.EscapeMode _escapeMode = Entities.EscapeMode.Base;
             private Encoding _encoding = Encoding.UTF8;
@@ -337,6 +391,22 @@ namespace NSoup.Nodes
                 this._indentAmount = indentAmount;
                 return this;
             }
+
+            #region ICloneable Members
+
+            public object Clone()
+            {
+                OutputSettings clone = new OutputSettings();
+
+                clone.SetEncoding(_encoding.WebName); // new charset and charset encoder
+                clone.EscapeMode = _escapeMode;
+                clone.PrettyPrint(_prettyPrint);
+                clone.IndentAmount(_indentAmount);
+
+                return clone;
+            }
+
+            #endregion
         }
 
         /// <summary>
@@ -345,7 +415,7 @@ namespace NSoup.Nodes
         /// <remarks>Changed to "Settings" due to ambiguity between property and class.</remarks>
         public OutputSettings Settings
         {
-            get { return outputSettings; }
+            get { return _outputSettings; }
         }
     }
 }

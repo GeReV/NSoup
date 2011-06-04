@@ -121,8 +121,8 @@ namespace Test.Parser
             Tag div = Tag.ValueOf("div");
 
             Assert.IsTrue(span.CanContain(span));
-            Assert.IsFalse(span.CanContain(p));
-            Assert.IsFalse(span.CanContain(div));
+            Assert.IsTrue(span.CanContain(p));
+            Assert.IsTrue(span.CanContain(div));
         }
 
         [TestMethod]

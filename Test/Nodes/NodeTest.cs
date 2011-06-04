@@ -97,6 +97,21 @@ namespace Test.Nodes
             Assert.IsFalse(a.HasAttr("abs:href")); // only realised on the get method, not in has or iterator
         }
 
+        /*
+    Test for an issue with Java's abs URL handler.
+     */
+        [TestMethod]
+        public void absHandlesRelativeQuery()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<a href='?foo'>One</a> <a href='bar.html?foo'>Two</a>", "http://jsoup.org/path/file?bar");
+
+            Element a1 = doc.Select("a").First;
+            Assert.AreEqual("http://jsoup.org/path/file?foo", a1.AbsUrl("href"));
+
+            Element a2 = doc.Select("a")[1];
+            Assert.AreEqual("http://jsoup.org/path/bar.html?foo", a2.AbsUrl("href"));
+        }
+
         [TestMethod]
         public void testRemove()
         {
@@ -105,7 +120,7 @@ namespace Test.Nodes
             p.ChildNodes[0].Remove();
 
             Assert.AreEqual("two three", p.Text());
-            Assert.AreEqual("<span>two</span> three", p.Html());
+            Assert.AreEqual("<span>two</span> three", TextUtil.StripNewLines(p.Html()));
         }
 
         [TestMethod]

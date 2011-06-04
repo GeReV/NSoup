@@ -542,6 +542,12 @@ namespace Test.Nodes
             Assert.AreEqual("0", divs3[0].Id);
             Assert.AreEqual("1", divs3[1].Id);
             Assert.AreEqual("2", divs3[2].Id);
+
+            Elements els1 = doc.Body.Select(":has(p)");
+            Assert.AreEqual(3, els1.Count); // body, div, dib
+            Assert.AreEqual("body", els1.First.TagName);
+            Assert.AreEqual("0", els1[1].Id);
+            Assert.AreEqual("2", els1[2].Id);
         }
 
         [TestMethod]
@@ -581,6 +587,13 @@ namespace Test.Nodes
             Elements ps3 = doc.Select("p:contains(the Rain):has(i)");
             Assert.AreEqual(1, ps3.Count);
             Assert.AreEqual("light", ps3.First.ClassName());
+
+            Elements ps4 = doc.Select(".light:contains(rain)");
+            Assert.AreEqual(1, ps4.Count);
+            Assert.AreEqual("light", ps3.First.ClassName());
+
+            Elements ps5 = doc.Select(":contains(rain)");
+            Assert.AreEqual(8, ps5.Count); // html, body, div,...
         }
 
         [TestMethod]
@@ -661,6 +674,43 @@ namespace Test.Nodes
             Elements el2 = doc.Select("abc-def");
             Assert.AreEqual(1, el2.Count);
             Assert.AreEqual("2", el2.First.Id);
+        }
+
+        [TestMethod]
+        public void notParas()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<p id=1>One</p> <p>Two</p> <p><span>Three</span></p>");
+
+            Elements el1 = doc.Select("p:not([id=1])");
+            Assert.AreEqual(2, el1.Count);
+            Assert.AreEqual("Two", el1.First.Text());
+            Assert.AreEqual("Three", el1.Last.Text());
+
+            Elements el2 = doc.Select("p:not(:has(span))");
+            Assert.AreEqual(2, el2.Count);
+            Assert.AreEqual("One", el2.First.Text());
+            Assert.AreEqual("Two", el2.Last.Text());
+        }
+
+        [TestMethod]
+        public void notAll()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<p>Two</p> <p><span>Three</span></p>");
+
+            Elements el1 = doc.Body.Select(":not(p)"); // should just be the span
+            Assert.AreEqual(2, el1.Count);
+            Assert.AreEqual("body", el1.First.TagName);
+            Assert.AreEqual("span", el1.Last.TagName);
+        }
+
+        [TestMethod]
+        public void notClass()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<div class=left>One</div><div class=right id=1><p>Two</p></div>");
+
+            Elements el1 = doc.Select("div:not(.left)");
+            Assert.AreEqual(1, el1.Count);
+            Assert.AreEqual("1", el1.First.Id);
         }
     }
 }

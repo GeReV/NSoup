@@ -38,6 +38,8 @@ namespace NSoup.Nodes
             this.text = text;
         }
 
+        protected TextNode() { } // Used for Node.Clone().
+
         public override string NodeName
         {
             get { return "#text"; }
@@ -92,7 +94,7 @@ namespace NSoup.Nodes
                 html = NormaliseWhitespace(html);
             }
 
-            if (output.PrettyPrint() && SiblingIndex == 0 && ParentNode is Element && ((Element)ParentNode).Tag.CanContainBlock && !IsBlank)
+            if (output.PrettyPrint() && SiblingIndex == 0 && ParentNode is Element && ((Element)ParentNode).Tag.FormatAsBlock && !IsBlank)
             {
                 Indent(accum, depth, output);
             }

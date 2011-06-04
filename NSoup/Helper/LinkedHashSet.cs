@@ -109,6 +109,18 @@ namespace NSoup
             return false;
         }
 
+        public bool AddAll(IEnumerable<T> collection)
+        {
+            bool changed = false;
+
+            foreach (T item in collection)
+            {
+                changed |= Add(item);
+            }
+
+            return changed;
+        }
+
         #region ICollection<T> Members
 
         void ICollection<T>.Add(T item)

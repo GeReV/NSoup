@@ -296,7 +296,7 @@ namespace Test.Parser
         {
             // http://www.whatwg.org/specs/web-apps/current-work/multipage/tabular-data.html#examples-0
             Document doc = NSoup.NSoupClient.Parse("<table> <colgroup> <col> <colgroup> <col> <col> <col> <thead> <tr> <th> <th>2008 <th>2007 <th>2006 <tbody> <tr> <th scope=rowgroup> Research and development <td> $ 1,109 <td> $ 782 <td> $ 712 <tr> <th scope=row> Percentage of net sales <td> 3.4% <td> 3.3% <td> 3.7% <tbody> <tr> <th scope=rowgroup> Selling, general, and administrative <td> $ 3,761 <td> $ 2,963 <td> $ 2,433 <tr> <th scope=row> Percentage of net sales <td> 11.6% <td> 12.3% <td> 12.6% </table>");
-            Assert.AreEqual("<table> <colgroup> <col /> </colgroup><colgroup> <col /> <col /> <col /> </colgroup><thead> <tr> <th> </th><th>2008 </th><th>2007 </th><th>2006 </th></tr></thead><tbody> <tr> <th scope=\"rowgroup\">Research and development </th><td>$ 1,109 </td><td>$ 782 </td><td>$ 712 </td></tr><tr> <th scope=\"row\">Percentage of net sales </th><td>3.4% </td><td>3.3% </td><td>3.7% </td></tr></tbody><tbody> <tr> <th scope=\"rowgroup\">Selling, general, and administrative </th><td>$ 3,761 </td><td>$ 2,963 </td><td>$ 2,433 </td></tr><tr> <th scope=\"row\">Percentage of net sales </th><td>11.6% </td><td>12.3% </td><td>12.6% </td></tr></tbody></table>", TextUtil.StripNewLines(doc.Body.Html()));
+            Assert.AreEqual("<table> <colgroup> <col /> </colgroup><colgroup> <col /> <col /> <col /> </colgroup><thead> <tr> <th> </th><th>2008 </th><th>2007 </th><th>2006 </th></tr></thead><tbody> <tr> <th scope=\"rowgroup\"> Research and development </th><td> $ 1,109 </td><td> $ 782 </td><td> $ 712 </td></tr><tr> <th scope=\"row\"> Percentage of net sales </th><td> 3.4% </td><td> 3.3% </td><td> 3.7% </td></tr></tbody><tbody> <tr> <th scope=\"rowgroup\"> Selling, general, and administrative </th><td> $ 3,761 </td><td> $ 2,963 </td><td> $ 2,433 </td></tr><tr> <th scope=\"row\"> Percentage of net sales </th><td> 11.6% </td><td> 12.3% </td><td> 12.6% </td></tr></tbody></table>", TextUtil.StripNewLines(doc.Body.Html()));
         }
 
         [TestMethod]
@@ -314,13 +314,29 @@ namespace Test.Parser
         }
 
         [TestMethod]
+        public void noTableDirectInTable()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<table> <td>One <td><table><td>Two</table> <table><td>Three");
+            Assert.AreEqual("<table> <tr><td>One </td><td><table><tr><td>Two</td></tr></table> <table><tr><td>Three</td></tr></table></td></tr></table>",
+                TextUtil.StripNewLines(doc.Body.Html()));
+        }
+
+        [TestMethod]
+        public void ignoresDupeEndTrTag()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<table><tr><td>One</td><td><table><tr><td>Two</td></tr></tr></table></td><td>Three</td></tr></table>"); // two </tr></tr>, must ignore or will close table
+            Assert.AreEqual("<table><tr><td>One</td><td><table><tr><td>Two</td></tr></table></td><td>Three</td></tr></table>",
+                TextUtil.StripNewLines(doc.Body.Html()));
+        }
+
+        [TestMethod]
         public void handlesBaseTags()
         {
             string h = "<a href=1>#</a><base href='/2/'><a href='3'>#</a><base href='http://bar'><a href=4>#</a>";
             Document doc = NSoup.NSoupClient.Parse(h, "http://foo/");
             //Assert.AreEqual("http://bar", doc.BaseUri); // gets updated as base changes, so doc.createElement has latest.
             Assert.AreEqual("http://bar/", doc.BaseUri); // Slight limitation in .NET, System.Uri class adds slash after string.
-            
+
 
             Elements anchors = doc.GetElementsByTag("a");
             Assert.AreEqual(3, anchors.Count);
@@ -498,6 +514,31 @@ namespace Test.Parser
         {
             Document doc = NSoup.NSoupClient.Parse("<abc_def id=1>Hello</abc_def> <abc-def>There</abc-def>");
             Assert.AreEqual("<abc_def id=\"1\">Hello</abc_def> <abc-def>There</abc-def>", TextUtil.StripNewLines(doc.Body.Html()));
+        }
+
+        [TestMethod]
+        public void testHeaderContents()
+        {
+            // h* tags (h1 .. h9) in browsers can handle any internal content other than other h*. which is not per any
+            // spec, which defines them as containing phrasing content only. so, reality over theory.
+            Document doc = NSoup.NSoupClient.Parse("<h1>Hello <div>There</div> now</h1> <h2>More <h3>Content</h3></h2>");
+            Assert.AreEqual("<h1>Hello <div>There</div> now</h1> <h2>More </h2><h3>Content</h3>", TextUtil.StripNewLines(doc.Body.Html()));
+        }
+
+        [TestMethod]
+        public void testSpanContents()
+        {
+            // like h1 tags, the spec says SPAN is phrasing only, but browsers and publisher treat span as a block tag
+            Document doc = NSoup.NSoupClient.Parse("<span>Hello <div>there</div> <span>now</span></span>");
+            Assert.AreEqual("<span>Hello <div>there</div> <span>now</span></span>", TextUtil.StripNewLines(doc.Body.Html()));
+        }
+
+        [TestMethod]
+        public void testAllowsImageInNoScriptInHead()
+        {
+            // some sites use this pattern as an analytics mechanism
+            Document doc = NSoup.NSoupClient.Parse("<html><head><noscript><img src='foo'></noscript></head><body><p>Hello</p></body></html>");
+            Assert.AreEqual("<html><head><noscript><img src=\"foo\" /></noscript></head><body><p>Hello</p></body></html>", TextUtil.StripNewLines(doc.Html()));
         }
     }
 }

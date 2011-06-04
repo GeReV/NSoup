@@ -95,11 +95,11 @@ namespace Test.Nodes
             Assert.AreEqual(" three &", tn.Text());
 
             tn.Text(" POW!");
-            Assert.AreEqual("One <span>two &amp;</span> POW!", p.Html());
+            Assert.AreEqual("One <span>two &amp;</span> POW!", TextUtil.StripNewLines(p.Html()));
 
             tn.Attr("text", "kablam &");
             Assert.AreEqual("kablam &", tn.Text());
-            Assert.AreEqual("One <span>two &amp;</span>kablam &amp;", p.Html());
+            Assert.AreEqual("One <span>two &amp;</span>kablam &amp;", TextUtil.StripNewLines(p.Html()));
         }
     }
 }

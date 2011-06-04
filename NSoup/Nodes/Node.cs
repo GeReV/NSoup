@@ -15,10 +15,10 @@ namespace NSoup.Nodes
     /// Original Author: Jonathan Hedley, jonathan@hedley.net
     /// Ported to .NET by: Amir Grozki
     /// -->
-    public abstract class Node
+    public abstract class Node : ICloneable
     {
         private Node _parentNode;
-        protected List<Node> _childNodes;
+        protected IList<Node> _childNodes;
         protected Attributes _attributes;
         private string _baseUri;
         private int _siblingIndex;
@@ -159,14 +159,16 @@ namespace NSoup.Nodes
 
         /// <summary>
         /// Get an absolute URL from a URL attribute that may be relative (i.e. an <code>&lt;a href&gt;</code> or 
-        /// <code>&lt;img src&gt;</code>.
+        /// <code>&lt;img src&gt;</code>).
+        /// E.g.: <code>String absUrl = linkEl.absUrl("href");</code>
         /// </summary>
         /// <remarks>
         /// If the attribute value is already absolute (i.e. it starts with a protocol, like 
         /// <code>http://</code> or <code>https://</code> etc), and it successfully parses as a URL, the attribute is 
         /// returned directly. Otherwise, it is treated as a URL relative to the element's <see cref="BaseUri"/>, and made 
         /// absolute using that. 
-        /// As an alternate, you can use the <see cref="Attr()"/> method with the <code>abs:</code> prefix.
+        /// As an alternate, you can use the <see cref="Attr()"/> method with the <code>abs:</code> prefix, e.g.:
+        /// <code>String absUrl = linkEl.attr("abs:href");</code>
         /// </remarks>
         /// <param name="attributeKey">The attribute key</param>
         /// <returns>
@@ -221,6 +223,13 @@ namespace NSoup.Nodes
                         Uri abs = new Uri(relUrl);
                         return abs.ToString();
                     }
+
+                    // workaround: java resolves '//path/file + ?foo' to '//path/?foo', not '//path/file?foo' as desired
+                    if (relUrl.StartsWith("?"))
+                    {
+                        relUrl = baseUrl.AbsolutePath + relUrl;
+                    }
+
                     Uri abs2 = new Uri(baseUrl, relUrl);
                     return abs2.ToString(); // Using the original string promises no tempering from the internals.
                 }
@@ -248,6 +257,7 @@ namespace NSoup.Nodes
         public IList<Node> ChildNodes
         {
             get { return _childNodes; }
+            private set { _childNodes = value; }
         }
 
         public Node[] ChildNodesAsArray()
@@ -483,7 +493,13 @@ namespace NSoup.Nodes
 
         public void OuterHtml(StringBuilder accum)
         {
-            new NodeTraversor(new OuterHtmlVisitor(accum, OwnerDocument.Settings)).Traverse(this);
+            new NodeTraversor(new OuterHtmlVisitor(accum, GetOutputSettings())).Traverse(this);
+        }
+
+        // if this node has no document (or parent), retrieve the default output settings
+        private Document.OutputSettings GetOutputSettings()
+        {
+            return OwnerDocument != null ? OwnerDocument.GetOutputSettings() : (new Document(string.Empty)).GetOutputSettings();
         }
 
         /// <summary>
@@ -517,6 +533,56 @@ namespace NSoup.Nodes
             result = 31 * result + (Attributes != null ? Attributes.GetHashCode() : 0);
             return result;
         }
+
+        #region ICloneable Members
+
+        /// <summary>
+        /// Create a stand-alone, deep copy of this node, and all of its children. The cloned node will have no siblings or
+        /// parent node. As a stand-alone object, any changes made to the clone or any of its children will not impact the
+        /// original node.
+        /// </summary>
+        /// <remarks>
+        /// The cloned node may be adopted into another Document or node structure using <see cref="Element.AppendChild(Node)"/>.
+        /// </remarks>
+        /// <returns>stand-alone cloned node</returns>
+        public object Clone()
+        {
+            return DoClone(null);
+        }
+
+        protected Node DoClone(Node parent) {
+            Node clone;
+            try
+            {
+                // Originally: (Node)super.clone();
+                // Base class of Node is System.Object, therefore the following is needed:
+                clone = (Node)this.MemberwiseClone();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+
+            // Note: Original Java code accesses actual members, not accessors.
+
+            clone._parentNode = parent; // can be null, to create an orphan split
+            clone._siblingIndex = parent == null ? 0 : SiblingIndex;
+            clone._attributes = Attributes != null ? (Attributes)Attributes.Clone() : null;
+            clone._baseUri = _baseUri;
+            clone._childNodes = new List<Node>(_childNodes.Count);
+
+            // We have to use for, instead of foreach, since .NET does not allow addition of items inside foreach.
+            for (int i = 0; i < _childNodes.Count; i++)
+            {
+                Node child = _childNodes[i];
+
+                clone._childNodes.Add(child.DoClone(clone)); // clone() creates orphans, doClone() keeps parent
+            }
+
+            return clone;
+        }
+
+        #endregion
 
         private class OuterHtmlVisitor : NodeVisitor
         {

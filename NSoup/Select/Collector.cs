@@ -15,6 +15,7 @@ namespace NSoup.Select
     /// -->
     public class Collector
     {
+        private Collector() { }
 
         /// <summary>
         /// Build a list of elements, by visiting root and every descendant of root, and testing it against the evaluator.
@@ -31,8 +32,8 @@ namespace NSoup.Select
 
         private class Accumulator : NodeVisitor
         {
-            private Elements elements;
-            private Evaluator eval;
+            private readonly Elements elements;
+            private readonly Evaluator eval;
 
             public Accumulator(Elements elements, Evaluator eval)
             {
