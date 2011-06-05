@@ -159,6 +159,17 @@ namespace Test.Nodes
         }
 
         [TestMethod]
+        public void testBrHasSpace()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<p>Hello<br>there</p>");
+            Assert.AreEqual("Hello there", doc.Text());
+            Assert.AreEqual("Hello there", doc.Select("p").First.OwnText());
+
+            doc = NSoup.NSoupClient.Parse("<p>Hello <br> there</p>");
+            Assert.AreEqual("Hello there", doc.Text());
+        }
+
+        [TestMethod]
         public void testGetSiblings()
         {
             Document doc = NSoup.NSoupClient.Parse("<div><p>Hello<p id=1>there<p>this<p>is<p>an<p id=last>element</div>");
@@ -224,6 +235,15 @@ namespace Test.Nodes
 
             List<Element> none = doc.GetElementsByAttribute("class").ToList();
             Assert.AreEqual(0, none.Count);
+        }
+
+        [TestMethod]
+        public void testGetElementsWithAttributeDash()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<meta http-equiv=content-type value=utf8 id=1> <meta name=foo content=bar id=2> <div http-equiv=content-type value=utf8 id=3>");
+            Elements meta = doc.Select("meta[http-equiv=content-type], meta[charset]");
+            Assert.AreEqual(1, meta.Count);
+            Assert.AreEqual("1", meta.First.Id);
         }
 
         [TestMethod]
@@ -314,7 +334,16 @@ namespace Test.Nodes
         {
             // don't put newlines into empty blocks
             Document doc = NSoup.NSoupClient.Parse("<section><div></div></section>");
-            Assert.AreEqual("\n<section>\n <div></div>\n</section>", doc.Select("section").First.OuterHtml());
+            Assert.AreEqual("<section>\n <div></div>\n</section>", doc.Select("section").First.OuterHtml());
+        }
+
+        [TestMethod]
+        public void testContainerOutput()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<title>Hello there</title> <div><p>Hello</p><p>there</p></div> <div>Another</div>");
+            Assert.AreEqual("<title>Hello there</title>", doc.Select("title").First.OuterHtml());
+            Assert.AreEqual("<div>\n <p>Hello</p>\n <p>there</p>\n</div>", doc.Select("div").First.OuterHtml());
+            Assert.AreEqual("<div>\n <p>Hello</p>\n <p>there</p>\n</div> \n<div>\n Another\n</div>", doc.Select("body").First.Html());
         }
 
         [TestMethod]
@@ -547,7 +576,7 @@ namespace Test.Nodes
         {
             Document doc = NSoup.NSoupClient.Parse("<img src='foo'>");
             Element img = doc.Select("img").First;
-            Assert.AreEqual("\n<img src=\"foo\" />", img.ToString());
+            Assert.AreEqual("<img src=\"foo\" />", img.ToString());
 
             img.Remove(); // lost its parent
             Assert.AreEqual("<img src=\"foo\" />", img.ToString());
@@ -583,6 +612,15 @@ namespace Test.Nodes
             Assert.AreEqual(0, doc.Select("i").Count);
             Assert.AreEqual(1, doc.Select("em").Count);
             Assert.AreEqual("<em>Hello</em>", doc.Select("div").First.Html());
+        }
+
+        [TestMethod]
+        public void testHtmlContainsOuter()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<title>Check</title> <div>Hello there</div>");
+            doc.GetOutputSettings().IndentAmount(0);
+            Assert.IsTrue(doc.Html().Contains(doc.Select("title").OuterHtml()));
+            Assert.IsTrue(doc.Html().Contains(doc.Select("div").OuterHtml()));
         }
     }
 }

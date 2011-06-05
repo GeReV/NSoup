@@ -63,7 +63,7 @@ namespace NSoup.Helper
                     // if not found, will keep utf-8 as best attempt
                     string foundCharset = meta.HasAttr("http-equiv") ? GetCharsetFromContentType(meta.Attr("content")) : meta.Attr("charset");
 
-                    if (foundCharset != null && !foundCharset.Equals(_defaultEncoding.WebName.ToUpperInvariant()))
+                    if (foundCharset != null && foundCharset.Length != 0 && !foundCharset.Equals(_defaultEncoding.WebName.ToUpperInvariant()))
                     { // need to re-decode
                         charsetName = foundCharset;
 

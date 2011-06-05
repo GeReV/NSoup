@@ -332,7 +332,7 @@ namespace NSoup.Parse
             CreateBlock("FOOTER").SetExcludes("HEADER", "FOOTER");
 
             // fontstyle
-            CreateInline("FONT");
+            CreateInline("FONT").SetOptionalClosing().SetCanContainBlock().SetFormatAsInline();
             CreateInline("TT");
             CreateInline("I");
             CreateInline("B");
@@ -361,7 +361,7 @@ namespace NSoup.Parse
             CreateInline("RP").SetParent("RUBY").SetExcludes("RT", "RP");
 
             // special
-            CreateInline("A").SetOptionalClosing(); // cannot contain self
+            CreateInline("A").SetOptionalClosing().SetCanContainBlock().SetFormatAsInline(); // cannot contain self
             CreateInline("IMG").SetEmpty().SetAncestor("BODY", "NOSCRIPT"); // noscript so an image can be in html->head->noscript
             CreateInline("BR").SetEmpty();
             CreateInline("WBR").SetEmpty();
