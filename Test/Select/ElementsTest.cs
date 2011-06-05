@@ -188,7 +188,7 @@ namespace Test.Nodes
             els.Val("three");
             Assert.AreEqual("three", els.First.Val());
             Assert.AreEqual("three", els.Last.Val());
-            Assert.AreEqual("\n<textarea>three</textarea>", els.Last.OuterHtml());
+            Assert.AreEqual("<textarea>three</textarea>", els.Last.OuterHtml());
         }
 
         [TestMethod]

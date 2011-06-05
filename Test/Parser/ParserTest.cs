@@ -541,5 +541,21 @@ namespace Test.Parser
             Document doc = NSoup.NSoupClient.Parse("<html><head><noscript><img src='foo'></noscript></head><body><p>Hello</p></body></html>");
             Assert.AreEqual("<html><head><noscript><img src=\"foo\" /></noscript></head><body><p>Hello</p></body></html>", TextUtil.StripNewLines(doc.Html()));
         }
+
+        [TestMethod]
+        public void testAFlowContents()
+        {
+            // html5 has <a> as either phrasing or block
+            Document doc = NSoup.NSoupClient.Parse("<a>Hello <div>there</div> <span>now</span></a>");
+            Assert.AreEqual("<a>Hello <div>there</div> <span>now</span></a>", TextUtil.StripNewLines(doc.Body.Html()));
+        }
+
+        [TestMethod]
+        public void testFontFlowContents()
+        {
+            // html5 has no definition of <font>; often used as flow
+            Document doc = NSoup.NSoupClient.Parse("<font>Hello <div>there</div> <span>now</span></font>");
+            Assert.AreEqual("<font>Hello <div>there</div> <span>now</span></font>", TextUtil.StripNewLines(doc.Body.Html()));
+        }
     }
 }

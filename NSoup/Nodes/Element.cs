@@ -851,7 +851,7 @@ namespace NSoup.Nodes
         public string Text()
         {
             StringBuilder sb = new StringBuilder();
-            GetText(sb);
+            Text(sb);
             return sb.ToString().Trim();
         }
 
@@ -877,8 +877,10 @@ namespace NSoup.Nodes
         /// <summary> 
         /// </summary>
         /// <param name="accum"></param>
-        private void GetText(StringBuilder accum)
+        private void Text(StringBuilder accum)
         {
+            AppendWhitespaceIfBr(this, accum);
+
             foreach (Node child in ChildNodes)
             {
                 if (child is TextNode)
@@ -893,7 +895,7 @@ namespace NSoup.Nodes
                     {
                         accum.Append(" ");
                     }
-                    element.GetText(accum);
+                    element.Text(accum);
                 }
             }
         }
@@ -922,6 +924,10 @@ namespace NSoup.Nodes
                     TextNode textNode = (TextNode)child;
                     AppendNormalisedText(accum, textNode);
                 }
+                else if (child is Element)
+                {
+                    AppendWhitespaceIfBr((Element)child, accum);
+                }
             }
         }
 
@@ -938,6 +944,14 @@ namespace NSoup.Nodes
                 }
             }
             accum.Append(text);
+        }
+
+        private static void AppendWhitespaceIfBr(Element element, StringBuilder accum)
+        {
+            if (element.Tag.Name.Equals("br") && !TextNode.LastCharIsWhitespace(accum))
+            {
+                accum.Append(" ");
+            }
         }
 
         /// <summary>
@@ -1168,7 +1182,7 @@ namespace NSoup.Nodes
 
         public override void OuterHtmlHead(StringBuilder accum, int depth, Document.OutputSettings output)
         {
-            if (output.PrettyPrint() && (Tag.FormatAsBlock || (Parent != null && Parent.Tag.FormatAsBlock)))
+            if (accum.Length > 0 && output.PrettyPrint() && (Tag.FormatAsBlock || (Parent != null && Parent.Tag.FormatAsBlock)))
             {
                 Indent(accum, depth, output);
             }

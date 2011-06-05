@@ -144,12 +144,24 @@ namespace Test
 
                 // check auto-detect from meta
                 Assert.AreEqual("GB2312", doc.Settings.Encoding.WebName.ToUpperInvariant());
-                Assert.AreEqual("\n<title>百度一下，你就知道      </title>", doc.Select("title").OuterHtml());
+                Assert.AreEqual("<title>百度一下，你就知道      </title>", doc.Select("title").OuterHtml());
 
                 doc.Settings.SetEncoding("ascii");
-                Assert.AreEqual("\n<title>&#30334;&#24230;&#19968;&#19979;&#65292;&#20320;&#23601;&#30693;&#36947;      </title>",
+                Assert.AreEqual("<title>&#30334;&#24230;&#19968;&#19979;&#65292;&#20320;&#23601;&#30693;&#36947;      </title>",
                     doc.Select("title").OuterHtml());
             }
+        }
+
+        [TestMethod]
+        public void testBaiduVariant()
+        {
+            // tests <meta charset> when preceded by another <meta>
+            Stream input = getFile("Test.htmltests.baidu-variant.html");
+            Document doc = NSoup.NSoupClient.Parse(input, null,
+                "http://www.baidu.com/"); // http charset is gb2312, but NOT specifying it, to test http-equiv parse
+            // check auto-detect from meta
+            Assert.AreEqual("GB2312", doc.GetOutputSettings().Encoding.WebName.ToUpperInvariant());
+            Assert.AreEqual("<title>百度一下，你就知道</title>", doc.Select("title").OuterHtml());
         }
 
         [TestMethod]

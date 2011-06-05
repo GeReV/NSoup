@@ -59,8 +59,16 @@ namespace NSoup.Select
         public sealed class Or : CombiningEvaluator
         {
             public Or(ICollection<Evaluator> evaluators)
-                : base(evaluators)
+                : base()
             {
+                if (evaluators.Count > 1)
+                {
+                    this._evaluators.Add(new And(evaluators));
+                }
+                else // 0 or 1
+                {
+                    this._evaluators.AddRange(evaluators);
+                }
             }
 
             public void Add(Evaluator e)
