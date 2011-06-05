@@ -84,6 +84,15 @@ namespace Test.Nodes
         }
 
         [TestMethod]
+        public void strictUnescape()
+        { // for attributes, enforce strict unescaping (must look like &xxx; , not just &xxx)
+            string text = "Hello &mid &amp;";
+            Assert.AreEqual("Hello &mid &", Entities.Unescape(text, true));
+            Assert.AreEqual("Hello ∣ &", Entities.Unescape(text));
+            Assert.AreEqual("Hello ∣ &", Entities.Unescape(text, false));
+        }
+
+        [TestMethod]
         public void caseSensitive()
         {
             string unescaped = "Ü ü & &";

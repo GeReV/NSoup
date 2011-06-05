@@ -1,0 +1,89 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using NSoup.Nodes;
+
+namespace NSoup.Select
+{
+    /// <summary>
+    /// Base combining (and, or) evaluator.
+    /// </summary>
+    abstract class CombiningEvaluator : Evaluator
+    {
+        protected readonly List<Evaluator> _evaluators;
+
+        private CombiningEvaluator()
+            : base()
+        {
+            _evaluators = new List<Evaluator>();
+        }
+
+        private CombiningEvaluator(ICollection<Evaluator> evaluators)
+            : this()
+        {
+            this._evaluators.AddRange(evaluators);
+        }
+
+        public sealed class And : CombiningEvaluator
+        {
+            public And(ICollection<Evaluator> evaluators)
+                : base(evaluators)
+            {
+            }
+
+            public And(params Evaluator[] evaluators)
+                : base(evaluators)
+            {
+            }
+
+            public override bool Matches(Element root, Element node)
+            {
+                foreach (Evaluator s in _evaluators)
+                {
+                    if (!s.Matches(root, node))
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            public override string ToString()
+            {
+                return string.Join(" ", _evaluators.Select(e => e.ToString()).ToArray());
+            }
+        }
+
+        public sealed class Or : CombiningEvaluator
+        {
+            public Or(ICollection<Evaluator> evaluators)
+                : base(evaluators)
+            {
+            }
+
+            public void Add(Evaluator e)
+            {
+                _evaluators.Add(e);
+            }
+
+            public override bool Matches(Element root, Element node)
+            {
+                foreach (Evaluator s in _evaluators)
+                {
+                    if (s.Matches(root, node))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            public override string ToString()
+            {
+                return string.Format(":or{0}", _evaluators);
+            }
+        }
+    }
+}

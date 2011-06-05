@@ -73,10 +73,10 @@ namespace Test.Parser
             Document doc = NSoup.NSoupClient.Parse(html);
             // need a better way to verify these:
             Element p = doc.Body.Child(0);
-            Assert.AreEqual("p", p.TagName);
+            Assert.AreEqual("p", p.TagName());
             Element img = p.Child(0);
             Assert.AreEqual("foo.png", img.Attr("src"));
-            Assert.AreEqual("img", img.TagName);
+            Assert.AreEqual("img", img.TagName());
         }
 
         [TestMethod]
@@ -87,7 +87,7 @@ namespace Test.Parser
 
             // need a better way to verify these:
             Element p = doc.Body.Child(0);
-            Assert.AreEqual("p", p.TagName);
+            Assert.AreEqual("p", p.TagName());
             Assert.AreEqual("foo > bar", p.Attr("class"));
         }
 
@@ -154,7 +154,7 @@ namespace Test.Parser
             Document doc = NSoup.NSoupClient.Parse(h1);
             Element p = doc.GetElementById("foo");
             Assert.IsNotNull(p);
-            Assert.AreEqual("p", p.TagName);
+            Assert.AreEqual("p", p.TagName());
         }
 
         [TestMethod]
@@ -402,10 +402,11 @@ namespace Test.Parser
         [TestMethod]
         public void handlesEmptyBlocks()
         {
-            string h = "<div id=1/><div id=2><img /></div>";
+            string h = "<div id=1/><div id=2><img /></div> <hr /> hr text";
             Document doc = NSoup.NSoupClient.Parse(h);
             Element div1 = doc.GetElementById("1");
             Assert.IsTrue(div1.Children.IsEmpty);
+            Assert.IsTrue(doc.Select("hr").First.Children.IsEmpty);
         }
 
         [TestMethod]
@@ -434,8 +435,8 @@ namespace Test.Parser
             // per the spec, dt and dd are inline, but in practise are block
             string h = "<dl><dt><div id=1>Term</div></dt><dd><div id=2>Def</div></dd></dl>";
             Document doc = NSoup.NSoupClient.Parse(h);
-            Assert.AreEqual("dt", doc.Select("#1").First.Parent.TagName);
-            Assert.AreEqual("dd", doc.Select("#2").First.Parent.TagName);
+            Assert.AreEqual("dt", doc.Select("#1").First.Parent.TagName());
+            Assert.AreEqual("dd", doc.Select("#2").First.Parent.TagName());
             Assert.AreEqual("<dl><dt><div id=\"1\">Term</div></dt><dd><div id=\"2\">Def</div></dd></dl>", TextUtil.StripNewLines(doc.Body.Html()));
         }
 
@@ -455,8 +456,8 @@ namespace Test.Parser
             Document doc = NSoup.NSoupClient.Parse(h);
             Element a = doc.Select("a").First;
             Assert.AreEqual("Deprecated", a.Text());
-            Assert.AreEqual("font", a.Child(0).TagName);
-            Assert.AreEqual("b", a.Child(0).Child(0).TagName);
+            Assert.AreEqual("font", a.Child(0).TagName());
+            Assert.AreEqual("b", a.Child(0).Child(0).TagName());
         }
 
         [TestMethod]

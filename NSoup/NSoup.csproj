@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30729</ProductVersion>
+    <ProductVersion>9.0.21022</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{EA189DC2-2C8D-4B50-BEE8-8964D6BEDF33}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -60,7 +60,7 @@
     <Compile Include="Nodes\Document.cs" />
     <Compile Include="Nodes\Element.cs" />
     <Compile Include="Nodes\Entities.cs" />
-    <Compile Include="Nodes\Evaluator.cs" />
+    <Compile Include="Select\Evaluator.cs" />
     <Compile Include="Nodes\Node.cs" />
     <Compile Include="Nodes\TextNode.cs" />
     <Compile Include="Nodes\XmlDeclaration.cs" />
@@ -72,10 +72,13 @@
     <Compile Include="Safety\Cleaner.cs" />
     <Compile Include="Safety\Whitelist.cs" />
     <Compile Include="Select\Collector.cs" />
+    <Compile Include="Select\CombiningEvaluator.cs" />
     <Compile Include="Select\Elements.cs" />
     <Compile Include="Select\NodeTraversor.cs" />
     <Compile Include="Select\NodeVisitor.cs" />
+    <Compile Include="Select\QueryParser.cs" />
     <Compile Include="Select\Selector.cs" />
+    <Compile Include="Select\StructuralEvaluator.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="NSoup.snk" />

@@ -86,6 +86,38 @@ namespace NSoup.Nodes
             get { return GetWholeText().IsBlank(); }
         }
 
+        /// <summary>
+        /// Split this text node into two nodes at the specified string offset. After splitting, this node will contain the 
+        /// original text up to the offset, and will have a new text node sibling containing the text after the offset.
+        /// </summary>
+        /// <param name="offset">string offset point to split node at.</param>
+        /// <returns>the newly created text node containing the text after the offset.</returns>
+        public TextNode SplitText(int offset)
+        {
+            if (offset < 0)
+            {
+                throw new ArgumentOutOfRangeException("offset", "Split offset must be not be negative");
+            }
+
+            if (offset > text.Length)
+            {
+                throw new ArgumentOutOfRangeException("offset", "Split offset must not be greater than current text length");
+            }
+
+            string head = GetWholeText().Substring(0, offset);
+            string tail = GetWholeText().Substring(offset);
+            
+            Text(head);
+
+            TextNode tailNode = new TextNode(tail, this.BaseUri);
+            if (ParentNode != null)
+            {
+                ParentNode.AddChildren(SiblingIndex + 1, tailNode);
+            }
+
+            return tailNode;
+        }
+
         public override void OuterHtmlHead(StringBuilder accum, int depth, Document.OutputSettings output)
         {
             string html = Entities.Escape(GetWholeText(), output);

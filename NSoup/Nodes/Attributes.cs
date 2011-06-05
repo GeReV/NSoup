@@ -131,17 +131,14 @@ namespace NSoup.Nodes
         /// Do not modify the keys of the attributes via this view, as changes 
         /// to keys will not be recognised in the containing set.
         /// </remarks>
-        public ReadOnlyCollection<Attribute> AsList
+        public ReadOnlyCollection<Attribute> AsList()
         {
-            get
+            List<Attribute> list = new List<Attribute>(attributes.Count);
+            foreach (KeyValuePair<string, Attribute> entry in attributes)
             {
-                List<Attribute> list = new List<Attribute>(attributes.Count);
-                foreach (KeyValuePair<string, Attribute> entry in attributes)
-                {
-                    list.Add(entry.Value);
-                }
-                return list.AsReadOnly(); // TODO: Solve this - System.Collections.rea Collections.unmodifiableList(list);
+                list.Add(entry.Value);
             }
+            return list.AsReadOnly(); // TODO: Solve this - System.Collections.rea Collections.unmodifiableList(list);
         }
 
         /// <summary>
@@ -428,7 +425,7 @@ namespace NSoup.Nodes
 
         IEnumerator<Attribute> IEnumerable<Attribute>.GetEnumerator()
         {
-            return AsList.GetEnumerator();
+            return AsList().GetEnumerator();
         }
 
         #endregion
@@ -437,7 +434,7 @@ namespace NSoup.Nodes
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {
-            return AsList.GetEnumerator();
+            return AsList().GetEnumerator();
         }
 
         #endregion

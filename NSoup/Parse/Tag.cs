@@ -304,7 +304,7 @@ namespace NSoup.Parse
             // TODO[must]: incorporate html 5 as appropriate
 
             // document
-            CreateBlock("HTML").SetAncestor(new string[0]); // specific includes not impl
+            CreateBlock("HTML").SetAncestor(); // specific includes not impl
             CreateBlock("HEAD").SetParent("HTML").SetLimitChildren();
             CreateBlock("BODY").SetAncestor("HTML"); // specific includes not impl
             CreateBlock("FRAMESET").SetAncestor("HTML");
@@ -336,6 +336,7 @@ namespace NSoup.Parse
             CreateInline("TT");
             CreateInline("I");
             CreateInline("B");
+            CreateInline("U");
             CreateInline("BIG");
             CreateInline("SMALL");
 

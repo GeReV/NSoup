@@ -20,7 +20,7 @@ namespace NSoup.Safety
     /// </ul> 
     /// If you need to allow more through (please be careful!), tweak a base whitelist with: 
     /// <ul> 
-    /// <li>{@link #addTags} 
+    /// <li>{@link #addTags}    
     /// <li>{@link #addAttributes} 
     /// <li>{@link #addEnforcedAttribute} 
     /// <li>{@link #addProtocols} 
@@ -382,7 +382,7 @@ namespace NSoup.Safety
             foreach (Protocol protocol in protocols)
             {
                 string prot = protocol.ToString() + ":";
-                if (value.ToString().ToLowerInvariant().StartsWith(prot))
+                if (value.ToLowerInvariant().StartsWith(prot))
                 {
                     return true;
                 }

@@ -49,11 +49,11 @@ namespace NSoup.Parse
         /// <summary>
         /// Retrieves but does not remove the first character from the queue.
         /// </summary>
-        /// <returns>First character, or null if empty.</returns>
+        /// <returns>First character, or 0 if empty.</returns>
         public char Peek()
         {
             // Cannot have nullable chars with functions which do not accept nulls. Hopefully '\0' would suffice.
-            return IsEmpty ? '\0' : _queue[_pos];
+            return IsEmpty ? (char)0 : _queue[_pos];
         }
 
         /// <summary>
@@ -83,20 +83,13 @@ namespace NSoup.Parse
         /// <returns>true if the next characters match.</returns>
         public bool Matches(string seq)
         {
-            int count = seq.Length;
-            if (count > RemainingLength)
+            if (_pos + seq.Length > _queue.Length)
             {
                 return false;
             }
 
-            while (--count >= 0)
-            {
-                if (char.ToLowerInvariant(seq[count]) != char.ToLowerInvariant(_queue[_pos + count]))
-                {
-                    return false;
-                }
-            }
-            return true;
+            // Originally: _queue.RegionMatches(true, pos, seq, 0, seq.length());
+            return _queue.Substring(_pos, seq.Length).Equals(seq, StringComparison.InvariantCultureIgnoreCase);
         }
 
         /// <summary>
@@ -150,7 +143,7 @@ namespace NSoup.Parse
         public bool MatchesStartTag()
         {
             // micro opt for matching "<x"
-            return (RemainingLength >= 2 && _queue[_pos] == '<' && char.IsLetterOrDigit(_queue[_pos + 1]));
+            return (RemainingLength >= 2 && _queue[_pos] == '<' && char.IsLetter(_queue[_pos + 1]));
         }
 
         /// <summary>
@@ -207,9 +200,7 @@ namespace NSoup.Parse
         /// <returns>first character on queue.</returns>
         public char Consume()
         {
-            char c = _queue[_pos];
-            _pos++;
-            return c;
+            return _queue[_pos++];
         }
 
         /// <summary>
@@ -259,18 +250,23 @@ namespace NSoup.Parse
             int start = _pos;
             string first = seq.Substring(0, 1);
             bool canScan = first.ToLowerInvariant().Equals(first.ToUpperInvariant()); // if first is not cased, use index of
-            while (!IsEmpty && !Matches(seq))
+            while (!IsEmpty)
             {
+                if (Matches(seq))
+                {
+                    break;
+                }
+
                 if (canScan)
                 {
                     int skip = _queue.IndexOf(first, _pos) - _pos;
-                    if (skip <= 0)
+                    if (skip == 0) // this char is the skip char, but not match, so force advance of pos
                     {
                         _pos++;
                     }
                     else if (skip < 0) // no chance of finding, grab to end
                     {
-                        _pos = _queue.Length - 1;
+                        _pos = _queue.Length;
                     }
                     else
                     {
@@ -342,13 +338,13 @@ namespace NSoup.Parse
         {
             StringBuilder accum = new StringBuilder();
             int depth = 0;
-            char last = '\0';
+            char last = (char)0;
 
             do
             {
                 if (IsEmpty) break;
                 char c = Consume();
-                if (last == '\0' || !last.Equals(ESC))
+                if (last == 0 || last != ESC)
                 {
                     if (c.Equals(open))
                     {
@@ -360,7 +356,7 @@ namespace NSoup.Parse
                     }
                 }
 
-                if (depth > 0 && last != '\0')
+                if (depth > 0 && last != 0)
                 {
                     accum.Append(c); // don't include the outer match pair in the return
                 }
@@ -377,12 +373,12 @@ namespace NSoup.Parse
         public static string Unescape(string input)
         {
             StringBuilder output = new StringBuilder();
-            char last = '\0';
+            char last = (char)0;
             foreach (char c in input.ToCharArray())
             {
-                if (c.Equals(ESC))
+                if (c == ESC)
                 {
-                    if (last != '\0' && last.Equals(ESC))
+                    if (last != 0 && last == ESC)
                     {
                         output.Append(c);
                     }

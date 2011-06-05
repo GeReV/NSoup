@@ -55,6 +55,13 @@ namespace NSoup
         IConnection Referrer(string referrer);
 
         /// <summary>
+        /// Configures the connection to (not) follow server redirects. By default this is <b>true</b>.
+        /// </summary>
+        /// <param name="followRedirects">true if server redirects should be followed.</param>
+        /// <returns>this IConnection, for chaining</returns>
+        IConnection FollowRedirects(bool followRedirects);
+
+        /// <summary>
         /// Set the request method to use, GET or POST. Default is GET.
         /// </summary>
         /// <param name="method">HTTP request method</param>
@@ -281,6 +288,19 @@ namespace NSoup
         IRequest Timeout(int millis);
 
         /// <summary>
+        /// Get the current followRedirects configuration.
+        /// </summary>
+        /// <returns>true if followRedirects is enabled.</returns>
+        bool FollowRedirects();
+
+        /// <summary>
+        /// Configures the request to (not) follow server redirects. By default this is <b>true</b>.
+        /// </summary>
+        /// <param name="followRedirects">true if server redirects should be followed.</param>
+        /// <returns>this IConnection, for chaining</returns>
+        IRequest FollowRedirects(bool followRedirects);
+
+        /// <summary>
         /// Add a data parameter to the request
         /// </summary>
         /// <param name="keyval">data to add.</param>
@@ -292,7 +312,6 @@ namespace NSoup
         /// </summary>
         /// <returns>collection of keyvals</returns>
         ICollection<KeyVal> Data();
-
     }
 
     /// <summary>
@@ -343,6 +362,11 @@ namespace NSoup
         /// </summary>
         /// <returns>body bytes</returns>
         byte[] BodyAsBytes();
+
+        /// <summary>
+        /// Gets number of redirects.
+        /// </summary>
+        int NumRedirects { get; }
     }
 
     /// <summary>

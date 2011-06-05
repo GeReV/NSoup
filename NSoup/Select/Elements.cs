@@ -14,7 +14,7 @@ namespace NSoup.Select
     /// Original Author: Jonathan Hedley, jonathan@hedley.net
     /// Ported to .NET by: Amir Grozki
     /// -->
-    public class Elements : IList<Element>
+    public class Elements : IList<Element>, ICloneable
     {
         private List<Element> _contents;
 
@@ -37,6 +37,22 @@ namespace NSoup.Select
             : this(elements.ToList())
         {
         }
+
+        #region ICloneable Members
+
+        public object Clone()
+        {
+            List<Element> elements = new List<Element>();
+
+            foreach (Element e in _contents)
+            {
+                elements.Add((Element)e.Clone());
+            }
+
+            return new Elements(elements);
+        }
+
+        #endregion
 
         // attribute methods
         /// <summary>
@@ -296,6 +312,21 @@ namespace NSoup.Select
         public override string ToString()
         {
             return OuterHtml();
+        }
+
+        /// <summary>
+        /// Update the tag name of each matched element. For example, to change each {@code <i>} to a {@code <em>}, do <code>doc.select("i").tagName("em");</code>
+        /// </summary>
+        /// <param name="tagName">the new tag name</param>
+        /// <returns>this, for chaining</returns>
+        /// <see cref="Element.TagName(string)"/>
+        public Elements TagName(string tagName) {
+            foreach (Element element in _contents)
+            {
+                element.TagName(tagName);
+            }
+
+            return this;
         }
 
         /// <summary>

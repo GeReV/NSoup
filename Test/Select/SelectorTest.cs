@@ -83,8 +83,9 @@ namespace Test.Nodes
         public void testById()
         {
             Elements els = NSoup.NSoupClient.Parse("<div><p id=foo>Hello</p><p id=foo>Foo two!</p></div>").Select("#foo");
-            Assert.AreEqual(1, els.Count);
+            Assert.AreEqual(2, els.Count);
             Assert.AreEqual("Hello", els[0].Text());
+            Assert.AreEqual("Foo two!", els[1].Text());
 
             Elements none = NSoup.NSoupClient.Parse("<div id=1></div>").Select("#foo");
             Assert.AreEqual(0, none.Count);
@@ -101,7 +102,7 @@ namespace Test.Nodes
             Elements none = NSoup.NSoupClient.Parse("<div class='one'></div>").Select(".foo");
             Assert.AreEqual(0, none.Count);
 
-            Elements els2 = NSoup.NSoupClient.Parse("<div class='one-two'></div>").Select(".one-two");
+            Elements els2 = NSoup.NSoupClient.Parse("<div class='One-Two'></div>").Select(".one-two");
             Assert.AreEqual(1, els2.Count);
         }
 
@@ -196,6 +197,25 @@ namespace Test.Nodes
         }
 
         [TestMethod]
+        public void testByAttributeRegexCombined()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<div><table class=x><td>Hello</td></table></div>");
+            Elements els = doc.Select("div table[class~=x|y]");
+            Assert.AreEqual(1, els.Count);
+            Assert.AreEqual("Hello", els.Text);
+        }
+
+        [TestMethod]
+        public void testCombinedWithContains()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<p id=1>One</p><p>Two +</p><p>Three +</p>");
+            Elements els = doc.Select("p#1 + :contains(+)");
+            Assert.AreEqual(1, els.Count);
+            Assert.AreEqual("Two +", els.Text);
+            Assert.AreEqual("p", els.First.TagName());
+        }
+
+        [TestMethod]
         public void testAllElements()
         {
             string h = "<div><p>Hello</p><p><b>there</b></p></div>";
@@ -204,7 +224,7 @@ namespace Test.Nodes
             Elements allUnderDiv = doc.Select("div *");
             Assert.AreEqual(8, allDoc.Count);
             Assert.AreEqual(3, allUnderDiv.Count);
-            Assert.AreEqual("p", allUnderDiv.First.TagName);
+            Assert.AreEqual("p", allUnderDiv.First.TagName());
         }
 
         [TestMethod]
@@ -224,15 +244,16 @@ namespace Test.Nodes
             Elements els = doc.Select("p,div,[title]");
 
             Assert.AreEqual(5, els.Count);
-            Assert.AreEqual("p", els[0].TagName);
-            Assert.AreEqual("div", els[1].TagName);
-            Assert.AreEqual("foo", els[1].Attr("title"));
-            Assert.AreEqual("div", els[2].TagName);
-            Assert.AreEqual("bar", els[2].Attr("title"));
-            Assert.AreEqual("div", els[3].TagName);
-            Assert.IsTrue(els[3].Attr("title").Length == 0); // missing Attributes come back as empty string
-            Assert.IsFalse(els[3].HasAttr("title"));
-            Assert.AreEqual("span", els[4].TagName);
+            Assert.AreEqual("div", els[0].TagName());
+            Assert.AreEqual("foo", els[0].Attr("title"));
+            Assert.AreEqual("div", els[1].TagName());
+            Assert.AreEqual("bar", els[1].Attr("title"));
+            Assert.AreEqual("div", els[2].TagName());
+            Assert.IsTrue(els[2].Attr("title").Length == 0); // missing attributes come back as empty string
+            Assert.IsFalse(els[2].HasAttr("title"));
+            Assert.AreEqual("p", els[3].TagName());
+
+            Assert.AreEqual("span", els[4].TagName());
         }
 
         [TestMethod]
@@ -273,19 +294,19 @@ namespace Test.Nodes
 
             Elements div = doc.Select("div.foo");
             Assert.AreEqual(1, div.Count);
-            Assert.AreEqual("div", div.First.TagName);
+            Assert.AreEqual("div", div.First.TagName());
 
             Elements p = doc.Select("div .foo"); // space indicates like "div *.foo"
             Assert.AreEqual(1, p.Count);
-            Assert.AreEqual("p", p.First.TagName);
+            Assert.AreEqual("p", p.First.TagName());
 
             Elements div2 = doc.Select("div#1.foo.bar[title=bar][name=qux]"); // very specific!
             Assert.AreEqual(1, div2.Count);
-            Assert.AreEqual("div", div2.First.TagName);
+            Assert.AreEqual("div", div2.First.TagName());
 
             Elements p2 = doc.Select("div *.foo"); // space indicates like "div *.foo"
             Assert.AreEqual(1, p2.Count);
-            Assert.AreEqual("p", p2.First.TagName);
+            Assert.AreEqual("p", p2.First.TagName());
         }
 
         [TestMethod]
@@ -295,7 +316,7 @@ namespace Test.Nodes
             Elements els = NSoup.NSoupClient.Parse(h).Select("div p .first");
             Assert.AreEqual(1, els.Count);
             Assert.AreEqual("Hello", els.First.Text());
-            Assert.AreEqual("span", els.First.TagName);
+            Assert.AreEqual("span", els.First.TagName());
         }
 
         [TestMethod]
@@ -322,11 +343,11 @@ namespace Test.Nodes
 
             Elements allAs = doc.Select("h1 > a");
             Assert.AreEqual(3, allAs.Count);
-            Assert.AreEqual("a", allAs.First.TagName);
+            Assert.AreEqual("a", allAs.First.TagName());
 
             Elements fooAs = doc.Select("h1.foo > a");
             Assert.AreEqual(2, fooAs.Count);
-            Assert.AreEqual("a", fooAs.First.TagName);
+            Assert.AreEqual("a", fooAs.First.TagName());
 
             Elements barAs = doc.Select("h1.foo > a.bar");
             Assert.AreEqual(1, barAs.Count);
@@ -339,9 +360,9 @@ namespace Test.Nodes
             Document doc = NSoup.NSoupClient.Parse(h);
             Elements divChilds = doc.Select("div > *");
             Assert.AreEqual(3, divChilds.Count);
-            Assert.AreEqual("p", divChilds[0].TagName);
-            Assert.AreEqual("p", divChilds[1].TagName);
-            Assert.AreEqual("span", divChilds[2].TagName);
+            Assert.AreEqual("p", divChilds[0].TagName());
+            Assert.AreEqual("p", divChilds[1].TagName());
+            Assert.AreEqual("span", divChilds[2].TagName());
         }
 
         [TestMethod]
@@ -351,7 +372,7 @@ namespace Test.Nodes
             Document doc = NSoup.NSoupClient.Parse(h);
             Elements els = doc.Select("div#foo > h1.bar > a[href*=example]");
             Assert.AreEqual(1, els.Count);
-            Assert.AreEqual("a", els.First.TagName);
+            Assert.AreEqual("a", els.First.TagName());
         }
 
         [TestMethod]
@@ -416,7 +437,7 @@ namespace Test.Nodes
             Elements els = doc.Select(".foo > ol, ol > li + li");
 
             Assert.AreEqual(3, els.Count);
-            Assert.AreEqual("ol", els[0].TagName);
+            Assert.AreEqual("ol", els[0].TagName());
             Assert.AreEqual("Two", els[1].Text());
             Assert.AreEqual("Three", els[2].Text());
         }
@@ -502,7 +523,7 @@ namespace Test.Nodes
             Elements ps2 = doc.Select("div:eq(0) p:eq(0)");
             Assert.AreEqual(1, ps2.Count);
             Assert.AreEqual("One", ps2[0].Text());
-            Assert.AreEqual("p", ps2[0].TagName);
+            Assert.AreEqual("p", ps2[0].TagName());
         }
 
         [TestMethod]
@@ -545,7 +566,7 @@ namespace Test.Nodes
 
             Elements els1 = doc.Body.Select(":has(p)");
             Assert.AreEqual(3, els1.Count); // body, div, dib
-            Assert.AreEqual("body", els1.First.TagName);
+            Assert.AreEqual("body", els1.First.TagName());
             Assert.AreEqual("0", els1[1].Id);
             Assert.AreEqual("2", els1[2].Id);
         }
@@ -561,13 +582,13 @@ namespace Test.Nodes
             // test matches in has
             divs = doc.Select("div:has(p:matches((?i)two))");
             Assert.AreEqual(1, divs.Count);
-            Assert.AreEqual("div", divs.First.TagName);
+            Assert.AreEqual("div", divs.First.TagName());
             Assert.AreEqual("Two", divs.First.Text());
 
             // test contains in has
             divs = doc.Select("div:has(p:contains(two))");
             Assert.AreEqual(1, divs.Count);
-            Assert.AreEqual("div", divs.First.TagName);
+            Assert.AreEqual("div", divs.First.TagName());
             Assert.AreEqual("Two", divs.First.Text());
         }
 
@@ -699,8 +720,8 @@ namespace Test.Nodes
 
             Elements el1 = doc.Body.Select(":not(p)"); // should just be the span
             Assert.AreEqual(2, el1.Count);
-            Assert.AreEqual("body", el1.First.TagName);
-            Assert.AreEqual("span", el1.Last.TagName);
+            Assert.AreEqual("body", el1.First.TagName());
+            Assert.AreEqual("span", el1.Last.TagName());
         }
 
         [TestMethod]

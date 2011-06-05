@@ -5,6 +5,7 @@ using System.Text;
 using System.Collections.ObjectModel;
 using NSoup.Select;
 using NSoup.Helper;
+using NSoup.Parse;
 
 namespace NSoup.Nodes
 {
@@ -316,6 +317,99 @@ namespace NSoup.Nodes
             }
 
             ParentNode.RemoveChild(this);
+        }
+
+        /// <summary>
+        /// Insert the specified HTML into the DOM before this node (i.e. as a preceeding sibling).
+        /// </summary>
+        /// <param name="html">HTML to add before this element</param>
+        /// <returns>this node, for chaining</returns>
+        /// <see cref="After(string)"/>
+        public virtual Node Before(string html)
+        {
+            AddSiblingHtml(SiblingIndex, html);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Insert the specified HTML into the DOM after this node (i.e. as a following sibling).
+        /// </summary>
+        /// <param name="html">HTML to add after this element</param>
+        /// <returns>this node, for chaining</returns>
+        /// <see cref="Before(string)"/>
+        public virtual Node After(string html)
+        {
+            AddSiblingHtml(SiblingIndex + 1, html);
+
+            return this;
+        }
+
+        private void AddSiblingHtml(int index, string html)
+        {
+            if (html == null)
+            {
+                throw new ArgumentNullException("html");
+            }
+
+            if (ParentNode == null)
+            {
+                throw new NullReferenceException("ParentNode is null.");
+            }
+
+            Element fragment = Parser.ParseBodyFragmentRelaxed(html, BaseUri).Body;
+            ParentNode.AddChildren(index, fragment.ChildNodesAsArray());
+        }
+
+        /// <summary>
+        /// Wrap the supplied HTML around this node.
+        /// </summary>
+        /// <param name="html">HTML to wrap around this element, e.g. <code>&lt;div class="head"&gt;&lt;/div&gt;</code>. Can be arbitrarily deep.</param>
+        /// <returns>this node, for chaining.</returns>
+        public virtual Node Wrap(string html)
+        {
+            if (string.IsNullOrEmpty(html))
+            {
+                throw new ArgumentException("html cannot be empty.");
+            }
+
+            Element wrapBody = Parser.ParseBodyFragmentRelaxed(html, BaseUri).Body;
+            Elements wrapChildren = wrapBody.Children;
+            Element wrap = wrapChildren.First;
+            if (wrap == null)  // nothing to wrap with; noop
+            {
+                return null;
+            }
+
+            Element deepest = GetDeepChild(wrap);
+            ParentNode.ReplaceChild(this, wrap);
+            deepest.AddChildren(this);
+
+            // remainder (unbalanced wrap, like <div></div><p></p> -- The <p> is remainder
+            if (wrapChildren.Count > 1)
+            {
+                for (int i = 1; i < wrapChildren.Count; i++)
+                { // skip first
+                    Element remainder = wrapChildren[i];
+                    remainder.ParentNode.RemoveChild(remainder);
+                    wrap.AppendChild(remainder);
+                }
+            }
+
+            return this;
+        }
+
+        private Element GetDeepChild(Element el)
+        {
+            List<Element> children = el.Children.ToList();
+            if (children.Count > 0)
+            {
+                return GetDeepChild(children[0]);
+            }
+            else
+            {
+                return el;
+            }
         }
         
         /// <summary>
