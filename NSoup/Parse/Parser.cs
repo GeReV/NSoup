@@ -228,7 +228,7 @@ namespace NSoup.Parse
             }
 
             // <base href>: update the base uri
-            if (child.TagName.Equals("base"))
+            if (child.TagName().Equals("base"))
             {
                 string href = child.AbsUrl("href");
                 if (!string.IsNullOrEmpty(href))
@@ -286,7 +286,7 @@ namespace NSoup.Parse
         {
             TextNode textNode;
             // special case: handle string like "hello < there". first char will be "<", because of matchStartTag
-            if (_tq.Peek().Equals('<'))
+            if (_tq.Peek() == '<')
             {
                 _tq.Advance();
                 textNode = new TextNode("<", _baseUri);

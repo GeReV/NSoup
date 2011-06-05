@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSoup.Nodes;
+using NSoup.Select;
 
 namespace Test.Nodes
 {
@@ -98,6 +99,15 @@ namespace Test.Nodes
             Element el = NSoup.NSoupClient.Parse(html).GetElementsByTag("a")[0];
             Attributes attr = el.Attributes;
             Assert.AreEqual(0, attr.Count);
+        }
+
+        [TestMethod]
+        public void strictAttributeUnescapes()
+        {
+            string html = "<a id=1 href='?foo=bar&mid&lt=true'>One</a> <a id=2 href='?foo=bar&lt;qux&lg=1'>Two</a>";
+            Elements els = NSoup.NSoupClient.Parse(html).Select("a");
+            Assert.AreEqual("?foo=bar&mid&lt=true", els.First.Attr("href"));
+            Assert.AreEqual("?foo=bar<qux&lg=1", els.Last.Attr("href"));
         }
     }
 }

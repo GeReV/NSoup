@@ -97,6 +97,15 @@ namespace Test.Nodes
             Assert.IsFalse(a.HasAttr("abs:href")); // only realised on the get method, not in has or iterator
         }
 
+        [TestMethod]
+        public void handlesAbsOnImage()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<p><img src=\"/rez/osi_logo.png\" /></p>", "http://jsoup.org/");
+            Element img = doc.Select("img").First;
+            Assert.AreEqual("http://jsoup.org/rez/osi_logo.png", img.Attr("abs:src"));
+            Assert.AreEqual(img.AbsUrl("src"), img.Attr("abs:src"));
+        }
+
         /*
     Test for an issue with Java's abs URL handler.
      */

@@ -133,7 +133,7 @@ namespace NSoup.Nodes
         /// <returns>attribute</returns>
         public static Attribute CreateFromEncoded(string unencodedKey, string encodedValue)
         {
-            string value = Entities.Unescape(encodedValue);
+            string value = Entities.Unescape(encodedValue, true);
             return new Attribute(unencodedKey, value);
         }
 

@@ -20,7 +20,7 @@ namespace NSoup.Nodes
     /// -->
     public class Element : Node
     {
-        private readonly Tag _tag;
+        private Tag _tag;
         private HashSet<string> _classNames; // TODO: Originally: Set<string>.
 
         /// <summary>
@@ -66,9 +66,26 @@ namespace NSoup.Nodes
         /// <summary>
         /// Gets the name of the tag for this element. E.g: <code>div</code>
         /// </summary>
-        public string TagName
+        public string TagName()
         {
-            get { return _tag.Name; }
+            return _tag.Name;
+        }
+
+        /// <summary>
+        /// Change the tag of this element. For example, convert a {@code <span>} to a {@code <div>} with <code>el.tagName("div");</code>.
+        /// </summary>
+        /// <param name="tagName">new tag name for this element</param>
+        /// <returns>this element, for chaining</returns>
+        public Element TagName(string tagName)
+        {
+            if (string.IsNullOrEmpty(tagName))
+            {
+                throw new ArgumentException("Tag name must not be empty.");
+            }
+            
+            _tag = Tag.ValueOf(tagName);
+            
+            return this;
         }
 
         /// <summary>
@@ -154,7 +171,7 @@ namespace NSoup.Nodes
         private static void AccumulateParents(Element el, Elements parents)
         {
             Element parent = el.Parent;
-            if (parent != null && !parent.TagName.Equals("#root"))
+            if (parent != null && !parent.TagName().Equals("#root"))
             {
                 parents.Add(parent);
                 AccumulateParents(parent, parents);
@@ -354,10 +371,9 @@ namespace NSoup.Nodes
         /// <param name="html">HTML to add before this element</param>
         /// <returns>this element, for chaining</returns>
         /// <seealso cref="After(string)"/>
-        public Element Before(string html)
+        public new Element Before(string html)
         {
-            AddSiblingHtml(SiblingIndex, html);
-            return this;
+            return (Element)base.Before(html);
         }
 
         /// <summary>
@@ -366,25 +382,9 @@ namespace NSoup.Nodes
         /// <param name="html">HTML to add after this element</param>
         /// <returns>this element, for chaining</returns>
         /// <seealso cref="Before(string)"/>
-        public Element After(string html)
+        public new Element After(string html)
         {
-            AddSiblingHtml(SiblingIndex + 1, html);
-            return this;
-        }
-
-        private void AddSiblingHtml(int index, string html)
-        {
-            if (html == null)
-            {
-                throw new ArgumentNullException("html");
-            }
-            if (ParentNode == null)
-            {
-                throw new Exception("ParentNode is null");
-            }
-
-            Element fragment = Parser.ParseBodyFragmentRelaxed(html, BaseUri).Body;
-            ParentNode.AddChildren(index, fragment.ChildNodesAsArray());
+            return (Element)base.After(html);
         }
 
         /// <summary>
@@ -402,49 +402,9 @@ namespace NSoup.Nodes
         /// </summary>
         /// <param name="html">HTML to wrap around this element, e.g. <code>&lt;div class="head"&gt;&lt;/div&gt;</code>. Can be arbitralily deep.</param>
         /// <returns>this element, for chaining.</returns>
-        public Element Wrap(string html)
+        public new Element Wrap(string html)
         {
-            if (string.IsNullOrEmpty(html))
-            {
-                throw new ArgumentNullException("html");
-            }
-
-            Element wrapBody = NSoup.Parse.Parser.ParseBodyFragmentRelaxed(html, BaseUri).Body;
-            Elements wrapChildren = wrapBody.Children;
-            Element wrap = wrapChildren.First;
-            if (wrap == null)
-            { // nothing to wrap with; noop
-                return null;
-            }
-
-            Element deepest = GetDeepChild(wrap);
-            ParentNode.ReplaceChild(this, wrap);
-            deepest.AddChildren(this);
-
-            // remainder (unbalananced wrap, like <div></div><p></p> -- The <p> is remainder
-            if (wrapChildren.Count > 1)
-            {
-                for (int i = 1; i < wrapChildren.Count; i++)
-                { // skip first
-                    Element remainder = wrapChildren[i];
-                    remainder.ParentNode.RemoveChild(remainder);
-                    wrap.AppendChild(remainder);
-                }
-            }
-            return this;
-        }
-
-        private Element GetDeepChild(Element el)
-        {
-            IList<Element> children = el.Children;
-            if (children.Count > 0)
-            {
-                return GetDeepChild(children[0]);
-            }
-            else
-            {
-                return el;
-            }
+            return (Element)base.Wrap(html);
         }
 
         /// <summary>
@@ -1090,13 +1050,22 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
-        /// Tests if this element has a class.
+        /// Tests if this element has a class. Case insensitive.
         /// </summary>
         /// <param name="className">name of class to check for</param>
         /// <returns>true if it does, false if not</returns>
         public bool HasClass(string className)
         {
-            return ClassNames().Contains(className);
+            HashSet<string> classNames = ClassNames();
+            foreach (string name in classNames)
+            {
+                if (className.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -1169,7 +1138,7 @@ namespace NSoup.Nodes
         /// <returns>the value of the form element, or empty string if not set.</returns>
         public string Val()
         {
-            if (TagName.Equals("textarea", StringComparison.InvariantCultureIgnoreCase))
+            if (TagName().Equals("textarea", StringComparison.InvariantCultureIgnoreCase))
             {
                 return Text();
             }
@@ -1186,7 +1155,7 @@ namespace NSoup.Nodes
         /// <returns>this element (for chaining)</returns>
         public Element Val(string value)
         {
-            if (TagName.Equals("textarea", StringComparison.InvariantCultureIgnoreCase))
+            if (TagName().Equals("textarea", StringComparison.InvariantCultureIgnoreCase))
             {
                 Text(value);
             }
@@ -1205,7 +1174,7 @@ namespace NSoup.Nodes
             }
             
             accum.Append("<")
-                 .Append(TagName);
+                 .Append(TagName());
             Attributes.Html(accum, output);
 
             if (ChildNodes.Count <= 0 && _tag.IsSelfClosing)
@@ -1226,7 +1195,7 @@ namespace NSoup.Nodes
                 {
                     Indent(accum, depth, output);
                 }
-                accum.Append("</").Append(TagName).Append(">");
+                accum.Append("</").Append(TagName()).Append(">");
             }
         }
 

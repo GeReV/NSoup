@@ -262,9 +262,9 @@ namespace Test.Nodes
             Elements parents = doc.Select("p").Parents;
 
             Assert.AreEqual(3, parents.Count);
-            Assert.AreEqual("div", parents[0].TagName);
-            Assert.AreEqual("body", parents[1].TagName);
-            Assert.AreEqual("html", parents[2].TagName);
+            Assert.AreEqual("div", parents[0].TagName());
+            Assert.AreEqual("body", parents[1].TagName());
+            Assert.AreEqual("html", parents[2].TagName());
         }
 
         [TestMethod]
@@ -279,6 +279,15 @@ namespace Test.Nodes
             Elements div2 = doc.Select("div").Not("#1");
             Assert.AreEqual(1, div2.Count);
             Assert.AreEqual("2", div2.First.Id);
+        }
+
+        [TestMethod]
+        public void tagNameSet()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<p>Hello <i>there</i> <i>now</i></p>");
+            doc.Select("i").TagName("em");
+
+            Assert.AreEqual("<p>Hello <em>there</em> <em>now</em></p>", doc.Body.Html());
         }
     }
 }

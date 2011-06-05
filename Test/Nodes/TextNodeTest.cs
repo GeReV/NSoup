@@ -101,5 +101,31 @@ namespace Test.Nodes
             Assert.AreEqual("kablam &", tn.Text());
             Assert.AreEqual("One <span>two &amp;</span>kablam &amp;", TextUtil.StripNewLines(p.Html()));
         }
+
+        [TestMethod]
+        public void testSplitText()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<div>Hello there</div>");
+            Element div = doc.Select("div").First;
+            TextNode tn = (TextNode)div.ChildNodes[0];
+            TextNode tail = tn.SplitText(6);
+            Assert.AreEqual("Hello ", tn.GetWholeText());
+            Assert.AreEqual("there", tail.GetWholeText());
+            tail.Text("there!");
+            Assert.AreEqual("Hello there!", div.Text());
+            Assert.IsTrue(tn.ParentNode == tail.ParentNode);
+        }
+
+        [TestMethod]
+        public void testSplitAnEmbolden()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<div>Hello there</div>");
+            Element div = doc.Select("div").First;
+            TextNode tn = (TextNode)div.ChildNodes[0];
+            TextNode tail = tn.SplitText(6);
+            tail.Wrap("<b></b>");
+
+            Assert.AreEqual("Hello <b>there</b>", TextUtil.StripNewLines(div.Html())); // not great that we get \n<b>there there... must correct
+        }
     }
 }

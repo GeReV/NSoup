@@ -156,5 +156,63 @@ namespace Test.Integration
             Document doc = con.Get();
             Assert.IsTrue(doc.Title.Contains("Google"));
         }
+
+        [TestMethod]
+        public void followsRelativeRedirect()
+        {
+            IConnection con = NSoupClient.Connect("http://infohound.net/tools/302-rel.pl"); // to ./ - /tools/
+            Document doc = con.Post();
+            Assert.IsTrue(doc.Title.Contains("HTML Tidy Online"));
+        }
+
+        [TestMethod]
+        public void throwsExceptionOnError()
+        {
+            IConnection con = NSoupClient.Connect("http://infohound.net/tools/404");
+            bool threw = false;
+            try
+            {
+                Document doc = con.Get();
+            }
+            catch (System.IO.IOException)
+            {
+                threw = true;
+            }
+            Assert.IsTrue(threw);
+        }
+
+        [TestMethod]
+        public void doesntRedirectIfSoConfigured()
+        {
+            IConnection con = NSoupClient.Connect("http://infohound.net/tools/302.pl").FollowRedirects(false);
+            IResponse res = con.Execute();
+            Assert.IsTrue(res.StatusCode() == (System.Net.HttpStatusCode)302);
+        }
+
+        [TestMethod]
+        public void redirectsResponseCookieToNextResponse()
+        {
+            IConnection con = NSoupClient.Connect("http://infohound.net/tools/302-cookie.pl");
+            IResponse res = con.Execute();
+            Assert.AreEqual("asdfg123", res.Cookie("token")); // confirms that cookies set on 1st hit are presented in final result
+            Document doc = res.Parse();
+            Assert.AreEqual("token=asdfg123", ihVal("HTTP_COOKIE", doc)); // confirms that redirected hit saw cookie
+        }
+
+        [TestMethod]
+        public void maximumRedirects()
+        {
+            bool threw = false;
+            try
+            {
+                Document doc = NSoupClient.Connect("http://infohound.net/tools/loop.pl").Get();
+            }
+            catch (System.IO.IOException e)
+            {
+                Assert.IsTrue(e.Message.Contains("Too many redirects"));
+                threw = true;
+            }
+            Assert.IsTrue(threw);
+        }
     }
 }

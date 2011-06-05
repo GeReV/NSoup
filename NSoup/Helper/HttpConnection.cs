@@ -81,6 +81,13 @@ namespace NSoup.Helper
             return this;
         }
 
+        public IConnection FollowRedirects(bool followRedirects)
+        {
+            req.FollowRedirects(followRedirects);
+
+            return this;
+        }
+
         public IConnection Referrer(string referrer)
         {
             if (referrer == null)
@@ -429,16 +436,39 @@ namespace NSoup.Helper
 
     public class Response : ConnectionBase<IResponse>, IResponse
     {
+        private static readonly int MAX_REDIRECTS = 20;
         private HttpStatusCode _statusCode;
         private string _statusMessage;
         private byte[] _byteData;
         private string _charset;
         private string _contentType;
         private bool _executed = false;
+        private int _numRedirects = 0;
+
+        public Response()
+            : base()
+        { }
+
+        private Response(IResponse previousResponse)
+            : base()
+        {
+            if (previousResponse != null)
+            {
+                _numRedirects = previousResponse.NumRedirects + 1;
+                if (_numRedirects >= MAX_REDIRECTS)
+                {
+                    throw new IOException(string.Format("Too many redirects occurred trying to load URL {0}", previousResponse.Url()));
+                }
+            }
+        }
 
         public static Response Execute(IRequest req)
         {
+            return Execute(req, null);
+        }
 
+        public static Response Execute(IRequest req, IResponse previousResponse)
+        {
             if (req == null)
             {
                 throw new ArgumentNullException("req", "Request must not be null");
@@ -467,12 +497,10 @@ namespace NSoup.Helper
 
             HttpWebResponse response = (HttpWebResponse)conn.GetResponse();
 
-            // todo: error handling options, allow user to get !200 without exception
             HttpStatusCode status = response.StatusCode;
             bool needsRedirect = false;
             if (status != HttpStatusCode.OK)
             {
-                // java url connection will follow redirects on same protocol, but not switch between http & https, so do that here
                 if (status == HttpStatusCode.Moved || status == HttpStatusCode.MovedPermanently || status == HttpStatusCode.SeeOther)
                 {
                     needsRedirect = true;
@@ -483,13 +511,19 @@ namespace NSoup.Helper
                 }
             }
 
-            Response res = new Response();
-            res.SetupFromConnection(response);
+            Response res = new Response(previousResponse);
+            res.SetupFromConnection(response, previousResponse);
 
-            if (needsRedirect)
+            if (needsRedirect && req.FollowRedirects())
             {
-                req.Url(new Uri(res.Header("Location")));
-                return Execute(req);
+                req.Url(new Uri(req.Url(), res.Header("Location")));
+
+                foreach (KeyValuePair<string, string> cookie in res.Cookies()) // add response cookies to request (for e.g. login posts)
+                {
+                    req.Cookie(cookie.Key, cookie.Value);
+                }
+
+                return Execute(req, res);
             }
 
             using (Stream inStream =
@@ -532,9 +566,9 @@ namespace NSoup.Helper
                 throw new InvalidOperationException("Request must be executed (with .Execute(), .Get(), or .Post() before parsing response ");
             }
 
-            if (_contentType == null || !_contentType.StartsWith("text/"))
+            if (_contentType == null || !(_contentType.StartsWith("text/") || _contentType.StartsWith("application/xml") || _contentType.StartsWith("application/xhtml+xml")))
             {
-                throw new IOException(string.Format("Unhandled content type \"{0}\" on URL {1}. Must be text/*",
+                throw new IOException(string.Format("Unhandled content type \"{0}\" on URL {1}. Must be text/*, application/xml, or application/xhtml+xml",
                     _contentType, _url.ToString()));
             }
             Document doc = DataUtil.ParseByteData(_byteData, _charset, _url.ToString());
@@ -579,7 +613,7 @@ namespace NSoup.Helper
             HttpWebRequest conn = (HttpWebRequest)HttpWebRequest.Create(req.Url());
 
             conn.Method = req.Method().ToString();
-            conn.AllowAutoRedirect = true;
+            conn.AllowAutoRedirect = false; // don't rely on native redirection support
             conn.Timeout = req.Timeout();
             conn.ReadWriteTimeout = req.Timeout();
 
@@ -618,7 +652,7 @@ namespace NSoup.Helper
         
 
         // set up url, method, header, cookies
-        private void SetupFromConnection(HttpWebResponse conn)
+        private void SetupFromConnection(HttpWebResponse conn, IResponse previousResponse)
         {
 
             _method = (Method)Enum.Parse(typeof(Method), conn.Method, true);
@@ -628,6 +662,7 @@ namespace NSoup.Helper
             _statusMessage = conn.StatusDescription;
             _contentType = conn.ContentType;
 
+            // headers into map
             WebHeaderCollection resHeaders = conn.Headers;
             foreach (string name in resHeaders.Keys)
             {
@@ -654,6 +689,17 @@ namespace NSoup.Helper
                     if (values.Length > 1)
                     {
                         Header(name, values[0]);
+                    }
+                }
+            }
+
+            // if from a redirect, map previous response cookies into this response
+            if (previousResponse != null) {
+                foreach (KeyValuePair<string, string> prevCookie in previousResponse.Cookies())
+                {
+                    if (!HasCookie(prevCookie.Key))
+                    {
+                        Cookie(prevCookie.Key, prevCookie.Value);
                     }
                 }
             }
@@ -746,16 +792,26 @@ namespace NSoup.Helper
             req.Url(new Uri(url.ToString()));
             req.Data().Clear(); // moved into url as get params
         }
+
+        public int NumRedirects
+        {
+            get
+            {
+                return _numRedirects;
+            }
+        }
     }
 
     public class Request : ConnectionBase<IRequest>, IRequest
     {
         private int _timeoutMilliseconds;
+        private bool _followRedirects;
         private ICollection<KeyVal> _data;
 
         public Request()
         {
             _timeoutMilliseconds = 3000;
+            _followRedirects = true;
             _data = new List<KeyVal>();
             _method = NSoup.Method.Get;
             _headers["Accept-Encoding"] = "gzip";
@@ -775,6 +831,18 @@ namespace NSoup.Helper
 
             _timeoutMilliseconds = millis;
 
+            return this;
+        }
+
+        public bool FollowRedirects()
+        {
+            return _followRedirects;
+        }
+
+        public IRequest FollowRedirects(bool followRedirects)
+        {
+            this._followRedirects = followRedirects;
+            
             return this;
         }
 

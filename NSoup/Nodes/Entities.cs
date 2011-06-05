@@ -36,6 +36,7 @@ namespace NSoup.Nodes
         private static readonly Dictionary<char, string> _baseByVal;
         private static readonly Dictionary<char, string> _fullByVal;
         private static readonly Regex _unescapePattern = new Regex("&(#(x|X)?([0-9a-fA-F]+)|[a-zA-Z]+\\d*);?", RegexOptions.Compiled);
+        private static readonly Regex _strictUnescapePattern = new Regex("&(#(x|X)?([0-9a-fA-F]+)|[a-zA-Z]+\\d*);", RegexOptions.Compiled);
 
         public static string Escape(string s, Document.OutputSettings output)
         {
@@ -79,12 +80,25 @@ namespace NSoup.Nodes
 
         public static string Unescape(string s)
         {
+            return Unescape(s, false);
+        }
+
+        /// <summary>
+        /// Unescape the input string.
+        /// </summary>
+        /// <param name="s"></param>
+        /// <param name="strict">if "strict" (that is, requires trailing ';' char, otherwise that's optional)</param>
+        /// <returns></returns>
+        public static string Unescape(string s, bool strict)
+        {
             if (!s.Contains("&"))
             {
                 return s;
             }
 
-            return _unescapePattern.Replace(s, new MatchEvaluator(delegate(Match m)
+            Regex unescape = strict ? _strictUnescapePattern : _unescapePattern;
+
+            return unescape.Replace(s, new MatchEvaluator(delegate(Match m)
             {
                 int charval = -1;
                 string num = m.Groups[3].Value;

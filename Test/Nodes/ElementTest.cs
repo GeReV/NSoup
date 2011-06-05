@@ -97,7 +97,7 @@ namespace Test.Nodes
             Elements els = doc.GetElementsByTag("abc:def");
             Assert.AreEqual(1, els.Count);
             Assert.AreEqual("1", els.First.Id);
-            Assert.AreEqual("abc:def", els.First.TagName);
+            Assert.AreEqual("abc:def", els.First.TagName());
         }
 
         [TestMethod]
@@ -110,9 +110,9 @@ namespace Test.Nodes
 
             Document doc2 = NSoup.NSoupClient.Parse("<div id=1><div id=2><p>Hello <span id=2>world!</span></p></div></div>");
             Element div2 = doc2.GetElementById("2");
-            Assert.AreEqual("div", div2.TagName); // not the span
+            Assert.AreEqual("div", div2.TagName()); // not the span
             Element span = div2.Child(0).GetElementById("2"); // called from <p> context should be span
-            Assert.AreEqual("span", span.TagName);
+            Assert.AreEqual("span", span.TagName());
         }
 
         [TestMethod]
@@ -178,10 +178,10 @@ namespace Test.Nodes
             Elements parents = span.Parents;
 
             Assert.AreEqual(4, parents.Count);
-            Assert.AreEqual("p", parents[0].TagName);
-            Assert.AreEqual("div", parents[1].TagName);
-            Assert.AreEqual("body", parents[2].TagName);
-            Assert.AreEqual("html", parents[3].TagName);
+            Assert.AreEqual("p", parents[0].TagName());
+            Assert.AreEqual("div", parents[1].TagName());
+            Assert.AreEqual("body", parents[2].TagName());
+            Assert.AreEqual("html", parents[3].TagName());
         }
 
         [TestMethod]
@@ -201,13 +201,13 @@ namespace Test.Nodes
 
             List<Element> els = doc.GetElementsByClass("mellow").ToList();
             Assert.AreEqual(2, els.Count);
-            Assert.AreEqual("div", els[0].TagName);
-            Assert.AreEqual("span", els[1].TagName);
+            Assert.AreEqual("div", els[0].TagName());
+            Assert.AreEqual("span", els[1].TagName());
 
             List<Element> els2 = doc.GetElementsByClass("yellow").ToList();
             Assert.AreEqual(2, els2.Count);
-            Assert.AreEqual("div", els2[0].TagName);
-            Assert.AreEqual("b", els2[1].TagName);
+            Assert.AreEqual("div", els2[0].TagName());
+            Assert.AreEqual("b", els2[1].TagName());
 
             List<Element> none = doc.GetElementsByClass("solo").ToList();
             Assert.AreEqual(0, none.Count);
@@ -219,8 +219,8 @@ namespace Test.Nodes
             Document doc = NSoup.NSoupClient.Parse("<div style='bold'><p title=qux><p><b style></b></p></div>");
             List<Element> els = doc.GetElementsByAttribute("style").ToList();
             Assert.AreEqual(2, els.Count);
-            Assert.AreEqual("div", els[0].TagName);
-            Assert.AreEqual("b", els[1].TagName);
+            Assert.AreEqual("div", els[0].TagName());
+            Assert.AreEqual("b", els[1].TagName());
 
             List<Element> none = doc.GetElementsByAttribute("class").ToList();
             Assert.AreEqual(0, none.Count);
@@ -232,7 +232,7 @@ namespace Test.Nodes
             Document doc = NSoup.NSoupClient.Parse("<div style='bold'><p><p><b style></b></p></div>");
             List<Element> els = doc.GetElementsByAttributeValue("style", "bold").ToList();
             Assert.AreEqual(1, els.Count);
-            Assert.AreEqual("div", els[0].TagName);
+            Assert.AreEqual("div", els[0].TagName());
 
             List<Element> none = doc.GetElementsByAttributeValue("style", "none").ToList();
             Assert.AreEqual(0, none.Count);
@@ -573,6 +573,16 @@ namespace Test.Nodes
             doc.Body.AppendChild(clone); // adopt
             Assert.IsNotNull(clone.Parent);
             Assert.AreEqual("<div><p>One</p><p><span>Two</span></p></div><p><span>Two</span><span>Three</span></p>", TextUtil.StripNewLines(doc.Body.Html()));
+        }
+
+        [TestMethod]
+        public void testTagNameSet()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<div><i>Hello</i>");
+            doc.Select("i").First.TagName("em");
+            Assert.AreEqual(0, doc.Select("i").Count);
+            Assert.AreEqual(1, doc.Select("em").Count);
+            Assert.AreEqual("<em>Hello</em>", doc.Select("div").First.Html());
         }
     }
 }
