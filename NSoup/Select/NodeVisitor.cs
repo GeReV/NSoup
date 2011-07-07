@@ -9,7 +9,7 @@ namespace NSoup.Select
     /**
      * Node visitor interface
      */
-    public interface NodeVisitor
+    internal interface NodeVisitor
     {
         void Head(Node node, int depth);
         void Tail(Node node, int depth);

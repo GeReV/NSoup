@@ -107,6 +107,20 @@ namespace NSoup.Helper
             return this;
         }
 
+        public IConnection IgnoreHttpErrors(bool ignoreHttpErrors)
+        {
+            req.IgnoreHttpErrors(ignoreHttpErrors);
+
+            return this;
+        }
+
+        public IConnection IgnoreContentType(bool ignoreContentType)
+        {
+            req.IgnoreContentType(ignoreContentType);
+
+            return this;
+        }
+
         public IConnection Data(string key, string value)
         {
             req.Data(KeyVal.Create(key, value));
@@ -444,6 +458,7 @@ namespace NSoup.Helper
         private string _contentType;
         private bool _executed = false;
         private int _numRedirects = 0;
+        private IRequest req;
 
         public Response()
             : base()
@@ -505,7 +520,7 @@ namespace NSoup.Helper
                 {
                     needsRedirect = true;
                 }
-                else
+                else if (!req.IgnoreHttpErrors())
                 {
                     throw new IOException(status + " error loading URL " + req.Url().ToString());
                 }
@@ -525,6 +540,13 @@ namespace NSoup.Helper
 
                 return Execute(req, res);
             }
+
+            res.req = req;
+
+            //dataStream = conn.getErrorStream() != null ? conn.getErrorStream() : conn.getInputStream();
+            //bodyStream = res.hasHeader("Content-Encoding") && res.header("Content-Encoding").equalsIgnoreCase("gzip") ?
+            //        new BufferedInputStream(new GZIPInputStream(dataStream)) :
+            //        new BufferedInputStream(dataStream);
 
             using (Stream inStream =
                 (res.HasHeader("Content-Encoding") && res.Header("Content-Encoding").Equals("gzip")) ?
@@ -566,7 +588,7 @@ namespace NSoup.Helper
                 throw new InvalidOperationException("Request must be executed (with .Execute(), .Get(), or .Post() before parsing response ");
             }
 
-            if (_contentType == null || !(_contentType.StartsWith("text/") || _contentType.StartsWith("application/xml") || _contentType.StartsWith("application/xhtml+xml")))
+            if (!req.IgnoreContentType() && (_contentType == null || !(_contentType.StartsWith("text/") || _contentType.StartsWith("application/xml") || _contentType.StartsWith("application/xhtml+xml"))))
             {
                 throw new IOException(string.Format("Unhandled content type \"{0}\" on URL {1}. Must be text/*, application/xml, or application/xhtml+xml",
                     _contentType, _url.ToString()));
@@ -664,6 +686,24 @@ namespace NSoup.Helper
 
             // headers into map
             WebHeaderCollection resHeaders = conn.Headers;
+
+            ProcessResponseHeaders(resHeaders);
+
+            // if from a redirect, map previous response cookies into this response
+            if (previousResponse != null)
+            {
+                foreach (KeyValuePair<string, string> prevCookie in previousResponse.Cookies())
+                {
+                    if (!HasCookie(prevCookie.Key))
+                    {
+                        Cookie(prevCookie.Key, prevCookie.Value);
+                    }
+                }
+            }
+        }
+
+        public void ProcessResponseHeaders(WebHeaderCollection resHeaders)
+        {
             foreach (string name in resHeaders.Keys)
             {
                 if (name == null)
@@ -677,11 +717,32 @@ namespace NSoup.Helper
                 {
                     foreach (string value in values)
                     {
+                        if (value == null)
+                        {
+                            continue;
+                        }
+
                         TokenQueue cd = new TokenQueue(value);
                         string cookieName = cd.ChompTo("=").Trim();
                         string cookieVal = cd.ConsumeTo(";").Trim();
+
+                        if (cookieVal == null)
+                        {
+                            cookieVal = string.Empty;
+                        }
+
                         // ignores path, date, domain, secure et al. req'd?
-                        Cookie(cookieName, cookieVal);
+                        if (StringUtil.In(cookieName.ToLowerInvariant(), "domain", "path", "expires", "max-age", "secure", "httponly"))
+                        {
+                            // This is added for NSoup, since we do headers a bit differently around here.
+                            continue;
+                        }
+
+                        // name not blank, value not null
+                        if (!string.IsNullOrEmpty(cookieName))
+                        {
+                            Cookie(cookieName, cookieVal);
+                        }
                     }
                 }
                 else
@@ -689,17 +750,6 @@ namespace NSoup.Helper
                     if (values.Length > 1)
                     {
                         Header(name, values[0]);
-                    }
-                }
-            }
-
-            // if from a redirect, map previous response cookies into this response
-            if (previousResponse != null) {
-                foreach (KeyValuePair<string, string> prevCookie in previousResponse.Cookies())
-                {
-                    if (!HasCookie(prevCookie.Key))
-                    {
-                        Cookie(prevCookie.Key, prevCookie.Value);
                     }
                 }
             }
@@ -807,6 +857,8 @@ namespace NSoup.Helper
         private int _timeoutMilliseconds;
         private bool _followRedirects;
         private ICollection<KeyVal> _data;
+        private bool _ignoreHttpErrors = false;
+        private bool _ignoreContentType = false;
 
         public Request()
         {
@@ -844,6 +896,26 @@ namespace NSoup.Helper
             this._followRedirects = followRedirects;
             
             return this;
+        }
+
+        public bool IgnoreHttpErrors()
+        {
+            return _ignoreHttpErrors;
+        }
+
+        public void IgnoreHttpErrors(bool ignoreHttpErrors)
+        {
+            this._ignoreHttpErrors = ignoreHttpErrors;
+        }
+
+        public bool IgnoreContentType()
+        {
+            return _ignoreContentType;
+        }
+
+        public void IgnoreContentType(bool ignoreContentType)
+        {
+            this._ignoreContentType = ignoreContentType;
         }
 
         public IRequest Data(KeyVal keyval)

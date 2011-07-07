@@ -17,6 +17,7 @@ namespace NSoup.Nodes
     public class Document : Element
     {
         private OutputSettings _outputSettings = new OutputSettings();
+        private QuirksModeEnum _quirksMode = QuirksModeEnum.NoQuirks;
 
         /// <summary>
         /// Create a new, empty Document.
@@ -146,6 +147,17 @@ namespace NSoup.Nodes
             NormaliseStructure("head", htmlEl);
             NormaliseStructure("body", htmlEl);
 
+            return this;
+        }
+
+        public QuirksModeEnum QuirksMode()
+        {
+            return _quirksMode;
+        }
+
+        public Document QuirksMode(QuirksModeEnum quirksMode)
+        {
+            this._quirksMode = quirksMode;
             return this;
         }
 
@@ -416,6 +428,11 @@ namespace NSoup.Nodes
         public OutputSettings Settings
         {
             get { return _outputSettings; }
+        }
+
+        public enum QuirksModeEnum
+        {
+            NoQuirks, Quirks, LimitedQuirks
         }
     }
 }

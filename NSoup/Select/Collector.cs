@@ -13,7 +13,7 @@ namespace NSoup.Select
     /// Original Author: Jonathan Hedley
     /// Ported to .NET by: Amir Grozki
     /// -->
-    public class Collector
+    internal class Collector
     {
         private Collector() { }
 

@@ -57,7 +57,7 @@ namespace NSoup.Select
     /// Ported to .NET by: Amir Grozki
     /// -->
     /// <see cref="Element.Select(string)"/>
-    public class Selector
+    internal class Selector
     {
         private readonly Evaluator _evaluator;
         private readonly Element _root;

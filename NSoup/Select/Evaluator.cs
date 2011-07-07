@@ -14,7 +14,7 @@ namespace NSoup.Select
     /// Original Author: Jonathan Hedley
     /// Ported to .NET by: Amir Grozki
     /// -->
-    public abstract class Evaluator
+    internal abstract class Evaluator
     {
 
         protected Evaluator()

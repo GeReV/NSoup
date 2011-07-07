@@ -38,6 +38,30 @@ namespace NSoup.Nodes
         private static readonly Regex _unescapePattern = new Regex("&(#(x|X)?([0-9a-fA-F]+)|[a-zA-Z]+\\d*);?", RegexOptions.Compiled);
         private static readonly Regex _strictUnescapePattern = new Regex("&(#(x|X)?([0-9a-fA-F]+)|[a-zA-Z]+\\d*);", RegexOptions.Compiled);
 
+        private Entities()
+        {
+        }
+
+        /// <summary>
+        /// Check if the input is a known named entity
+        /// </summary>
+        /// <param name="name">the possible entity name (e.g. "lt" or "amp")</param>
+        /// <returns>true if a known named entity</returns>
+        public static bool IsNamedEntity(string name)
+        {
+            return _full.ContainsKey(name);
+        }
+
+        /// <summary>
+        /// Get the Character value of the named entity
+        /// </summary>
+        /// <param name="name">named entity (e.g. "lt" or "amp")</param>
+        /// <returns>the Character value of the named entity (e.g. '<' or '&')</returns>
+        public static char GetCharacterByName(string name)
+        {
+            return _full[name];
+        }
+
         public static string Escape(string s, Document.OutputSettings output)
         {
             return Escape(s, output.Encoding, output.EscapeMode);
@@ -91,6 +115,7 @@ namespace NSoup.Nodes
         /// <returns></returns>
         public static string Unescape(string s, bool strict)
         {
+            // todo: change this method to use Tokeniser.consumeCharacterReference
             if (!s.Contains("&"))
             {
                 return s;

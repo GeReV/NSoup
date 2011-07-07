@@ -242,7 +242,7 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
-        /// Add a node to the last child of this element.
+        /// Add a node child node to this element.
         /// </summary>
         /// <param name="child">node to add. Must not already have a parent.</param>
         /// <returns>this element, so that you can add more child nodes or elements.</returns>
@@ -341,8 +341,8 @@ namespace NSoup.Nodes
                 throw new ArgumentNullException("html");
             }
 
-            Element fragment = Parser.ParseBodyFragmentRelaxed(html, BaseUri).Body;
-            AddChildren(fragment.ChildNodesAsArray());
+            IList<Node> nodes = Parser.ParseFragment(html, this, BaseUri);
+            AddChildren(nodes.ToArray());
 
             return this;
         }
@@ -360,8 +360,8 @@ namespace NSoup.Nodes
                 throw new ArgumentNullException("html");
             }
 
-            Element fragment = Parser.ParseBodyFragmentRelaxed(html, BaseUri).Body;
-            AddChildren(0, fragment.ChildNodesAsArray());
+            IList<Node> nodes = Parser.ParseFragment(html, this, BaseUri);
+            AddChildren(0, nodes.ToArray());
             return this;
         }
 
@@ -377,6 +377,17 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
+        /// Insert the specified node into the DOM before this node (i.e. as a preceeding sibling). 
+        /// </summary>
+        /// <param name="node">node to add before this element</param>
+        /// <returns>this Element, for chaining</returns>
+        /// <see cref="After(Node)"/>
+        public new Element Before(Node node)
+        {
+            return (Element)base.Before(node);
+        }
+
+        /// <summary>
         /// Insert the specified HTML into the DOM after this element (i.e. as a following sibling).
         /// </summary>
         /// <param name="html">HTML to add after this element</param>
@@ -385,6 +396,17 @@ namespace NSoup.Nodes
         public new Element After(string html)
         {
             return (Element)base.After(html);
+        }
+
+        /// <summary>
+        /// Insert the specified node into the DOM after this node (i.e. as a following sibling).
+        /// </summary>
+        /// <param name="node">node to add after this element</param>
+        /// <returns>this element, for chaining</returns>
+        /// <see cref="Before(Node)"/>
+        public new Element After(Node node)
+        {
+            return (Element)base.After(node);
         }
 
         /// <summary>
@@ -1026,7 +1048,7 @@ namespace NSoup.Nodes
         /// </summary>
         public string ClassName()
         {
-            return Attributes.ContainsKey("class") ? Attributes.GetValue("class") : string.Empty;
+            return Attr("class");
         }
 
         // TODO: Originally - Set<string>.
@@ -1254,19 +1276,12 @@ namespace NSoup.Nodes
 
         public override bool Equals(Object o)
         {
-            if (this == o) return true;
-            if (!(o is Element)) return false;
-            if (!base.Equals(o)) return false;
-
-            Element element = (Element)o;
-
-            if (Tag != null ? !Tag.Equals(element.Tag) : element.Tag != null) return false;
-
-            return true;
+            return this == o;
         }
 
         public override int GetHashCode()
         {
+            // todo: fixup, not very useful
             int result = base.GetHashCode();
             result = 31 * result + (_tag != null ? _tag.GetHashCode() : 0);
             return result;

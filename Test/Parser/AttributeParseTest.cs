@@ -6,7 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSoup.Nodes;
 using NSoup.Select;
 
-namespace Test.Nodes
+namespace Test.Parser
 {
     /// <summary>
     /// Test suite for attribute parser.
@@ -93,12 +93,14 @@ namespace Test.Nodes
         }
 
         [TestMethod]
-        public void emptyOnNoKey()
+        public void canStartWithEq()
         {
             string html = "<a =empty />";
             Element el = NSoup.NSoupClient.Parse(html).GetElementsByTag("a")[0];
             Attributes attr = el.Attributes;
-            Assert.AreEqual(0, attr.Count);
+            Assert.AreEqual(1, attr.Count);
+            Assert.IsTrue(attr.ContainsKey("=empty"));
+            Assert.AreEqual("", attr["=empty"]);
         }
 
         [TestMethod]
@@ -106,7 +108,7 @@ namespace Test.Nodes
         {
             string html = "<a id=1 href='?foo=bar&mid&lt=true'>One</a> <a id=2 href='?foo=bar&lt;qux&lg=1'>Two</a>";
             Elements els = NSoup.NSoupClient.Parse(html).Select("a");
-            Assert.AreEqual("?foo=bar&mid&lt=true", els.First.Attr("href"));
+            Assert.AreEqual("?foo=bar∣&lt=true", els.First.Attr("href")); // &mid gets to ∣ because not tailed by =; lt is so not unescaped
             Assert.AreEqual("?foo=bar<qux&lg=1", els.Last.Attr("href"));
         }
     }

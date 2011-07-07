@@ -6,7 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSoup.Nodes;
 using NSoup.Safety;
 
-namespace Test.Nodes
+namespace Test.Safety
 {
     /// <summary>
     /// Tests for the cleaner.
@@ -86,7 +86,7 @@ namespace Test.Nodes
         [TestMethod]
         public void basicBehaviourTest()
         {
-            string h = "<div><p><a href='javascript:sendAllMoney()'>Dodgy</a> <A HREF='HTTP://nice.com'>Nice</p><blockquote>Hello</blockquote>";
+            string h = "<div><p><a href='javascript:sendAllMoney()'>Dodgy</a> <A HREF='HTTP://nice.com'>Nice</a></p><blockquote>Hello</blockquote>";
             string cleanHtml = NSoup.NSoupClient.Clean(h, Whitelist.Basic);
 
             /*Assert.AreEqual("<p><a rel=\"nofollow\">Dodgy</a> <a href=\"http://nice.com\" rel=\"nofollow\">Nice</a></p><blockquote>Hello</blockquote>",
@@ -106,7 +106,7 @@ namespace Test.Nodes
         [TestMethod]
         public void testRelaxed()
         {
-            string h = "<h1>Head</h1><td>One<td>Two</td>";
+            string h = "<h1>Head</h1><table><tr><td>One<td>Two</td></tr></table>";
             string cleanHtml = NSoup.NSoupClient.Clean(h, Whitelist.Relaxed);
             Assert.AreEqual("<h1>Head</h1><table><tbody><tr><td>One</td><td>Two</td></tr></tbody></table>", TextUtil.StripNewLines(cleanHtml));
         }

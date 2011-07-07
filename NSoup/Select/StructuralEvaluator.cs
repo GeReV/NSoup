@@ -6,11 +6,10 @@ using NSoup.Nodes;
 
 namespace NSoup.Select
 {
-
-/// <summary>
-/// Base structural evaluator.
-/// </summary>
-    abstract class StructuralEvaluator : Evaluator
+    /// <summary>
+    /// Base structural evaluator.
+    /// </summary>
+    internal abstract class StructuralEvaluator : Evaluator
     {
         Evaluator _evaluator;
 

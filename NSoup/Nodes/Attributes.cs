@@ -22,10 +22,11 @@ namespace NSoup.Nodes
     {
         public static readonly string DataPrefix = "data-";
 
-        protected Dictionary<string, Attribute> attributes = new Dictionary<string, Attribute>(2);
+        protected Dictionary<string, Attribute> attributes = null;
         // The order in which items are returned from a Dictionary is undefined. Should find a different solution.
         //private LinkedHashMap<string, Attribute> attributes = new LinkedHashMap<string, Attribute>();
         // linked hash map to preserve insertion order.
+        // null be default as so many elements have no attributes -- saves a good chunk of memory
 
         /// <summary>
         /// Set a new attribute, or replace an existing one by key.
@@ -49,6 +50,11 @@ namespace NSoup.Nodes
                 throw new ArgumentNullException("attribute");
             }
 
+            if (attributes == null)
+            {
+                attributes = new Dictionary<string, Attribute>(2);
+            }
+
             if (attributes.ContainsKey(attribute.Key))
             {
                 attributes[attribute.Key] = attribute;
@@ -68,6 +74,11 @@ namespace NSoup.Nodes
             if (string.IsNullOrEmpty(key))
             {
                 throw new ArgumentNullException("key");
+            }
+
+            if (attributes == null)
+            {
+                return string.Empty;
             }
 
             Attribute attr = null;
@@ -91,6 +102,12 @@ namespace NSoup.Nodes
             {
                 throw new ArgumentNullException("key");
             }
+
+            if (attributes == null)
+            {
+                return;
+            }
+
             attributes.Remove(key.ToLowerInvariant());
         }
 
@@ -101,7 +118,7 @@ namespace NSoup.Nodes
         /// <returns>true if key exists, false otherwise</returns>
         public bool ContainsKey(string key)
         {
-            return attributes.ContainsKey(key.ToLowerInvariant());
+            return attributes != null && attributes.ContainsKey(key.ToLowerInvariant());
         }
 
         /// <summary>
@@ -109,7 +126,14 @@ namespace NSoup.Nodes
         /// </summary>
         public int Count
         {
-            get { return attributes.Count; }
+            get
+            {
+                if (attributes == null)
+                {
+                    return 0;
+                }
+                return attributes.Count;
+            }
         }
 
         /// <summary>
@@ -118,6 +142,16 @@ namespace NSoup.Nodes
         /// <param name="incoming">attributes to add to these attributes.</param>
         public void AddRange(Attributes incoming)
         {
+            if (incoming.Count == 0)
+            {
+                return;
+            }
+
+            if (attributes == null)
+            {
+                attributes = new Dictionary<string, Attribute>(incoming.Count);
+            }
+
             foreach (Attribute item in incoming.attributes.Values)
             {
                 Add(item);
@@ -133,6 +167,11 @@ namespace NSoup.Nodes
         /// </remarks>
         public ReadOnlyCollection<Attribute> AsList()
         {
+            if (attributes == null)
+            {
+                return new List<Attribute>().AsReadOnly();
+            }
+
             List<Attribute> list = new List<Attribute>(attributes.Count);
             foreach (KeyValuePair<string, Attribute> entry in attributes)
             {
@@ -163,6 +202,11 @@ namespace NSoup.Nodes
 
         public void Html(StringBuilder accum, Document.OutputSettings output)
         {
+            if (attributes == null)
+            {
+                return;
+            }
+
             foreach (Attribute attribute in attributes.Values)
             {
                 accum.Append(" ");
@@ -182,9 +226,20 @@ namespace NSoup.Nodes
 
             Attributes that = (Attributes)obj;
 
-            if (attributes != null ? !attributes.Equals(that.attributes) : that.attributes != null) return false;
+            if (that.attributes == null && attributes == null)
+            {
+                return true;
+            }
 
-            return true;
+            if (that.attributes != null && 
+                attributes != null &&
+                attributes.Keys.SequenceEqual(that.attributes.Keys) &&
+                attributes.Values.SequenceEqual(that.attributes.Values))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         public override int GetHashCode()
@@ -201,6 +256,11 @@ namespace NSoup.Nodes
 
             public Dataset(Dictionary<string, Attribute> attributes)
             {
+                if (attributes == null)
+                {
+                    attributes = new Dictionary<string, Attribute>(2);
+                }
+
                 _attributes = attributes;
             }
 
@@ -452,6 +512,11 @@ namespace NSoup.Nodes
 
         public object Clone()
         {
+            if (attributes == null)
+            {
+                return new Attributes();
+            }
+
             Attributes clone = new Attributes();
 
             clone.attributes = new Dictionary<string, Attribute>(attributes.Count);

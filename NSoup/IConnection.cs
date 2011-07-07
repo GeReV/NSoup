@@ -69,6 +69,24 @@ namespace NSoup
         IConnection Method(Method method);
 
         /// <summary>
+        /// Configures the connection to not throw exceptions when a HTTP error occurs. (4xx - 5xx, e.g. 404 or 500). By 
+        /// default this is <b>false</b>; an IOException is thrown if an error is encountered. If set to <b>true</b>, the 
+        /// response is populated with the error body, and the status message will reflect the error.
+        /// </summary>
+        /// <param name="ignoreHttpErrors">false (default) if HTTP errors should be ignored</param>
+        /// <returns>this IConnection, for chaining</returns>
+        IConnection IgnoreHttpErrors(bool ignoreHttpErrors);
+
+        /// <summary>
+        /// Ignore the document's Content-Type when parsing the response. By default this is <b>false</b>, an unrecognised 
+        /// content-type will cause an IOException to be thrown. (This is to prevent producing garbage by attempting to parse 
+        /// a JPEG binary image, for example.) Set to true to force a parse attempt regardless of content type.
+        /// </summary>
+        /// <param name="ignoreContentType">set to true if you would like the content type ignored on parsing the response into a Document</param>
+        /// <returns>this IConnection, for chaining</returns>
+        IConnection IgnoreContentType(bool ignoreContentType);
+
+        /// <summary>
         /// Add a request data parameter. Request parameters are sent in the request query string for GETs, and in the request 
         /// body for POSTs. A request may have multiple values of the same name.
         /// </summary>
@@ -299,6 +317,30 @@ namespace NSoup
         /// <param name="followRedirects">true if server redirects should be followed.</param>
         /// <returns>this IConnection, for chaining</returns>
         IRequest FollowRedirects(bool followRedirects);
+
+        /// <summary>
+        /// Gets the current IgnoreHttpErrors configuration.
+        /// </summary>
+        /// <returns>true if errors will be ignored; false (default) if HTTP errors will cause an IOException to be thrown</returns>
+        bool IgnoreHttpErrors();
+
+        /// <summary>
+        /// Configures the request to ignore HTTP errors in the response.
+        /// </summary>
+        /// <param name="ignoreHttpErrors">set to true to ignore HTTP errors.</param>
+        void IgnoreHttpErrors(bool ignoreHttpErrors);
+
+        /// <summary>
+        /// Gets the current IgnoreContentType configuration.
+        /// </summary>
+        /// <returns>true if invalid content-types will be ignored; false (default) if they will cause an IOException to be thrown</returns>
+        bool IgnoreContentType();
+
+        /// <summary>
+        /// Configures the request to ignore the Content-Type of the response.
+        /// </summary>
+        /// <param name="ignoreContentType">set to true to ignore the contenet type</param>
+        void IgnoreContentType(bool ignoreContentType);
 
         /// <summary>
         /// Add a data parameter to the request

@@ -7,7 +7,7 @@ using NSoup.Nodes;
 using NSoup.Select;
 using System.IO;
 
-namespace Test
+namespace Test.Integration
 {
     /// <summary>
     /// Integration test: parses from real-world example HTML.

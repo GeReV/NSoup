@@ -19,10 +19,8 @@ namespace NSoup
     /// Original Author: Jonathan Hedley
     /// Ported to .NET by: Amir Grozki
     /// -->
-    public class NSoupClient
+    public static class NSoupClient
     {
-        private NSoupClient() { }
-
         /// <summary>
         /// Parse HTML into a Document. The parser will make a sensible, balanced document tree out of any HTML.
         /// </summary>

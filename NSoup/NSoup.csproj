@@ -49,6 +49,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Helper\DataUtil.cs" />
+    <Compile Include="Helper\DescendableLinkedList.cs" />
     <Compile Include="Helper\HttpConnection.cs" />
     <Compile Include="Helper\LinkedHashSet.cs" />
     <Compile Include="Helper\StringUtil.cs" />
@@ -58,8 +59,16 @@
     <Compile Include="Nodes\Comment.cs" />
     <Compile Include="Nodes\DataNode.cs" />
     <Compile Include="Nodes\Document.cs" />
+    <Compile Include="Nodes\DocumentType.cs" />
     <Compile Include="Nodes\Element.cs" />
     <Compile Include="Nodes\Entities.cs" />
+    <Compile Include="Parse\CharacterReader.cs" />
+    <Compile Include="Parse\ParseError.cs" />
+    <Compile Include="Parse\Token.cs" />
+    <Compile Include="Parse\Tokeniser.cs" />
+    <Compile Include="Parse\TokeniserState.cs" />
+    <Compile Include="Parse\TreeBuilder.cs" />
+    <Compile Include="Parse\TreeBuilderState.cs" />
     <Compile Include="Select\Evaluator.cs" />
     <Compile Include="Nodes\Node.cs" />
     <Compile Include="Nodes\TextNode.cs" />
