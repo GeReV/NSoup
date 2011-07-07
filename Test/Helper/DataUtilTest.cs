@@ -7,7 +7,7 @@ using NSoup.Nodes;
 using NSoup;
 using NSoup.Helper;
 
-namespace Test.Nodes
+namespace Test.Helper
 {
 
     [TestClass]

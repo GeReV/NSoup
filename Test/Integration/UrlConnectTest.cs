@@ -105,6 +105,13 @@ namespace Test.Integration
         }
 
         [TestMethod]
+        public void ignoresContentTypeIfSoConfigured()
+        {
+            Document doc = NSoupClient.Connect("http://jsoup.org/rez/osi_logo.png").IgnoreContentType(true).Get();
+            Assert.AreEqual("", doc.Title); // this will cause an ugly parse tree
+        }
+
+        [TestMethod]
         public void doesPost()
         {
             Document doc = NSoupClient.Connect(echoURL)
@@ -113,7 +120,7 @@ namespace Test.Integration
                 .Post();
 
             Assert.AreEqual("POST", ihVal("REQUEST_METHOD", doc));
-            Assert.AreEqual("gzip", ihVal("HTTP_ACCEPT_ENCODING", doc));
+            //Assert.AreEqual("gzip", ihVal("HTTP_ACCEPT_ENCODING", doc)); // current proxy removes gzip on post
             Assert.AreEqual("auth=token", ihVal("HTTP_COOKIE", doc));
             Assert.AreEqual("ו÷¦ה¸€ה¸‹", ihVal("ח™¾", doc));
             Assert.AreEqual("Jsoup, Jonathan", ihVal("uname", doc));
@@ -179,6 +186,16 @@ namespace Test.Integration
                 threw = true;
             }
             Assert.IsTrue(threw);
+        }
+
+        [TestMethod]
+        public void ignoresExceptionIfSoConfigured()
+        {
+            IConnection con = NSoupClient.Connect("http://infohound.net/tools/404").IgnoreHttpErrors(true);
+            IResponse res = con.Execute();
+            Document doc = res.Parse();
+            Assert.AreEqual(System.Net.HttpStatusCode.NotFound, res.StatusCode());
+            Assert.AreEqual("Not Found", doc.Select("h1").First.Text());
         }
 
         [TestMethod]

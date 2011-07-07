@@ -6,7 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSoup.Nodes;
 using NSoup.Select;
 
-namespace Test.Nodes
+namespace Test.Select
 {
     /// <summary>
     /// Tests for ElementList.
@@ -107,11 +107,36 @@ namespace Test.Nodes
         }
 
         [TestMethod]
+        public void hasAbsAttr()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<a id=1 href='/foo'>One</a> <a id=2 href='http://jsoup.org'>Two</a>");
+            Elements one = doc.Select("#1");
+            Elements two = doc.Select("#2");
+            Elements both = doc.Select("a");
+            Assert.IsFalse(one.HasAttr("abs:href"));
+            Assert.IsTrue(two.HasAttr("abs:href"));
+            Assert.IsTrue(both.HasAttr("abs:href")); // hits on #2
+        }
+
+        [TestMethod]
         public void Attr()
         {
             Document doc = NSoup.NSoupClient.Parse("<p title=foo><p title=bar><p class=foo><p class=bar>");
             string classVal = doc.Select("p").Attr("class");
             Assert.AreEqual("foo", classVal);
+        }
+
+        [TestMethod]
+        public void absAttr()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<a id=1 href='/foo'>One</a> <a id=2 href='http://jsoup.org'>Two</a>");
+            Elements one = doc.Select("#1");
+            Elements two = doc.Select("#2");
+            Elements both = doc.Select("a");
+
+            Assert.AreEqual("", one.Attr("abs:href"));
+            Assert.AreEqual("http://jsoup.org/", two.Attr("abs:href"));
+            Assert.AreEqual("http://jsoup.org/", both.Attr("abs:href"));
         }
 
         [TestMethod]
@@ -180,7 +205,7 @@ namespace Test.Nodes
         public void val()
         {
             Document doc = NSoup.NSoupClient.Parse("<input value='one' /><textarea>two</textarea>");
-            Elements els = doc.Select("form > *");
+            Elements els = doc.Select("input, textarea");
             Assert.AreEqual(2, els.Count);
             Assert.AreEqual("one", els.Val());
             Assert.AreEqual("two", els.Last.Val());
@@ -215,6 +240,15 @@ namespace Test.Nodes
             doc.Select("b").Wrap("<i></i>");
             Assert.AreEqual("<p><i><b>This</b></i> is <i><b>jsoup</b></i></p>", doc.Body.Html());
         }
+
+        [TestMethod]
+        public void unwrap()
+        {
+            string h = "<div><font>One</font> <font><a href=\"/\">Two</a></font></div";
+            Document doc = NSoup.NSoupClient.Parse(h);
+            doc.Select("font").Unwrap();
+            Assert.AreEqual("<div>One <a href=\"/\">Two</a></div>", TextUtil.StripNewLines(doc.Body.Html()));
+        }   
 
         [TestMethod]
         public void empty()

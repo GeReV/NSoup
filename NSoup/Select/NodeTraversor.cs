@@ -9,7 +9,7 @@ namespace NSoup.Select
     /**
      * Breadth first node traversor.
      */
-    public class NodeTraversor
+    internal class NodeTraversor
     {
         private NodeVisitor visitor;
 

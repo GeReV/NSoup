@@ -131,6 +131,18 @@ namespace NSoup.Helper
             }
             return modified ? sb.ToString() : s;
         }
+
+        public static bool In(string needle, params string[] haystack)
+        {
+            foreach (string hay in haystack)
+            {
+                if (hay.Equals(needle))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 
 }

@@ -12,7 +12,7 @@ namespace NSoup.Helper
     /// <summary>
     /// Internal static utilities for handling data.
     /// </summary>
-    public class DataUtil
+    internal class DataUtil
     {
         private static readonly Regex _charsetPattern = new Regex("(?i)\\bcharset=\\s*\"?([^\\s;\"]*)", RegexOptions.Compiled);
         static readonly Encoding _defaultEncoding = Encoding.UTF8; // used if not found in header or meta charset

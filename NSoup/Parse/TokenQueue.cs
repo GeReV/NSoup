@@ -12,7 +12,7 @@ namespace NSoup.Parse
     /// Original Author: Jonathan Hedley
     /// Ported to .NET by: Amir Grozki
     /// -->
-    public class TokenQueue
+    internal class TokenQueue
     {
         private string _queue;
         private int _pos = 0;
@@ -95,8 +95,8 @@ namespace NSoup.Parse
         /// <summary>
         /// Case sensitive match test.
         /// </summary>
-        /// <param name="seq"></param>
-        /// <returns></returns>
+        /// <param name="seq">string to case sensitively check for</param>
+        /// <returns>true if matched, false if not</returns>
         public bool MatchesCS(string seq)
         {
             if (seq.Length + _pos > _queue.Length)
@@ -109,8 +109,8 @@ namespace NSoup.Parse
         /// <summary>
         /// Tests if the next characters match any of the sequences. Case insensitive.
         /// </summary>
-        /// <param name="seq"></param>
-        /// <returns></returns>
+        /// <param name="seq">list of strings to case insensitively check for</param>
+        /// <returns>true of any matched, false if none did</returns>
         public bool MatchesAny(params string[] seq)
         {
             foreach (string s in seq)

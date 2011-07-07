@@ -90,7 +90,7 @@ namespace NSoup.Nodes
                 throw new ArgumentNullException("attributeKey");
             }
 
-            if (HasAttr(attributeKey))
+            if (_attributes.ContainsKey(attributeKey))
             {
                 return _attributes.GetValue(attributeKey);
             }
@@ -124,6 +124,16 @@ namespace NSoup.Nodes
             {
                 throw new ArgumentNullException("attributeKey");
             }
+
+            if (attributeKey.ToLowerInvariant().StartsWith("abs:"))
+            {
+                string key = attributeKey.Substring("abs:".Length);
+                if (_attributes.ContainsKey(key) && !AbsUrl(key).Equals(string.Empty))
+                {
+                    return true;
+                }
+            }
+
             return _attributes.ContainsKey(attributeKey);
         }
 
@@ -322,7 +332,7 @@ namespace NSoup.Nodes
         /// <summary>
         /// Insert the specified HTML into the DOM before this node (i.e. as a preceeding sibling).
         /// </summary>
-        /// <param name="html">HTML to add before this element</param>
+        /// <param name="html">HTML to add before this node</param>
         /// <returns>this node, for chaining</returns>
         /// <see cref="After(string)"/>
         public virtual Node Before(string html)
@@ -333,14 +343,58 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
+        /// Insert the specified node into the DOM before this node (i.e. as a preceeding sibling).
+        /// </summary>
+        /// <param name="node">node to add before this node</param>
+        /// <returns>this node, for chaining</returns>
+        /// <see cref="After(Node)"/>
+        public virtual Node Before(Node node)
+        {
+            if (node == null)
+            {
+                throw new ArgumentNullException("node");
+            }
+            if (ParentNode == null)
+            {
+                throw new InvalidOperationException("ParentNode is null.");
+            }
+
+            _parentNode.AddChildren(SiblingIndex, node);
+
+            return this;
+        }
+
+        /// <summary>
         /// Insert the specified HTML into the DOM after this node (i.e. as a following sibling).
         /// </summary>
-        /// <param name="html">HTML to add after this element</param>
+        /// <param name="html">HTML to add after this node</param>
         /// <returns>this node, for chaining</returns>
         /// <see cref="Before(string)"/>
         public virtual Node After(string html)
         {
             AddSiblingHtml(SiblingIndex + 1, html);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Insert the specified node into the DOM after this node (i.e. as a following sibling).
+        /// </summary>
+        /// <param name="node">node to add after this node</param>
+        /// <returns>this node, for chaining</returns>
+        /// <see cref="Before(Node)"/>
+        public virtual Node After(Node node)
+        {
+            if (node == null)
+            {
+                throw new ArgumentNullException("node");
+            }
+            if (ParentNode == null)
+            {
+                throw new InvalidOperationException("ParentNode is null.");
+            }
+
+            _parentNode.AddChildren(SiblingIndex + 1, node);
 
             return this;
         }
@@ -357,8 +411,9 @@ namespace NSoup.Nodes
                 throw new NullReferenceException("ParentNode is null.");
             }
 
-            Element fragment = Parser.ParseBodyFragmentRelaxed(html, BaseUri).Body;
-            ParentNode.AddChildren(index, fragment.ChildNodesAsArray());
+            Element context = ParentNode is Element ? (Element)ParentNode : null;
+            IList<Node> nodes = Parser.ParseFragment(html, context, BaseUri);
+            _parentNode.AddChildren(index, nodes.ToArray());
         }
 
         /// <summary>
@@ -373,30 +428,62 @@ namespace NSoup.Nodes
                 throw new ArgumentException("html cannot be empty.");
             }
 
-            Element wrapBody = Parser.ParseBodyFragmentRelaxed(html, BaseUri).Body;
-            Elements wrapChildren = wrapBody.Children;
-            Element wrap = wrapChildren.First;
-            if (wrap == null)  // nothing to wrap with; noop
+            Element context = ParentNode is Element ? (Element)ParentNode : null;
+            IList<Node> wrapChildren = Parser.ParseFragment(html, context, BaseUri);
+            Node wrapNode = wrapChildren.First();
+            if (wrapNode == null || !(wrapNode is Element))  // nothing to wrap with; noop
             {
                 return null;
             }
 
+            Element wrap = (Element)wrapNode;
             Element deepest = GetDeepChild(wrap);
             ParentNode.ReplaceChild(this, wrap);
             deepest.AddChildren(this);
 
             // remainder (unbalanced wrap, like <div></div><p></p> -- The <p> is remainder
-            if (wrapChildren.Count > 1)
+            if (wrapChildren.Count > 0)
             {
-                for (int i = 1; i < wrapChildren.Count; i++)
+                for (int i = 0; i < wrapChildren.Count; i++)
                 { // skip first
-                    Element remainder = wrapChildren[i];
+                    Node remainder = wrapChildren[i];
                     remainder.ParentNode.RemoveChild(remainder);
                     wrap.AppendChild(remainder);
                 }
             }
 
             return this;
+        }
+
+        /// <summary>
+        /// Removes this node from the DOM, and moves its children up into the node's parent. This has the effect of dropping 
+        /// the node but keeping its children.
+        /// 
+        /// For example, with the input html:
+        /// <code>&lt;div&gt;One &lt;span&gt;Two &lt;b&gt;Three&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;</code> 
+        /// Calling <code>element.Unwrap()</code> on the <code>span</code> element will result in the html: 
+        /// <code>&lt;div&gt;One Two &lt;b&gt;Three&lt;/b&gt;</code>
+        /// and the <code>"Two "</code> <see cref="TextNode">TextNode</see> being returned.
+        /// </summary>
+        /// <returns>the first child of this node, after the node has been unwrapped. Null if the node had no children.</returns>
+        /// <see cref="Remove()"/>
+        /// <see cref="Wrap(string)"/>
+        public Node Unwrap()
+        {
+            if (_parentNode == null)
+            {
+                throw new InvalidOperationException("Parent node is null.");
+            }
+
+            int index = SiblingIndex;
+
+            Node firstChild = _childNodes.Count > 0 ? _childNodes[0] : null;
+
+            _parentNode.AddChildren(index, this.ChildNodesAsArray());
+
+            this.Remove();
+
+            return firstChild;
         }
 
         private Element GetDeepChild(Element el)

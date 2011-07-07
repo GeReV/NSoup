@@ -6,7 +6,7 @@ using System.Collections;
 
 namespace NSoup
 {
-    public class LinkedHashSet<T> : ICollection<T>, IEnumerable<T>, IEnumerable
+    internal class LinkedHashSet<T> : ICollection<T>, IEnumerable<T>, IEnumerable
     {
         private HashSet<T> _hashSet;
         private List<T> _list;

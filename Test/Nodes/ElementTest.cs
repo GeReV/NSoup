@@ -381,10 +381,10 @@ namespace Test.Nodes
         public void testAppendRowToTable()
         {
             Document doc = NSoup.NSoupClient.Parse("<table><tr><td>1</td></tr></table>");
-            Element table = doc.Select("table").First;
+            Element table = doc.Select("tbody").First;
             table.Append("<tr><td>2</td></tr>");
 
-            Assert.AreEqual("<table><tr><td>1</td></tr><tr><td>2</td></tr></table>", TextUtil.StripNewLines(doc.Body.Html()));
+            Assert.AreEqual("<table><tbody><tr><td>1</td></tr><tr><td>2</td></tr></tbody></table>", TextUtil.StripNewLines(doc.Body.Html()));
 
             // check sibling index (reindexChildren):
             Elements ps = doc.Select("tr");
@@ -398,10 +398,10 @@ namespace Test.Nodes
         public void testPrependRowToTable()
         {
             Document doc = NSoup.NSoupClient.Parse("<table><tr><td>1</td></tr></table>");
-            Element table = doc.Select("table").First();
+            Element table = doc.Select("tbody").First();
             table.Prepend("<tr><td>2</td></tr>");
 
-            Assert.AreEqual("<table><tr><td>2</td></tr><tr><td>1</td></tr></table>", TextUtil.StripNewLines(doc.Body.Html()));
+            Assert.AreEqual("<table><tbody><tr><td>2</td></tr><tr><td>1</td></tr></tbody></table>", TextUtil.StripNewLines(doc.Body.Html()));
         }
 
         [TestMethod]

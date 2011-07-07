@@ -94,7 +94,7 @@ namespace Test.Nodes
             Element a = doc.Select("a").First;
             Assert.AreEqual("/foo", a.Attr("href"));
             Assert.AreEqual("http://jsoup.org/foo", a.Attr("abs:href"));
-            Assert.IsFalse(a.HasAttr("abs:href")); // only realised on the get method, not in has or iterator
+            Assert.IsTrue(a.HasAttr("abs:href"));
         }
 
         [TestMethod]
@@ -104,6 +104,33 @@ namespace Test.Nodes
             Element img = doc.Select("img").First;
             Assert.AreEqual("http://jsoup.org/rez/osi_logo.png", img.Attr("abs:src"));
             Assert.AreEqual(img.AbsUrl("src"), img.Attr("abs:src"));
+        }
+
+        [TestMethod]
+        public void handlesAbsPrefixOnHasAttr()
+        {
+            // 1: no abs url; 2: has abs url
+            Document doc = NSoup.NSoupClient.Parse("<a id=1 href='/foo'>One</a> <a id=2 href='http://jsoup.org/'>Two</a>");
+            Element one = doc.Select("#1").First;
+            Element two = doc.Select("#2").First;
+
+            Assert.IsFalse(one.HasAttr("abs:href"));
+            Assert.IsTrue(one.HasAttr("href"));
+            Assert.AreEqual("", one.AbsUrl("href"));
+
+            Assert.IsTrue(two.HasAttr("abs:href"));
+            Assert.IsTrue(two.HasAttr("href"));
+            Assert.AreEqual("http://jsoup.org/", two.AbsUrl("href"));
+        }
+
+        [TestMethod]
+        public void literalAbsPrefix()
+        {
+            // if there is a literal attribute "abs:xxx", don't try and make absolute.
+            Document doc = NSoup.NSoupClient.Parse("<a abs:href='odd'>One</a>");
+            Element el = doc.Select("a").First;
+            Assert.IsTrue(el.HasAttr("abs:href"));
+            Assert.AreEqual("odd", el.Attr("abs:href"));
         }
 
         /*
@@ -152,6 +179,59 @@ namespace Test.Nodes
             Assert.IsTrue(p.OwnerDocument == doc);
             Assert.IsTrue(doc.OwnerDocument == doc);
             Assert.IsNull(doc.Parent);
+        }
+
+        [TestMethod]
+        public void before()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<p>One <b>two</b> three</p>");
+            Element newNode = new Element(Tag.ValueOf("em"), "");
+            newNode.AppendText("four");
+
+            doc.Select("b").First.Before(newNode);
+            Assert.AreEqual("<p>One <em>four</em><b>two</b> three</p>", doc.Body.Html());
+
+            doc.Select("b").First.Before("<i>five</i>");
+            Assert.AreEqual("<p>One <em>four</em><i>five</i><b>two</b> three</p>", doc.Body.Html());
+        }
+
+        [TestMethod]
+        public void after()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<p>One <b>two</b> three</p>");
+            Element newNode = new Element(Tag.ValueOf("em"), "");
+            newNode.AppendText("four");
+
+            doc.Select("b").First.After(newNode);
+            Assert.AreEqual("<p>One <b>two</b><em>four</em> three</p>", doc.Body.Html());
+
+            doc.Select("b").First.After("<i>five</i>");
+            Assert.AreEqual("<p>One <b>two</b><i>five</i><em>four</em> three</p>", doc.Body.Html());
+        }
+
+        [TestMethod]
+        public void unwrap()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<div>One <span>Two <b>Three</b></span> Four</div>");
+            Element span = doc.Select("span").First;
+            Node twoText = span.ChildNodes[0];
+            Node node = span.Unwrap();
+
+            Assert.AreEqual("<div>One Two <b>Three</b> Four</div>", TextUtil.StripNewLines(doc.Body.Html()));
+            Assert.IsTrue(node is TextNode);
+            Assert.AreEqual("Two ", ((TextNode)node).Text());
+            Assert.AreEqual(node, twoText);
+            Assert.AreEqual(node.ParentNode, doc.Select("div").First);
+        }
+
+        [TestMethod]
+        public void unwrapNoChildren()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<div>One <span></span> Two</div>");
+            Element span = doc.Select("span").First();
+            Node node = span.Unwrap();
+            Assert.AreEqual("<div>One  Two</div>", TextUtil.StripNewLines(doc.Body.Html()));
+            Assert.IsTrue(node == null);
         }
     }
 }

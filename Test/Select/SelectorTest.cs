@@ -6,7 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSoup.Nodes;
 using NSoup.Select;
 
-namespace Test.Nodes
+namespace Test.Select
 {
 
     /// <summary>

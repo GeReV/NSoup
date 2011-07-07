@@ -9,7 +9,7 @@ namespace NSoup.Select
     /// <summary>
     /// Base combining (and, or) evaluator.
     /// </summary>
-    abstract class CombiningEvaluator : Evaluator
+    internal abstract class CombiningEvaluator : Evaluator
     {
         protected readonly List<Evaluator> _evaluators;
 

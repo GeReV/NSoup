@@ -94,15 +94,14 @@ namespace Test.Parser
         [TestMethod]
         public void parsesQuiteRoughAttributes()
         {
-            String html = "<p =a>One<a =a";
+            string html = "<p =a>One<a <p>Something</p>Else";
+            // this gets a <p> with attr '=a' and an <a tag with an attribue named '<p'; and then auto-recreated
             Document doc = NSoup.NSoupClient.Parse(html);
-            Assert.AreEqual("<p>One<a></a></p>", doc.Body.Html());
+            Assert.AreEqual("<p =a=\"\">One<a <p=\"\">Something</a></p>\n" +
+                "<a <p=\"\">Else</a>", doc.Body.Html());
 
-            doc = NSoup.NSoupClient.Parse("<p .....");
-            Assert.AreEqual("<p></p>", doc.Body.Html());
-
-            doc = NSoup.NSoupClient.Parse("<p .....<p!!");
-            Assert.AreEqual("<p></p>\n<p></p>", doc.Body.Html());
+            doc = NSoup.NSoupClient.Parse("<p .....>");
+            Assert.AreEqual("<p .....=\"\"></p>", doc.Body.Html());
         }
 
         [TestMethod]
@@ -133,46 +132,47 @@ namespace Test.Parser
         }
 
         [TestMethod]
-        public void parsesUnterminatedTag()
+        public void dropsUnterminatedTag()
         {
+            // jsoup used to parse this to <p>, but whatwg, webkit will drop.
             string h1 = "<p";
             Document doc = NSoup.NSoupClient.Parse(h1);
-            Assert.AreEqual(1, doc.GetElementsByTag("p").Count);
+            Assert.AreEqual(0, doc.GetElementsByTag("p").Count);
+            Assert.AreEqual("", doc.Text());
 
             string h2 = "<div id=1<p id='2'";
             doc = NSoup.NSoupClient.Parse(h2);
-            Element d = doc.GetElementById("1");
-            Assert.AreEqual(1, d.Children.Count);
-            Element p = doc.GetElementById("2");
-            Assert.IsNotNull(p);
+            Assert.AreEqual("", doc.Text());
         }
 
         [TestMethod]
-        public void parsesUnterminatedAttribute()
+        public void dropsUnterminatedAttribute()
         {
+            // jsoup used to parse this to <p id="foo">, but whatwg, webkit will drop.
             string h1 = "<p id=\"foo";
             Document doc = NSoup.NSoupClient.Parse(h1);
-            Element p = doc.GetElementById("foo");
-            Assert.IsNotNull(p);
-            Assert.AreEqual("p", p.TagName());
+            Assert.AreEqual("", doc.Text());
         }
 
         [TestMethod]
         public void parsesUnterminatedTextarea()
         {
+            // don't parse right to end, but break on <p>
             Document doc = NSoup.NSoupClient.Parse("<body><p><textarea>one<p>two");
             Element t = doc.Select("textarea").First;
-            Assert.AreEqual("one<p>two", t.Text());
+            Assert.AreEqual("one", t.Text());
+            Assert.AreEqual("two", doc.Select("p")[1].Text());
         }
 
         [TestMethod]
         public void parsesUnterminatedOption()
         {
+            // bit weird this -- browsers and spec get stuck in select until there's a </select>
             Document doc = NSoup.NSoupClient.Parse("<body><p><select><option>One<option>Two</p><p>Three</p>");
             Elements options = doc.Select("option");
             Assert.AreEqual(2, options.Count);
             Assert.AreEqual("One", options.First.Text());
-            Assert.AreEqual("Two", options.Last.Text());
+            Assert.AreEqual("TwoThree", options.Last.Text());
         }
 
         [TestMethod]
@@ -256,13 +256,15 @@ namespace Test.Parser
         }
 
         [TestMethod]
-        public void createsImplicitLists()
+        public void doesNotCreateImplicitLists()
         {
             string h = "<li>Point one<li>Point two";
             Document doc = NSoup.NSoupClient.Parse(h);
-            Elements ol = doc.Select("ul"); // should have created a default ul.
-            Assert.AreEqual(1, ol.Count);
-            Assert.AreEqual(2, ol[0].Children.Count);
+            Elements ol = doc.Select("ul"); // should NOT have created a default ul.
+            Assert.AreEqual(0, ol.Count);
+            Elements lis = doc.Select("li");
+            Assert.AreEqual(2, lis.Count);
+            Assert.AreEqual("body", lis.First.Parent.TagName());
 
             // no fiddling with non-implicit lists
             string h2 = "<ol><li><p>Point the first<li><p>Point the second";
@@ -276,11 +278,12 @@ namespace Test.Parser
         }
 
         [TestMethod]
-        public void createsImplicitTable()
+        public void discardsNakedTds()
         {
+            // jsoup used to make this into an implicit table; but browsers make it into a text run
             string h = "<td>Hello<td><p>There<p>now";
             Document doc = NSoup.NSoupClient.Parse(h);
-            Assert.AreEqual("<table><tbody><tr><td>Hello</td><td><p>There</p><p>now</p></td></tr></tbody></table>", TextUtil.StripNewLines(doc.Body.Html()));
+            Assert.AreEqual("Hello<p>There</p><p>now</p>", TextUtil.StripNewLines(doc.Body.Html()));
             // <tbody> is introduced if no implicitly creating table, but allows tr to be directly under table
         }
 
@@ -288,7 +291,7 @@ namespace Test.Parser
         public void handlesNestedImplicitTable()
         {
             Document doc = NSoup.NSoupClient.Parse("<table><td>1</td></tr> <td>2</td></tr> <td> <table><td>3</td> <td>4</td></table> <tr><td>5</table>");
-            Assert.AreEqual("<table><tr><td>1</td></tr> <tr><td>2</td></tr> <tr><td> <table><tr><td>3</td> <td>4</td></tr></table> </td></tr><tr><td>5</td></tr></table>", TextUtil.StripNewLines(doc.Body.Html()));
+            Assert.AreEqual("<table><tbody><tr><td>1</td></tr> <tr><td>2</td></tr> <tr><td> <table><tbody><tr><td>3</td> <td>4</td></tr></tbody></table> </td></tr><tr><td>5</td></tr></tbody></table>", TextUtil.StripNewLines(doc.Body.Html()));
         }
 
         [TestMethod]
@@ -310,14 +313,14 @@ namespace Test.Parser
         public void handlesImplicitCaptionClose()
         {
             Document doc = NSoup.NSoupClient.Parse("<table><caption>A caption<td>One<td>Two");
-            Assert.AreEqual("<table><caption>A caption</caption><tr><td>One</td><td>Two</td></tr></table>", TextUtil.StripNewLines(doc.Body.Html()));
+            Assert.AreEqual("<table><caption>A caption</caption><tbody><tr><td>One</td><td>Two</td></tr></tbody></table>", TextUtil.StripNewLines(doc.Body.Html()));
         }
 
         [TestMethod]
         public void noTableDirectInTable()
         {
             Document doc = NSoup.NSoupClient.Parse("<table> <td>One <td><table><td>Two</table> <table><td>Three");
-            Assert.AreEqual("<table> <tr><td>One </td><td><table><tr><td>Two</td></tr></table> <table><tr><td>Three</td></tr></table></td></tr></table>",
+            Assert.AreEqual("<table> <tbody><tr><td>One </td><td><table><tbody><tr><td>Two</td></tr></tbody></table> <table><tbody><tr><td>Three</td></tr></tbody></table></td></tr></tbody></table>",
                 TextUtil.StripNewLines(doc.Body.Html()));
         }
 
@@ -325,13 +328,15 @@ namespace Test.Parser
         public void ignoresDupeEndTrTag()
         {
             Document doc = NSoup.NSoupClient.Parse("<table><tr><td>One</td><td><table><tr><td>Two</td></tr></tr></table></td><td>Three</td></tr></table>"); // two </tr></tr>, must ignore or will close table
-            Assert.AreEqual("<table><tr><td>One</td><td><table><tr><td>Two</td></tr></table></td><td>Three</td></tr></table>",
+            Assert.AreEqual("<table><tbody><tr><td>One</td><td><table><tbody><tr><td>Two</td></tr></tbody></table></td><td>Three</td></tr></tbody></table>",
                 TextUtil.StripNewLines(doc.Body.Html()));
         }
 
         [TestMethod]
         public void handlesBaseTags()
         {
+            // todo -- don't handle base tags like this -- spec and browsers don't (any more -- v. old ones do).
+            // instead, just maintain one baseUri in the doc
             string h = "<a href=1>#</a><base href='/2/'><a href='3'>#</a><base href='http://bar'><a href=4>#</a>";
             Document doc = NSoup.NSoupClient.Parse(h, "http://foo/");
             //Assert.AreEqual("http://bar", doc.BaseUri); // gets updated as base changes, so doc.createElement has latest.
@@ -354,7 +359,8 @@ namespace Test.Parser
         [TestMethod]
         public void handlesCdata()
         {
-            string h = "<div id=1><![CData[<html>\n<foo><&amp;]]></div>"; // "cdata" insensitive. the &amp; in there should remain literal
+            // todo: as this is html namespace, should actually treat as bogus comment, not cdata. keep as cdata for now
+            string h = "<div id=1><![CDATA[<html>\n<foo><&amp;]]></div>"; // the &amp; in there should remain literal
             Document doc = NSoup.NSoupClient.Parse(h);
             Element div = doc.GetElementById("1");
             Assert.AreEqual("<html> <foo><&amp;", div.Text());
@@ -392,21 +398,44 @@ namespace Test.Parser
         }
 
         [TestMethod]
+        public void parsesBodyFragment()
+        {
+            string h = "<!-- comment --><p><a href='foo'>One</a></p>";
+            Document doc = NSoup.NSoupClient.ParseBodyFragment(h, "http://example.com");
+            Assert.AreEqual("<body><!-- comment --><p><a href=\"foo\">One</a></p></body>", TextUtil.StripNewLines(doc.Body.OuterHtml()));
+            Assert.AreEqual("http://example.com/foo", doc.Select("a").First.AbsUrl("href"));
+        }
+
+        [TestMethod]
         public void handlesUnknownNamespaceTags()
         {
-            string h = "<foo:bar id=1/><abc:def id=2>Foo<p>Hello</abc:def><foo:bar>There</foo:bar>";
+            // note that the first foo:bar should not really be allowed to be self closing, if parsed in html mode.
+            string h = "<foo:bar id='1' /><abc:def id=2>Foo<p>Hello</p></abc:def><foo:bar>There</foo:bar>";
             Document doc = NSoup.NSoupClient.Parse(h);
             Assert.AreEqual("<foo:bar id=\"1\" /><abc:def id=\"2\">Foo<p>Hello</p></abc:def><foo:bar>There</foo:bar>", TextUtil.StripNewLines(doc.Body.Html()));
         }
 
         [TestMethod]
-        public void handlesEmptyBlocks()
+        public void handlesKnownEmptyBlocks()
         {
-            string h = "<div id=1/><div id=2><img /></div> <hr /> hr text";
+            // if known tag, must be defined as self closing to allow as self closing. unkown tags can be self closing.
+            string h = "<div id='1' /><div id=2><img /><img></div> <hr /> hr text <hr> hr text two";
             Document doc = NSoup.NSoupClient.Parse(h);
             Element div1 = doc.GetElementById("1");
-            Assert.IsTrue(div1.Children.IsEmpty);
+            Assert.IsTrue(!div1.Children.IsEmpty); // <div /> is treated as <div>...
             Assert.IsTrue(doc.Select("hr").First.Children.IsEmpty);
+            Assert.IsTrue(doc.Select("hr").Last.Children.IsEmpty);
+            Assert.IsTrue(doc.Select("img").First.Children.IsEmpty);
+            Assert.IsTrue(doc.Select("img").Last.Children.IsEmpty);
+        }
+
+        [TestMethod]
+        public void handlesSolidusAtAttributeEnd()
+        {
+            // this test makes sure [<a href=/>link</a>] is parsed as [<a href="/">link</a>], not [<a href="" /><a>link</a>]
+            string h = "<a href=/>link</a>";
+            Document doc = NSoup.NSoupClient.Parse(h);
+            Assert.AreEqual("<a href=\"/\">link</a>", doc.Body.Html());
         }
 
         [TestMethod]
@@ -421,9 +450,11 @@ namespace Test.Parser
         [TestMethod]
         public void handlesUnclosedDefinitionLists()
         {
+            // jsoup used to create a <dl>, but that's not to spec
             string h = "<dt>Foo<dd>Bar<dt>Qux<dd>Zug";
             Document doc = NSoup.NSoupClient.Parse(h);
-            Assert.AreEqual(4, doc.Body.GetElementsByTag("dl").First.Children.Count);
+            Assert.AreEqual(0, doc.Select("dl").Count); // no auto dl
+            Assert.AreEqual(4, doc.Select("dt, dd").Count);
             Elements dts = doc.Select("dt");
             Assert.AreEqual(2, dts.Count);
             Assert.AreEqual("Zug", dts[1].NextElementSibling.Text());
@@ -445,8 +476,9 @@ namespace Test.Parser
         {
             string h = "<html><head><script></script><noscript></noscript></head><frameset><frame src=foo></frame><frame src=foo></frameset></html>";
             Document doc = NSoup.NSoupClient.Parse(h);
-            Assert.AreEqual("<html><head><script></script><noscript></noscript></head><frameset><frame src=\"foo\" /><frame src=\"foo\" /></frameset><body></body></html>",
-                    TextUtil.StripNewLines(doc.Html()));
+            Assert.AreEqual("<html><head><script></script><noscript></noscript></head><frameset><frame src=\"foo\" /><frame src=\"foo\" /></frameset></html>",
+                TextUtil.StripNewLines(doc.Html()));
+            // no body auto vivification
         }
 
         [TestMethod]
@@ -475,8 +507,8 @@ namespace Test.Parser
         {
             string h = "<!doctype html>One<html>Two<head>Three<link></head>Four<body>Five </body>Six </html>Seven ";
             Document doc = NSoup.NSoupClient.Parse(h);
-            Assert.AreEqual("<!doctype html><html><head><link /></head><body>One Two Four Three Five Six Seven </body></html>",
-                    TextUtil.StripNewLines(doc.Html())); // is spaced OK if not newline & space stripped
+            Assert.AreEqual("<!DOCTYPE html><html><head></head><body>OneTwoThree<link />FourFive Six Seven </body></html>",
+                TextUtil.StripNewLines(doc.Html()));
         }
 
         [TestMethod]
@@ -495,6 +527,14 @@ namespace Test.Parser
         }
 
         [TestMethod]
+        public void normalisedBodyAfterContent()
+        {
+            Document doc = NSoup.NSoupClient.Parse("<font face=Arial><body class=name><div>One</div></body></font>");
+            Assert.AreEqual("<html><head></head><body class=\"name\"><font face=\"Arial\"><div>One</div></font></body></html>",
+                TextUtil.StripNewLines(doc.Html()));
+        }
+
+        [TestMethod]
         public void findsCharsetInMalformedMeta()
         {
             string h = "<meta http-equiv=Content-Type content=text/html; charset=gb2312>";
@@ -506,8 +546,9 @@ namespace Test.Parser
         [TestMethod]
         public void testHgroup()
         {
+            // jsoup used to not allow hroup in h{n}, but that's not in spec, and browsers are OK
             Document doc = NSoup.NSoupClient.Parse("<h1>Hello <h2>There <hgroup><h1>Another<h2>headline</hgroup> <hgroup><h1>More</h1><p>stuff</p></hgroup>");
-            Assert.AreEqual("<h1>Hello </h1><h2>There </h2><hgroup><h1>Another</h1><h2>headline</h2></hgroup> <hgroup><h1>More</h1></hgroup><p>stuff</p>", TextUtil.StripNewLines(doc.Body.Html()));
+            Assert.AreEqual("<h1>Hello </h1><h2>There <hgroup><h1>Another</h1><h2>headline</h2></hgroup> <hgroup><h1>More</h1><p>stuff</p></hgroup></h2>", TextUtil.StripNewLines(doc.Body.Html()));
         }
 
         [TestMethod]
@@ -535,11 +576,11 @@ namespace Test.Parser
         }
 
         [TestMethod]
-        public void testAllowsImageInNoScriptInHead()
+        public void testNoImagesInNoScriptInHead()
         {
-            // some sites use this pattern as an analytics mechanism
+            // jsoup used to allow, but against spec if parsing with noscript
             Document doc = NSoup.NSoupClient.Parse("<html><head><noscript><img src='foo'></noscript></head><body><p>Hello</p></body></html>");
-            Assert.AreEqual("<html><head><noscript><img src=\"foo\" /></noscript></head><body><p>Hello</p></body></html>", TextUtil.StripNewLines(doc.Html()));
+            Assert.AreEqual("<html><head><noscript></noscript></head><body><img src=\"foo\" /><p>Hello</p></body></html>", TextUtil.StripNewLines(doc.Html()));
         }
 
         [TestMethod]
@@ -556,6 +597,156 @@ namespace Test.Parser
             // html5 has no definition of <font>; often used as flow
             Document doc = NSoup.NSoupClient.Parse("<font>Hello <div>there</div> <span>now</span></font>");
             Assert.AreEqual("<font>Hello <div>there</div> <span>now</span></font>", TextUtil.StripNewLines(doc.Body.Html()));
+        }
+
+        [TestMethod]
+        public void handlesMisnestedTagsBI()
+        {
+            // whatwg: <b><i></b></i>
+            string h = "<p>1<b>2<i>3</b>4</i>5</p>";
+            Document doc = NSoup.NSoupClient.Parse(h);
+            Assert.AreEqual("<p>1<b>2<i>3</i></b><i>4</i>5</p>", doc.Body.Html());
+            // adoption agency on </b>, reconstruction of formatters on 4.
+        }
+
+        [TestMethod]
+        public void handlesMisnestedTagsBP()
+        {
+            //  whatwg: <b><p></b></p>
+            string h = "<b>1<p>2</b>3</p>";
+            Document doc = NSoup.NSoupClient.Parse(h);
+            Assert.AreEqual("<b>1</b>\n<p><b>2</b>3</p>", doc.Body.Html());
+        }
+
+        [TestMethod]
+        public void handlesUnexpectedMarkupInTables()
+        {
+            // whatwg - tests markers in active formatting (if they didn't work, would get in in table)
+            // also tests foster parenting
+            string h = "<table><b><tr><td>aaa</td></tr>bbb</table>ccc";
+            Document doc = NSoup.NSoupClient.Parse(h);
+            Assert.AreEqual("<b></b><b>bbb</b><table><tbody><tr><td>aaa</td></tr></tbody></table><b>ccc</b>", TextUtil.StripNewLines(doc.Body.Html()));
+        }
+
+        [TestMethod]
+        public void handlesUnclosedFormattingElements()
+        {
+            // whatwg: formatting elements get collected and applied, but excess elements are thrown away
+            string h = "<!DOCTYPE html>\n" +
+                    "<p><b class=x><b class=x><b><b class=x><b class=x><b>X\n" +
+                    "<p>X\n" +
+                    "<p><b><b class=x><b>X\n" +
+                    "<p></b></b></b></b></b></b>X";
+            Document doc = NSoup.NSoupClient.Parse(h);
+            doc.GetOutputSettings().IndentAmount(0);
+            string want = "<!DOCTYPE html>\n" +
+                    "<html>\n" +
+                    "<head></head>\n" +
+                    "<body>\n" +
+                    "<p><b class=\"x\"><b class=\"x\"><b><b class=\"x\"><b class=\"x\"><b>X </b></b></b></b></b></b></p>\n" +
+                    "<p><b class=\"x\"><b><b class=\"x\"><b class=\"x\"><b>X </b></b></b></b></b></p>\n" +
+                    "<p><b class=\"x\"><b><b class=\"x\"><b class=\"x\"><b><b><b class=\"x\"><b>X </b></b></b></b></b></b></b></b></p>\n" +
+                    "<p>X</p>\n" +
+                    "</body>\n" +
+                    "</html>";
+            Assert.AreEqual(want, doc.Html());
+        }
+
+        [TestMethod]
+        public void reconstructFormattingElements()
+        {
+            // tests attributes and multi b
+            string h = "<p><b class=one>One <i>Two <b>Three</p><p>Hello</p>";
+            Document doc = NSoup.NSoupClient.Parse(h);
+            Assert.AreEqual("<p><b class=\"one\">One <i>Two <b>Three</b></i></b></p>\n<p><b class=\"one\"><i><b>Hello</b></i></b></p>", doc.Body.Html());
+        }
+
+        [TestMethod]
+        public void reconstructFormattingElementsInTable()
+        {
+            // tests that tables get formatting markers -- the <b> applies outside the table and does not leak in,
+            // and the <i> inside the table and does not leak out.
+            string h = "<p><b>One</p> <table><tr><td><p><i>Three<p>Four</i></td></tr></table> <p>Five</p>";
+            Document doc = NSoup.NSoupClient.Parse(h);
+            string want = "<p><b>One</b></p>\n" +
+                    "<b> \n" +
+                    " <table>\n" +
+                    "  <tbody>\n" +
+                    "   <tr>\n" +
+                    "    <td><p><i>Three</i></p><p><i>Four</i></p></td>\n" +
+                    "   </tr>\n" +
+                    "  </tbody>\n" +
+                    " </table> <p>Five</p></b>";
+            Assert.AreEqual(want, doc.Body.Html());
+        }
+
+        [TestMethod]
+        public void commentBeforeHtml()
+        {
+            string h = "<!-- comment --><!-- comment 2 --><p>One</p>";
+            Document doc = NSoup.NSoupClient.Parse(h);
+            Assert.AreEqual("<!-- comment --><!-- comment 2 --><html><head></head><body><p>One</p></body></html>", TextUtil.StripNewLines(doc.Html()));
+        }
+
+        [TestMethod]
+        public void emptyTdTag()
+        {
+            string h = "<table><tr><td>One</td><td id='2' /></tr></table>";
+            Document doc = NSoup.NSoupClient.Parse(h);
+            Assert.AreEqual("<td>One</td>\n<td id=\"2\"></td>", doc.Select("tr").First.Html());
+        }
+
+        [TestMethod]
+        public void handlesSolidusInA()
+        {
+            // test for bug #66
+            string h = "<a class=lp href=/lib/14160711/>link text</a>";
+            Document doc = NSoup.NSoupClient.Parse(h);
+            Element a = doc.Select("a").First;
+            Assert.AreEqual("link text", a.Text());
+            Assert.AreEqual("/lib/14160711/", a.Attr("href"));
+        }
+
+        [TestMethod]
+        public void handlesSpanInTbody()
+        {
+            // test for bug 64
+            string h = "<table><tbody><span class='1'><tr><td>One</td></tr><tr><td>Two</td></tr></span></tbody></table>";
+            Document doc = NSoup.NSoupClient.Parse(h);
+            Assert.AreEqual(doc.Select("span").First.Children.Count, 0); // the span gets closed
+            Assert.AreEqual(doc.Select("table").Count, 1); // only one table
+        }
+
+        [TestMethod]
+        public void handlesUnclosedTitleAtEof()
+        {
+            Assert.AreEqual("Data", NSoup.NSoupClient.Parse("<title>Data").Title);
+            Assert.AreEqual("Data<", NSoup.NSoupClient.Parse("<title>Data<").Title);
+            Assert.AreEqual("Data</", NSoup.NSoupClient.Parse("<title>Data</").Title);
+            Assert.AreEqual("Data</t", NSoup.NSoupClient.Parse("<title>Data</t").Title);
+            Assert.AreEqual("Data</ti", NSoup.NSoupClient.Parse("<title>Data</ti").Title);
+            Assert.AreEqual("Data", NSoup.NSoupClient.Parse("<title>Data</title>").Title);
+            Assert.AreEqual("Data", NSoup.NSoupClient.Parse("<title>Data</title >").Title);
+        }
+
+        [TestMethod]
+        public void handlesUnclosedTitle()
+        {
+            Document one = NSoup.NSoupClient.Parse("<title>One <b>Two <b>Three</TITLE><p>Test</p>"); // has title, so <b> is plain text
+            Assert.AreEqual("One <b>Two <b>Three", one.Title);
+            Assert.AreEqual("Test", one.Select("p").First.Text());
+
+            Document two = NSoup.NSoupClient.Parse("<title>One<b>Two <p>Test</p>"); // no title, so <b> causes </title> breakout
+            Assert.AreEqual("One", two.Title);
+            Assert.AreEqual("<b>Two <p>Test</p></b>", two.Body.Html());
+        }
+
+        [TestMethod]
+        public void noImplicitFormForTextAreas()
+        {
+            // old jsoup parser would create implicit forms for form children like <textarea>, but no more
+            Document doc = NSoup.NSoupClient.Parse("<textarea>One</textarea>");
+            Assert.AreEqual("<textarea>One</textarea>", doc.Body.Html());
         }
     }
 }

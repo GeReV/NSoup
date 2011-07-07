@@ -93,46 +93,28 @@ namespace Test.Parser
         public void divSemantics()
         {
             Tag div = Tag.ValueOf("div");
-            Tag p = Tag.ValueOf("p");
 
-            Assert.IsTrue(div.CanContain(div));
-            Assert.IsTrue(div.CanContain(p));
+            Assert.IsTrue(div.IsBlock);
+            Assert.IsTrue(div.FormatAsBlock);
         }
 
         [TestMethod]
         public void pSemantics()
         {
-            Tag div = Tag.ValueOf("div");
             Tag p = Tag.ValueOf("p");
-            Tag img = Tag.ValueOf("img");
-            Tag span = Tag.ValueOf("span");
 
-            Assert.IsTrue(p.CanContain(img));
-            Assert.IsTrue(p.CanContain(span));
-            Assert.IsFalse(p.CanContain(div));
-            Assert.IsFalse(p.CanContain(p));
-        }
-
-        [TestMethod]
-        public void spanSemantics()
-        {
-            Tag span = Tag.ValueOf("span");
-            Tag p = Tag.ValueOf("p");
-            Tag div = Tag.ValueOf("div");
-
-            Assert.IsTrue(span.CanContain(span));
-            Assert.IsTrue(span.CanContain(p));
-            Assert.IsTrue(span.CanContain(div));
+            Assert.IsTrue(p.IsBlock);
+            Assert.IsFalse(p.FormatAsBlock);
         }
 
         [TestMethod]
         public void imgSemantics()
         {
             Tag img = Tag.ValueOf("img");
-            Tag p = Tag.ValueOf("p");
 
-            Assert.IsFalse(img.CanContain(img));
-            Assert.IsFalse(img.CanContain(p));
+            Assert.IsTrue(img.IsInline);
+            Assert.IsTrue(img.IsSelfClosing);
+            Assert.IsFalse(img.IsBlock);
         }
 
         [TestMethod]
@@ -140,12 +122,10 @@ namespace Test.Parser
         {
             Tag foo = Tag.ValueOf("foo"); // not defined
             Tag foo2 = Tag.ValueOf("FOO");
-            Tag div = Tag.ValueOf("div");
 
             Assert.AreEqual(foo, foo2);
-            Assert.IsTrue(foo.CanContain(foo));
-            Assert.IsTrue(foo.CanContain(div));
-            Assert.IsTrue(div.CanContain(foo));
+            Assert.IsTrue(foo.IsInline);
+            Assert.IsTrue(foo.FormatAsBlock);
         }
 
         [TestMethod]

@@ -6,8 +6,7 @@ using System.Text;
 namespace NSoup.Parse
 {
     /// <summary>
-    ///  HTML Tag specifications. This is a very simplistic model without the full expressiveness as the DTD,
-    /// but it should capture most of what we need to know to intelligently parse a doc.
+    ///  HTML Tag capabilities.
     /// </summary>
     /// <!--
     /// Original author: Jonathan Hedley, jonathan@hedley.net
@@ -15,32 +14,21 @@ namespace NSoup.Parse
     /// -->
     public class Tag : IEquatable<Tag>
     {
-        private static readonly Dictionary<string, Tag> _tags = new Dictionary<string, Tag>();
-        private static readonly Tag _defaultAncestor;
+        private static readonly Dictionary<string, Tag> _tags = new Dictionary<string, Tag>();  // map of known tags
 
         static Tag()
         {
-            _defaultAncestor = new Tag("BODY");
-            _tags.Add(_defaultAncestor._tagName, _defaultAncestor);
-
             Initialize();
         }
 
         private string _tagName;
-        private bool _knownTag = false; // if pre-defined or auto-created
         private bool _isBlock = true; // block or inline
-        private bool _formatAsBlock = true;
+        private bool _formatAsBlock = true; // should be formatted as a block
         private bool _canContainBlock = true; // Can this tag hold block level tags?
         private bool _canContainInline = true; // only pcdata if not
-        private bool _optionalClosing = false; // If tag is open, and another seen, close previous tag
         private bool _empty = false; // can hold nothing; e.g. img
         private bool _selfClosing = false; // can self close (<foo />). used for unknown tags that self close, without forcing them as empty.
         private bool _preserveWhitespace = false; // for pre, textarea, script etc
-        private List<Tag> _ancestors; // elements must be a descendant of one of these ancestors
-        private List<Tag> _excludes = new List<Tag>(); // cannot contain these tags
-        private List<Tag> _ignoreEndTags = new List<Tag>(); // ignore these end tags
-        private bool _directDescendant; // if true, must directly descend from one of the ancestors
-        private bool _limitChildren; // if true, only contain children that've registered parents
 
         public Tag Parent { get; set; } // if not null, elements must be a direct child of parent
 
@@ -82,71 +70,11 @@ namespace NSoup.Parse
                 {
                     // not defined: create default; go anywhere, do anything! (incl be inside a <p>)
                     tag = new Tag(tagName);
-                    tag.SetAncestor(_defaultAncestor._tagName);
-                    tag.SetExcludes();
                     tag._isBlock = false;
                     tag._canContainBlock = true;
                 }
                 return tag;
             }
-        }
-
-        /// <summary>
-        /// Test if this tag, the prospective parent, can accept the proposed child.
-        /// </summary>
-        /// <param name="child">potential child tag.</param>
-        /// <returns>true if this can contain child.</returns>
-        public bool CanContain(Tag child)
-        {
-            if (child == null)
-            {
-                throw new ArgumentNullException("child");
-            }
-
-            if (child._isBlock && !this._canContainBlock)
-                return false;
-
-            if (!child._isBlock && !this._canContainInline) // not block == inline
-                return false;
-
-            if (this._optionalClosing && this.Equals(child))
-                return false;
-
-            if (this._empty || this.IsData)
-                return false;
-
-            // don't allow children to contain their parent (directly)
-            if (this.RequiresSpecificParent && this.GetImplicitParent().Equals(child))
-            {
-                return false;
-            }
-
-            // confirm limited children
-            if (_limitChildren)
-            {
-                foreach (Tag childParent in child._ancestors)
-                {
-                    if (childParent.Equals(this))
-                    {
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-            // exclude children
-            if (_excludes.Count > 0)
-            {
-                foreach (Tag excluded in _excludes)
-                {
-                    if (child.Equals(excluded))
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
         }
 
         /// <summary>
@@ -209,9 +137,19 @@ namespace NSoup.Parse
         /// <summary>
         /// Gets if this is a pre-defined tag, or was auto created on parsing.
         /// </summary>
-        public bool IsKnownTag
+        public bool IsKnownTag()
         {
-            get { return _knownTag; }
+            return _tags.ContainsKey(_tagName);
+        }
+
+        /// <summary>
+        /// Check if this tagname is a known tag.
+        /// </summary>
+        /// <param name="tagName">name of tag</param>
+        /// <returns>if known HTML tag</returns>
+        public static bool IsKnownTag(string tagName)
+        {
+            return _tags.ContainsKey(tagName);
         }
 
         /// <summary>
@@ -222,71 +160,43 @@ namespace NSoup.Parse
             get { return _preserveWhitespace; }
         }
 
-        public Tag GetImplicitParent()
+        public Tag SetSelfClosing()
         {
-            return (!(_ancestors.Count <= 0)) ? _ancestors[0] : null;
-        }
-
-        public bool RequiresSpecificParent
-        {
-            get { return _directDescendant; }
-        }
-
-        public bool IsValidParent(Tag child)
-        {
-            return IsValidAncestor(child);
-        }
-
-        public bool IsValidAncestor(Tag child)
-        {
-            if (child._ancestors == null || child._ancestors.Count <= 0)
-            {
-                return true; // HTML tag
-            }
-
-            for (int i = 0; i < child._ancestors.Count; i++)
-            {
-                if (this.Equals(child._ancestors[i]))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        public bool IsIgnorableEndTag(Tag child)
-        {
-            foreach (Tag endTag in _ignoreEndTags)
-            {
-                if (child.Equals(endTag))
-                {
-                    return true;
-                }
-            }
-            return false;
+            _selfClosing = true;
+            return this;
         }
 
         public override bool Equals(Object o)
         {
             if (this == o) return true;
-            if (o == null || this.GetType() != o.GetType()) return false;
+            if (!(o is Tag)) return false;
 
             Tag tag = (Tag)o;
 
-            if (_tagName != null ? !_tagName.Equals(tag._tagName) : tag._tagName != null) return false;
+            if (CanContainBlock != tag.CanContainBlock) return false;
+            if (_canContainInline != tag._canContainInline) return false;
+            if (_empty != tag._empty) return false;
+            if (FormatAsBlock != tag.FormatAsBlock) return false;
+            if (IsBlock != tag.IsBlock) return false;
+            if (PreserveWhitespace != tag.PreserveWhitespace) return false;
+            if (_selfClosing != tag._selfClosing) return false;
+            if (!_tagName.Equals(tag._tagName)) return false;
 
             return true;
         }
 
         public override int GetHashCode()
         {
-            int result = _tagName != null ? _tagName.GetHashCode() : 0;
+            int result = _tagName.GetHashCode();
+
             result = 31 * result + (_isBlock ? 1 : 0);
+            result = 31 * result + (_formatAsBlock ? 1 : 0);
             result = 31 * result + (_canContainBlock ? 1 : 0);
             result = 31 * result + (_canContainInline ? 1 : 0);
-            result = 31 * result + (_optionalClosing ? 1 : 0);
             result = 31 * result + (_empty ? 1 : 0);
+            result = 31 * result + (_selfClosing ? 1 : 0);
+            result = 31 * result + (_preserveWhitespace ? 1 : 0);
+
             return result;
         }
 
@@ -296,165 +206,86 @@ namespace NSoup.Parse
         }
 
         // internal static initialisers:
+        // prepped from http://www.w3.org/TR/REC-html40/sgml/dtd.html and other sources
+        private static readonly string[] blockTags = {
+            "html", "head", "body", "frameset", "script", "noscript", "style", "meta", "link", "title", "frame",
+            "noframes", "section", "nav", "aside", "hgroup", "header", "footer", "p", "h1", "h2", "h3", "h4", "h5", "h6",
+            "ul", "ol", "pre", "div", "blockquote", "hr", "address", "figure", "figcaption", "form", "fieldset", "ins",
+            "del", "dl", "dt", "dd", "li", "table", "caption", "thead", "tfoot", "tbody", "colgroup", "col", "tr", "th",
+            "td", "video", "audio", "canvas", "details", "menu", "plaintext"
+    };
+        private static readonly string[] inlineTags = {
+            "object", "base", "font", "tt", "i", "b", "u", "big", "small", "em", "strong", "dfn", "code", "samp", "kbd",
+            "var", "cite", "abbr", "time", "acronym", "mark", "ruby", "rt", "rp", "a", "img", "br", "wbr", "map", "q",
+            "sub", "sup", "bdo", "iframe", "embed", "span", "input", "select", "textarea", "label", "button", "optgroup",
+            "option", "legend", "datalist", "keygen", "output", "progress", "meter", "area", "param", "source", "track",
+            "summary", "command", "device"
+    };
+        private static readonly string[] emptyTags = {
+            "meta", "link", "base", "frame", "img", "br", "wbr", "embed", "hr", "input", "keygen", "col", "command",
+            "device"
+    };
+        private static readonly string[] formatAsInlineTags = {
+            "title", "a", "p", "h1", "h2", "h3", "h4", "h5", "h6", "pre", "address", "li", "th", "td"
+    };
+        private static readonly string[] preserveWhitespaceTags = { "pre", "plaintext", "title" };
 
         static void Initialize()
         {
-            // prepped from http://www.w3.org/TR/REC-html40/sgml/dtd.html#inline
-            // tags are set here in uppercase for legibility, but internally held as lowercase.
-            // TODO[must]: incorporate html 5 as appropriate
+            // creates
+            foreach (string tagName in blockTags)
+            {
+                Tag tag = new Tag(tagName);
+                Register(tag);
+            }
 
-            // document
-            CreateBlock("HTML").SetAncestor(); // specific includes not impl
-            CreateBlock("HEAD").SetParent("HTML").SetLimitChildren();
-            CreateBlock("BODY").SetAncestor("HTML"); // specific includes not impl
-            CreateBlock("FRAMESET").SetAncestor("HTML");
+            foreach (string tagName in inlineTags)
+            {
+                Tag tag = new Tag(tagName);
+                tag._isBlock = false;
+                tag._canContainBlock = false;
+                tag._formatAsBlock = false;
+                Register(tag);
+            }
 
-            // head
-            // all ancestors set to (head, body): so implicitly create head, but allow in body
-            CreateBlock("SCRIPT").SetAncestor("HEAD", "BODY").SetContainDataOnly();
-            CreateBlock("NOSCRIPT").SetAncestor("HEAD", "BODY");
-            CreateBlock("STYLE").SetAncestor("HEAD", "BODY").SetContainDataOnly();
-            CreateBlock("META").SetAncestor("HEAD", "BODY").SetEmpty();
-            CreateBlock("LINK").SetAncestor("HEAD", "BODY").SetEmpty(); // only within head
-            CreateInline("OBJECT").SetAncestor("HEAD", "BODY"); // flow (block/inline) or param
-            CreateBlock("TITLE").SetAncestor("HEAD", "BODY").SetContainDataOnly().SetFormatAsInline();
-            CreateInline("BASE").SetAncestor("HEAD", "BODY").SetEmpty();
+            // mods:
+            foreach (string tagName in emptyTags)
+            {
+                Tag tag = _tags[tagName];
 
-            CreateBlock("FRAME").SetParent("FRAMESET").SetEmpty();
-            CreateBlock("NOFRAMES").SetParent("FRAMESET").SetContainDataOnly();
+                if (tag == null)
+                {
+                    throw new InvalidOperationException("tag is null.");
+                }
 
-            // html5 sections
-            CreateBlock("SECTION");
-            CreateBlock("NAV");
-            CreateBlock("ASIDE");
-            CreateBlock("HGROUP").SetLimitChildren(); // limited to h1 - h6
-            CreateBlock("HEADER").SetExcludes("HEADER", "FOOTER");
-            CreateBlock("FOOTER").SetExcludes("HEADER", "FOOTER");
+                tag._canContainBlock = false;
+                tag._canContainInline = false;
+                tag._empty = true;
+            }
 
-            // fontstyle
-            CreateInline("FONT").SetOptionalClosing().SetCanContainBlock().SetFormatAsInline();
-            CreateInline("TT");
-            CreateInline("I");
-            CreateInline("B");
-            CreateInline("U");
-            CreateInline("BIG");
-            CreateInline("SMALL");
+            foreach (string tagName in formatAsInlineTags)
+            {
+                Tag tag = _tags[tagName];
 
-            // phrase
-            CreateInline("EM");
-            CreateInline("STRONG");
-            CreateInline("DFN").SetOptionalClosing();
-            CreateInline("DFN");
-            CreateInline("CODE");
-            CreateInline("SAMP");
-            CreateInline("KBD");
-            CreateInline("VAR");
-            CreateInline("CITE");
-            CreateInline("ABBR");
-            CreateInline("TIME").SetOptionalClosing();
-            CreateInline("ACRONYM");
-            CreateInline("MARK");
+                if (tag == null)
+                {
+                    throw new InvalidOperationException("tag is null.");
+                }
 
-            // ruby
-            CreateInline("RUBY");
-            CreateInline("RT").SetParent("RUBY").SetExcludes("RT", "RP");
-            CreateInline("RP").SetParent("RUBY").SetExcludes("RT", "RP");
+                tag._formatAsBlock = false;
+            }
 
-            // special
-            CreateInline("A").SetOptionalClosing().SetCanContainBlock().SetFormatAsInline(); // cannot contain self
-            CreateInline("IMG").SetEmpty().SetAncestor("BODY", "NOSCRIPT"); // noscript so an image can be in html->head->noscript
-            CreateInline("BR").SetEmpty();
-            CreateInline("WBR").SetEmpty();
-            CreateInline("MAP"); // map is defined as inline, but can hold block (what?) or area. Seldom used so NBD.
-            CreateInline("Q");
-            CreateInline("SUB");
-            CreateInline("SUP");
-            CreateInline("BDO");
-            CreateInline("IFRAME").SetOptionalClosing();
-            CreateInline("EMBED").SetEmpty();
+            foreach (string tagName in preserveWhitespaceTags)
+            {
+                Tag tag = _tags[tagName];
 
-            // things past this point aren't really blocks or inline. I'm using them because they can hold block or inline,
-            // but per the spec, only specific elements can hold this. if this becomes a real-world parsing problem,
-            // will need to have another non block/inline type, and explicit include & exclude rules. should be right though
+                if (tag == null)
+                {
+                    throw new InvalidOperationException("tag is null.");
+                }
 
-            // block
-            CreateInline("SPAN").SetCanContainBlock().SetFormatAsInline(); // spec is phrasing only, practise is block
-            CreateBlock("P").SetContainInlineOnly(); // emasculated block?
-            CreateBlock("H1").SetAncestor("BODY", "HGROUP").SetExcludes("HGROUP", "H1", "H2", "H3", "H4", "H5", "H6").SetFormatAsInline();
-            CreateBlock("H2").SetAncestor("BODY", "HGROUP").SetExcludes("HGROUP", "H1", "H2", "H3", "H4", "H5", "H6").SetFormatAsInline();
-            CreateBlock("H3").SetAncestor("BODY", "HGROUP").SetExcludes("HGROUP", "H1", "H2", "H3", "H4", "H5", "H6").SetFormatAsInline();
-            CreateBlock("H4").SetAncestor("BODY", "HGROUP").SetExcludes("HGROUP", "H1", "H2", "H3", "H4", "H5", "H6").SetFormatAsInline();
-            CreateBlock("H5").SetAncestor("BODY", "HGROUP").SetExcludes("HGROUP", "H1", "H2", "H3", "H4", "H5", "H6").SetFormatAsInline();
-            CreateBlock("H6").SetAncestor("BODY", "HGROUP").SetExcludes("HGROUP", "H1", "H2", "H3", "H4", "H5", "H6").SetFormatAsInline();
-            CreateBlock("UL");
-            CreateBlock("OL");
-            CreateBlock("PRE").SetContainInlineOnly().SetPreserveWhitespace();
-            CreateBlock("DIV");
-            CreateBlock("BLOCKQUOTE");
-            CreateBlock("HR").SetEmpty();
-            CreateBlock("ADDRESS").SetContainInlineOnly();
-            CreateBlock("FIGURE");
-            CreateBlock("FIGCAPTION").SetAncestor("FIGURE");
-
-
-            // formctrl
-            CreateBlock("FORM").SetOptionalClosing(); // can't contain self
-            CreateInline("INPUT").SetAncestor("FORM").SetEmpty();
-            CreateInline("SELECT").SetAncestor("FORM"); // just contain optgroup or option
-            CreateInline("TEXTAREA").SetAncestor("FORM").SetContainDataOnly();
-            CreateInline("LABEL").SetAncestor("FORM").SetOptionalClosing(); // not self
-            CreateInline("BUTTON").SetAncestor("FORM"); // bunch of excludes not defined
-            CreateInline("OPTGROUP").SetParent("SELECT"); //  only contain option
-            CreateInline("OPTION").SetParent("SELECT", "OPTGROUP", "DATALIST").SetOptionalClosing();
-            CreateBlock("FIELDSET").SetAncestor("FORM");
-            CreateInline("LEGEND").SetAncestor("FIELDSET");
-
-            // html5 form ctrl, not specced to have to be in forms
-            CreateInline("DATALIST");
-            CreateInline("KEYGEN").SetEmpty();
-            CreateInline("OUTPUT");
-            CreateInline("PROGRESS").SetOptionalClosing();
-            CreateInline("METER").SetOptionalClosing();
-
-            // other
-            CreateInline("AREA").SetAncestor("MAP").SetEmpty(); // not an inline per-se
-            CreateInline("PARAM").SetParent("OBJECT").SetEmpty();
-            CreateBlock("INS"); // only within body
-            CreateBlock("DEL"); // only within body
-
-            // definition lists. per spec, dt and dd are inline and must directly descend from dl. However in practise
-            // these are all used as blocks and dl need only be an ancestor
-            CreateBlock("DL").SetOptionalClosing(); // can't nest
-            CreateBlock("DT").SetAncestor("DL").SetExcludes("DL", "DD").SetOptionalClosing(); // only within DL.
-            CreateBlock("DD").SetAncestor("DL").SetExcludes("DL", "DT").SetOptionalClosing(); // only within DL.
-
-            CreateBlock("LI").SetAncestor("UL", "OL").SetOptionalClosing().SetFormatAsInline(); // only within OL or UL.
-
-            // tables
-            CreateBlock("TABLE").SetOptionalClosing().SetIgnoreEnd("BODY", "CAPTION", "COL", "COLGROUP", "HTML", "TBODY", "TD", "TFOO", "TH", "THEAD", "TR"); // specific list of only includes (tr, td, thead etc) not implemented
-            CreateBlock("CAPTION").SetParent("TABLE").SetExcludes("THEAD", "TFOOT", "TBODY", "COLGROUP", "COL", "TR", "TH", "TD").SetOptionalClosing().SetIgnoreEnd("BODY", "COL", "COLGROUP", "HTML", "TBODY", "TD", "TFOOT", "TH", "THEAD", "TR");
-            CreateBlock("THEAD").SetParent("TABLE").SetLimitChildren().SetOptionalClosing().SetIgnoreEnd("BODY", "CAPTION", "COL", "COLGROUP", "HTML", "TD", "TH", "TR"); // just TR
-            CreateBlock("TFOOT").SetParent("TABLE").SetLimitChildren().SetOptionalClosing().SetIgnoreEnd("BODY", "CAPTION", "COL", "COLGROUP", "HTML", "TD", "TH", "TR"); // just TR
-            CreateBlock("TBODY").SetParent("TABLE").SetLimitChildren().SetOptionalClosing().SetIgnoreEnd("BODY", "CAPTION", "COL", "COLGROUP", "HTML", "TD", "TH", "TR"); // optional / implicit open too. just TR
-            CreateBlock("COLGROUP").SetParent("TABLE").SetLimitChildren().SetOptionalClosing().SetIgnoreEnd("COL"); // just COL
-            CreateBlock("COL").SetParent("COLGROUP").SetEmpty();
-            CreateBlock("TR").SetParent("TBODY", "THEAD", "TFOOT", "TABLE").SetLimitChildren().SetOptionalClosing().SetIgnoreEnd("BODY", "CAPTION", "COL", "COLGROUP", "HTML", "TD", "TH"); // just TH, TD
-            CreateBlock("TH").SetParent("TR").SetExcludes("THEAD", "TFOOT", "TBODY", "COLGROUP", "COL", "TR", "TH", "TD").SetOptionalClosing().SetIgnoreEnd("BODY", "CAPTION", "COL", "COLGROUP", "HTML").SetFormatAsInline();
-            CreateBlock("TD").SetParent("TR").SetExcludes("THEAD", "TFOOT", "TBODY", "COLGROUP", "COL", "TR", "TH", "TD").SetOptionalClosing().SetIgnoreEnd("BODY", "CAPTION", "COL", "COLGROUP", "HTML").SetFormatAsInline();
-
-            // html5 media
-            CreateBlock("VIDEO").SetExcludes("VIDEO", "AUDIO");
-            CreateBlock("AUDIO").SetExcludes("VIDEO", "AUDIO");
-            CreateInline("SOURCE").SetParent("VIDEO", "AUDIO").SetEmpty();
-            CreateInline("TRACK").SetParent("VIDEO", "AUDIO").SetEmpty();
-            CreateBlock("CANVAS");
-
-            // html5 interactive
-            CreateBlock("DETAILS");
-            CreateInline("SUMMARY").SetParent("DETAILS");
-            CreateInline("COMMAND").SetEmpty();
-            CreateBlock("MENU");
-            CreateInline("DEVICE").SetEmpty();
+                tag._preserveWhitespace = true;
+            }
         }
 
         #region IEquatable<Tag> Members
@@ -466,24 +297,8 @@ namespace NSoup.Parse
 
         #endregion
 
-        private static Tag CreateBlock(string tagName)
-        {
-            return Register(new Tag(tagName));
-        }
-
-        private static Tag CreateInline(string tagName)
-        {
-            Tag inline = new Tag(tagName);
-            inline._isBlock = false;
-            inline._canContainBlock = false;
-            inline._formatAsBlock = false;
-            return Register(inline);
-        }
-
         private static Tag Register(Tag tag)
         {
-            tag.SetAncestor(_defaultAncestor._tagName);
-            tag.SetKnownTag();
             lock (_tags)
             {
                 if (_tags.ContainsKey(tag._tagName))
@@ -496,130 +311,6 @@ namespace NSoup.Parse
                 }
             }
             return tag;
-        }
-
-        private Tag SetCanContainBlock()
-        {
-            _canContainBlock = true;
-            return this;
-        }
-
-        private Tag SetContainInlineOnly()
-        {
-            _canContainBlock = false;
-            _canContainInline = true;
-            _formatAsBlock = false;
-            return this;
-        }
-
-        private Tag SetFormatAsInline()
-        {
-            _formatAsBlock = false;
-            return this;
-        }
-
-        private Tag SetContainDataOnly()
-        {
-            _canContainBlock = false;
-            _canContainInline = false;
-            _preserveWhitespace = true;
-            return this;
-        }
-
-        private Tag SetEmpty()
-        {
-            _canContainBlock = false;
-            _canContainInline = false;
-            _empty = true;
-            return this;
-        }
-
-        private Tag SetOptionalClosing()
-        {
-            _optionalClosing = true;
-            return this;
-        }
-
-        private Tag SetPreserveWhitespace()
-        {
-            _preserveWhitespace = true;
-            return this;
-        }
-
-        private Tag SetAncestor(params string[] tagNames)
-        {
-            if (tagNames == null || tagNames.Length == 0)
-            {
-                _ancestors = new List<Tag>();
-            }
-            else
-            {
-                _ancestors = new List<Tag>(tagNames.Length);
-                foreach (string name in tagNames)
-                {
-                    _ancestors.Add(Tag.ValueOf(name));
-                }
-            }
-            return this;
-        }
-
-        private Tag SetExcludes(params string[] tagNames)
-        {
-            if (tagNames == null || tagNames.Length == 0)
-            {
-                _excludes = new List<Tag>();
-            }
-            else
-            {
-                _excludes = new List<Tag>(tagNames.Length);
-                foreach (string name in tagNames)
-                {
-                    _excludes.Add(Tag.ValueOf(name));
-                }
-            }
-            return this;
-        }
-
-        private Tag SetIgnoreEnd(params string[] tagNames)
-        {
-            if (tagNames == null || tagNames.Length == 0)
-            {
-                _ignoreEndTags = new List<Tag>();
-            }
-            else
-            {
-                _ignoreEndTags = new List<Tag>(tagNames.Length);
-                foreach (string name in tagNames)
-                {
-                    _ignoreEndTags.Add(Tag.ValueOf(name));
-                }
-            }
-            return this;
-        }
-
-        private Tag SetParent(params string[] tagNames)
-        {
-            _directDescendant = true;
-            SetAncestor(tagNames);
-            return this;
-        }
-
-        private Tag SetLimitChildren()
-        {
-            _limitChildren = true;
-            return this;
-        }
-
-        public Tag SetSelfClosing()
-        {
-            _selfClosing = true;
-            return this;
-        }
-
-        private Tag SetKnownTag()
-        {
-            _knownTag = true;
-            return this;
         }
     }
 }

@@ -9,6 +9,8 @@ namespace NSoup.Select
 
     /// <summary>
     /// A list of {@link Element Elements}, with methods that act on every element in the list
+    /// 
+    /// To get an Elements object, use the <see cref="Element.Select(string)"/> method.
     /// </summary>
     /// <!--
     /// Original Author: Jonathan Hedley, jonathan@hedley.net
@@ -391,11 +393,11 @@ namespace NSoup.Select
 
         /// <summary>
         /// Wrap the supplied HTML around each matched elements. For example, with HTML 
-        /// <code><p><b>This</b> is <b>Jsoup</b></p></code>,
+        /// <code>&lt;p&gt;&lt;b&gt;This&lt;/b&gt; is &lt;b&gt;Jsoup&lt;/b&gt;&lt;/p&gt;</code>,
         /// <code>doc.select("b").wrap("&lt;i&gt;&lt;/i&gt;");</code> 
-        /// becomes <code><p><i><b>This</b></i> is <i><b>jsoup</b></i></p></code>
+        /// becomes <code>&lt;p&gt;&lt;i&gt;&lt;b&gt;This&lt;/b&gt;&lt;/i&gt; is &lt;i&gt;&lt;b&gt;jsoup&lt;/b&gt;&lt;/i&gt;&lt;/p&gt;</code>
         /// </summary>
-        /// <param name="html">HTML to wrap around each element, e.g. <code><div class="head"></div></code>. Can be arbitrarily deep.</param>
+        /// <param name="html">HTML to wrap around each element, e.g. <code>&lt;div class="head"&gt;&lt;/div&gt;</code>. Can be arbitrarily deep.</param>
         /// <returns>this (for chaining)</returns>
         /// <seealso cref="Element.Wrap()"/>
         public Elements Wrap(string html)
@@ -407,6 +409,27 @@ namespace NSoup.Select
             foreach (Element element in _contents)
             {
                 element.Wrap(html);
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// Removes the matched elements from the DOM, and moves their children up into their parents. This has the effect of 
+        /// dropping the elements but keeping their children.
+        /// 
+        /// This is useful for e.g removing unwanted formatting elements but keeping their contents.
+        /// 
+        /// E.g. with HTML: <code>&lt;div&gt;&lt;font&gt;One&lt;/font&gt; &lt;font&gt;&lt;a href="/"&gt;Two&lt;/a&gt;&lt;/font&gt;&lt;/div&gt;</code>
+        /// <code>doc.Select("font").Unwrap();</code>
+        /// HTML = <code>&lt;div&gt;One &lt;a href="/"&gt;Two&lt;/a&gt;&lt;/div&gt;</code>
+        /// </summary>
+        /// <returns>this (for chaining)</returns>
+        /// <see cref="Node.Unwrap()"/>
+        public Elements Unwrap()
+        {
+            foreach (Element element in _contents)
+            {
+                element.Unwrap();
             }
             return this;
         }

@@ -7,7 +7,7 @@ using NSoup.Nodes;
 using NSoup;
 using NSoup.Helper;
 
-namespace Test.Nodes
+namespace Test.Helper
 {
 
     [TestClass]
@@ -109,6 +109,35 @@ namespace Test.Nodes
             res.Header("accept-encoding", "deflate");
             Assert.AreEqual("deflate", res.Header("Accept-Encoding"));
             Assert.AreEqual("deflate", res.Header("accept-Encoding"));
+        }
+
+        [TestMethod]
+        public void ignoresEmptySetCookies()
+        {
+            // prep http response header map
+            System.Net.WebHeaderCollection headers = new System.Net.WebHeaderCollection();
+
+            headers["Set-Cookie"] = "";
+            Response res = new Response();
+            res.ProcessResponseHeaders(headers);
+            Assert.AreEqual(0, res.Cookies().Count);
+        }
+
+        [TestMethod]
+        public void ignoresEmptyCookieNameAndVals()
+        {
+            // prep http response header map
+            System.Net.WebHeaderCollection headers = new System.Net.WebHeaderCollection();
+
+            headers.Set("Set-Cookie", "one;two=;three=;four=data; Domain=.example.com; Path=/");
+
+            Response res = new Response();
+            res.ProcessResponseHeaders(headers);
+            Assert.AreEqual(4, res.Cookies().Count);
+            Assert.AreEqual("", res.Cookie("one"));
+            Assert.AreEqual("", res.Cookie("two"));
+            Assert.AreEqual("", res.Cookie("three"));
+            Assert.AreEqual("data", res.Cookie("four"));
         }
 
         [TestMethod]
