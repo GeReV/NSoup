@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSoup.Nodes;
 using NSoup.Select;
+using NSoup;
 
 namespace Test.Select
 {
@@ -242,19 +243,38 @@ namespace Test.Select
         }
 
         [TestMethod]
+        public void wrapDiv()
+        {
+            string h = "<p><b>This</b> is <b>jsoup</b>.</p> <p>How do you like it?</p>";
+            Document doc = NSoupClient.Parse(h);
+            doc.Select("p").Wrap("<div></div>");
+            Assert.AreEqual("<div><p><b>This</b> is <b>jsoup</b>.</p></div> <div><p>How do you like it?</p></div>",
+                    TextUtil.StripNewLines(doc.Body.Html()));
+        }
+
+        [TestMethod]
         public void unwrap()
         {
             string h = "<div><font>One</font> <font><a href=\"/\">Two</a></font></div";
             Document doc = NSoup.NSoupClient.Parse(h);
             doc.Select("font").Unwrap();
             Assert.AreEqual("<div>One <a href=\"/\">Two</a></div>", TextUtil.StripNewLines(doc.Body.Html()));
-        }   
+        }
+
+        [TestMethod]
+        public void unwrapP()
+        {
+            string h = "<p><a>One</a> Two</p> Three <i>Four</i> <p>Fix <i>Six</i></p>";
+            Document doc = NSoupClient.Parse(h);
+            doc.Select("p").Unwrap();
+            Assert.AreEqual("<a>One</a> Two Three <i>Four</i> Fix <i>Six</i>", TextUtil.StripNewLines(doc.Body.Html()));
+        }
 
         [TestMethod]
         public void empty()
         {
             Document doc = NSoup.NSoupClient.Parse("<div><p>Hello <b>there</b></p> <p>now!</p></div>");
-            doc.GetOutputSettings().PrettyPrint(false);
+            doc.OutputSettings().PrettyPrint(false);
 
             doc.Select("p").Empty();
             Assert.AreEqual("<div><p></p> <p></p></div>", doc.Body.Html());
@@ -264,7 +284,7 @@ namespace Test.Select
         public void remove()
         {
             Document doc = NSoup.NSoupClient.Parse("<div><p>Hello <b>there</b></p> jsoup <p>now!</p></div>");
-            doc.GetOutputSettings().PrettyPrint(false);
+            doc.OutputSettings().PrettyPrint(false);
 
             doc.Select("p").Remove();
             Assert.AreEqual("<div> jsoup </div>", doc.Body.Html());
@@ -322,6 +342,35 @@ namespace Test.Select
             doc.Select("i").TagName("em");
 
             Assert.AreEqual("<p>Hello <em>there</em> <em>now</em></p>", doc.Body.Html());
+        }
+
+        [TestMethod]
+        public void traverse()
+        {
+            Document doc = NSoupClient.Parse("<div><p>Hello</p></div><div>There</div>");
+            StringBuilder accum = new StringBuilder();
+            doc.Select("div").Traverse(new TestNodeVisitor(accum));
+            Assert.AreEqual("<div><p><#text></#text></p></div><div><#text></#text></div>", accum.ToString());
+        }
+
+        private class TestNodeVisitor : NodeVisitor
+        {
+            StringBuilder accum;
+
+            public TestNodeVisitor(StringBuilder accum)
+            {
+                this.accum = accum;
+            }
+
+            public void Head(Node node, int depth)
+            {
+                accum.Append("<" + node.NodeName + ">");
+            }
+
+            public void Tail(Node node, int depth)
+            {
+                accum.Append("</" + node.NodeName + ">");
+            }
         }
     }
 }

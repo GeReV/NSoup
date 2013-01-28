@@ -6,18 +6,27 @@ using NSoup.Nodes;
 
 namespace NSoup.Select
 {
-    /**
-     * Breadth first node traversor.
-     */
+    /// <summary>
+    /// Depth-first node traversor. Use to iterate through all nodes under and including the specified root node.
+    /// This implementation does not use recursion, so a deep DOM does not risk blowing the stack.
+    /// </summary>
     internal class NodeTraversor
     {
-        private NodeVisitor visitor;
+        private NodeVisitor _visitor;
 
+        /// <summary>
+        /// Create a new traversor.
+        /// </summary>
+        /// <param name="visitor">A class implementing the NodeVisitor interface, to be called when visiting each node.</param>
         public NodeTraversor(NodeVisitor visitor)
         {
-            this.visitor = visitor;
+            this._visitor = visitor;
         }
 
+        /// <summary>
+        /// Start a depth-first traverse of the root and all of its descendants.
+        /// </summary>
+        /// <param name="root">The root node point to traverse.</param>
         public void Traverse(Node root)
         {
             Node node = root;
@@ -25,7 +34,7 @@ namespace NSoup.Select
 
             while (node != null)
             {
-                visitor.Head(node, depth);
+                _visitor.Head(node, depth);
                 if (node.ChildNodes.Count > 0)
                 {
                     node = node.ChildNodes[0];
@@ -35,11 +44,11 @@ namespace NSoup.Select
                 {
                     while (node.NextSibling == null && depth > 0)
                     {
-                        visitor.Tail(node, depth);
+                        _visitor.Tail(node, depth);
                         node = node.ParentNode;
                         depth--;
                     }
-                    visitor.Tail(node, depth);
+                    _visitor.Tail(node, depth);
                     if (node == root)
                     {
                         break;

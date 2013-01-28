@@ -10,13 +10,12 @@ namespace NSoup.Parse
 /// <summary>
 /// Readers the input stream into tokens.
 /// </summary>
-    internal class Tokeniser
+    public class Tokeniser
     {
         public const char ReplacementChar = '\uFFFD'; // replaces null character
 
         private CharacterReader _reader; // html input
-        private bool _trackErrors = true;
-        private List<ParseError> _errors = new List<ParseError>(); // errors found while tokenising
+        private ParseErrorList _errors;
 
         private TokeniserState _state = TokeniserState.Data; // current tokenisation state
         private Token _emitPending; // the token we are about to emit on next read
@@ -30,9 +29,10 @@ namespace NSoup.Parse
         private Token.StartTag _lastStartTag; // the last start tag emitted, to test appropriate end tag
         private bool _selfClosingFlagAcknowledged = true;
 
-        public Tokeniser(CharacterReader reader)
+        public Tokeniser(CharacterReader reader, ParseErrorList errors)
         {
             this._reader = reader;
+            this._errors = errors;
         }
 
         public Token Read()
@@ -87,7 +87,7 @@ namespace NSoup.Parse
             {
                 Token.EndTag endTag = (Token.EndTag)token;
 
-                if (endTag.Attributes.Count > 0)
+                if (endTag.Attributes != null)
                 {
                     Error("Attributes incorrectly present on end tag");
                 }
@@ -139,7 +139,7 @@ namespace NSoup.Parse
                 return null;
             }
 
-            if (_reader.MatchesAny('\t', '\n', '\f', '<', '&'))
+            if (_reader.MatchesAny('\t', '\n', '\r', '\f', ' ', '<', '&'))
             {
                 return null;
             }
@@ -153,14 +153,14 @@ namespace NSoup.Parse
 
                 if (numRef.Length == 0)
                 { // didn't match anything
-                    CharacterReferenceError();
+                    CharacterReferenceError("Numeric reference with no numerals");
                     _reader.RewindToMark();
                     return null;
                 }
 
                 if (!_reader.MatchConsume(";"))
                 {
-                    CharacterReferenceError(); // missing semi
+                    CharacterReferenceError("Missing semicolon"); // missing semi
                 }
 
                 int charval = -1;
@@ -174,7 +174,7 @@ namespace NSoup.Parse
                 } // skip
                 if (charval == -1 || (charval >= 0xD800 && charval <= 0xDFFF) || charval > 0x10FFFF)
                 {
-                    CharacterReferenceError();
+                    CharacterReferenceError("Character outside of valid range");
                     return ReplacementChar;
                 }
                 else
@@ -187,31 +187,24 @@ namespace NSoup.Parse
             else
             { // named
                 // get as many letters as possible, and look for matching entities. unconsume backwards till a match is found
-                string nameRef = _reader.ConsumeLetterSequence();
+                string nameRef = _reader.ConsumeLetterThenDigitSequence();
                 bool looksLegit = _reader.Matches(';');
-                bool found = false;
-                while (nameRef.Length > 0 && !found)
-                {
-                    if (Entities.IsNamedEntity(nameRef))
-                        found = true;
-                    else
-                    {
-                        nameRef = nameRef.Substring(0, nameRef.Length - 1);
-                        _reader.Unconsume();
-                    }
-                }
+
+                // found if a base named entity without a ;, or an extended entity with the ;.
+                bool found = (Entities.IsBaseNamedEntity(nameRef) || (Entities.IsNamedEntity(nameRef) && looksLegit));
+
 
                 if (!found)
                 {
-                    if (looksLegit) // named with semicolon
-                    {
-                        CharacterReferenceError();
-                    }
                     _reader.RewindToMark();
+                    if (looksLegit)
+                    {
+                        CharacterReferenceError(string.Format("Invalid named referenece '{0}'", nameRef));
+                    }
                     return null;
                 }
 
-                if (inAttribute && (_reader.MatchesLetter() || _reader.MatchesDigit() || _reader.Matches('=')))
+                if (inAttribute && (_reader.MatchesLetter() || _reader.MatchesDigit() || _reader.MatchesAny('=', '-', '_')))
                 {
                     // don't want that to match
                     _reader.RewindToMark();
@@ -220,7 +213,7 @@ namespace NSoup.Parse
 
                 if (!_reader.MatchConsume(";"))
                 {
-                    CharacterReferenceError(); // missing semi
+                    CharacterReferenceError("Missing semicolon"); // missing semi
                 }
 
                 return Entities.GetCharacterByName(nameRef);
@@ -273,6 +266,10 @@ namespace NSoup.Parse
 
         public bool IsAppropriateEndTagToken()
         {
+            if (_lastStartTag == null)
+            {
+                return false;
+            }
             return _tagPending.Name().Equals(_lastStartTag.Name());
         }
 
@@ -281,54 +278,72 @@ namespace NSoup.Parse
             return _lastStartTag.Name();
         }
 
-        public bool IsTrackErrors()
-        {
-            return _trackErrors;
-        }
-
-        void SetTrackErrors(bool trackErrors)
-        {
-            this._trackErrors = trackErrors;
-        }
-
         public void Error(TokeniserState state)
         {
-            if (_trackErrors)
+            if (_errors.CanAddError)
             {
-                _errors.Add(new ParseError("Unexpected character in input", _reader.Current(), state, _reader.Position));
+                _errors.Add(new ParseError(_reader.Position, "Unexpected character '{0}' in input state [{1}]", _reader.Current(), state));
             }
         }
 
         public void EofError(TokeniserState state)
         {
-            if (_trackErrors)
+            if (_errors.CanAddError)
             {
-                _errors.Add(new ParseError("Unexpectedly reached end of file (EOF)", state, _reader.Position));
+                _errors.Add(new ParseError(_reader.Position, "Unexpectedly reached end of file (EOF) in input state [{0}]", state));
             }
         }
 
-        private void CharacterReferenceError()
+        private void CharacterReferenceError(string message)
         {
-            if (_trackErrors)
+            if (_errors.CanAddError)
             {
-                _errors.Add(new ParseError("Invalid character reference", _reader.Position));
+                _errors.Add(new ParseError(_reader.Position, "Invalid character reference: {0}", message));
             }
         }
 
         private void Error(string errorMsg)
         {
-            if (_trackErrors)
+            if (_errors.CanAddError)
             {
-                _errors.Add(new ParseError(errorMsg, _reader.Position));
+                _errors.Add(new ParseError(_reader.Position, errorMsg));
             }
         }
 
-        bool CurrentNodeInHtmlNS()
+        private bool CurrentNodeInHtmlNS()
         {
-            // todo: implememnt namespaces correctly
+            // todo: implement namespaces correctly
             return true;
             // Element currentNode = currentNode();
             // return currentNode != null && currentNode.namespace().equals("HTML");
+        }
+
+        /// <summary>
+        /// Utility method to consume reader and unescape entities found within.
+        /// </summary>
+        /// <param name="inAttribute"></param>
+        /// <returns>Unescaped string from reader</returns>
+        public string UnescapeEntities(bool inAttribute)
+        {
+            StringBuilder builder = new StringBuilder();
+            while (!_reader.IsEmpty())
+            {
+                builder.Append(_reader.ConsumeTo('&'));
+                if (_reader.Matches('&'))
+                {
+                    _reader.Consume();
+                    char? c = ConsumeCharacterReference(null, inAttribute);
+                    if (c == null)
+                    {
+                        builder.Append('&');
+                    }
+                    else
+                    {
+                        builder.Append(c);
+                    }
+                }
+            }
+            return builder.ToString();
         }
 
         public Token.Tag TagPending

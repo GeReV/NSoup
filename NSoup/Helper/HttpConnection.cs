@@ -190,6 +190,25 @@ namespace NSoup.Helper
             return this;
         }
 
+        public IConnection Cookies(IDictionary<string, string> cookies)
+        {
+            if (cookies == null)
+            {
+                throw new ArgumentNullException("cookies");
+            }
+            foreach (KeyValuePair<string, string> entry in cookies)
+            {
+                req.Cookie(entry.Key, entry.Value);
+            }
+            return this;
+        }
+
+        public IConnection Parser(Parser parser)
+        {
+            req.Parser(parser);
+            return this;
+        }
+
         public Document Get()
         {
             req.Method(NSoup.Method.Get);
@@ -488,11 +507,12 @@ namespace NSoup.Helper
             {
                 throw new ArgumentNullException("req", "Request must not be null");
             }
-            
+
             string protocol = req.Url().Scheme;
 
             if (!protocol.Equals("http") && !protocol.Equals("https"))
             {
+                // throw new MalformedURLException
                 throw new InvalidOperationException("Only http & https protocols supported");
             }
 
@@ -503,6 +523,9 @@ namespace NSoup.Helper
             }
 
             HttpWebRequest conn = CreateConnection(req);
+            Response res;
+
+
 
             if (req.Method() == NSoup.Method.Post)
             {
@@ -522,15 +545,17 @@ namespace NSoup.Helper
                 }
                 else if (!req.IgnoreHttpErrors())
                 {
-                    throw new IOException(status + " error loading URL " + req.Url().ToString());
+                    throw new HttpStatusException("HTTP error fetching URL", (int)status, req.Url().ToString());
                 }
             }
 
-            Response res = new Response(previousResponse);
+            res = new Response(previousResponse);
             res.SetupFromConnection(response, previousResponse);
 
             if (needsRedirect && req.FollowRedirects())
             {
+                req.Method(NSoup.Method.Get);
+                req.Data().Clear();
                 req.Url(new Uri(req.Url(), res.Header("Location")));
 
                 foreach (KeyValuePair<string, string> cookie in res.Cookies()) // add response cookies to request (for e.g. login posts)
@@ -540,8 +565,16 @@ namespace NSoup.Helper
 
                 return Execute(req, res);
             }
-
             res.req = req;
+
+            // check that we can handle the returned content type; if not, abort before fetching it
+            string contentType = res.ContentType();
+
+            if (contentType != null && !req.IgnoreContentType() && (!(contentType.StartsWith("text/") || contentType.StartsWith("application/xml") || contentType.StartsWith("application/xhtml+xml"))))
+            {
+                throw new UnsupportedMimeTypeException("Unhandled content type. Must be text/*, application/xml, or application/xhtml+xml",
+                        contentType, req.Url().ToString());
+            }
 
             //dataStream = conn.getErrorStream() != null ? conn.getErrorStream() : conn.getInputStream();
             //bodyStream = res.hasHeader("Content-Encoding") && res.header("Content-Encoding").equalsIgnoreCase("gzip") ?
@@ -588,14 +621,9 @@ namespace NSoup.Helper
                 throw new InvalidOperationException("Request must be executed (with .Execute(), .Get(), or .Post() before parsing response ");
             }
 
-            if (!req.IgnoreContentType() && (_contentType == null || !(_contentType.StartsWith("text/") || _contentType.StartsWith("application/xml") || _contentType.StartsWith("application/xhtml+xml"))))
-            {
-                throw new IOException(string.Format("Unhandled content type \"{0}\" on URL {1}. Must be text/*, application/xml, or application/xhtml+xml",
-                    _contentType, _url.ToString()));
-            }
-            Document doc = DataUtil.ParseByteData(_byteData, _charset, _url.ToString());
+            Document doc = DataUtil.ParseByteData(_byteData, _charset, _url.ToString(), req.Parser());
 
-            _charset = doc.Settings.Encoding.WebName.ToUpperInvariant(); // update charset from meta-equiv, possibly
+            _charset = doc.OutputSettings().Encoding.WebName.ToUpperInvariant(); // update charset from meta-equiv, possibly
             return doc;
         }
 
@@ -859,6 +887,7 @@ namespace NSoup.Helper
         private ICollection<KeyVal> _data;
         private bool _ignoreHttpErrors = false;
         private bool _ignoreContentType = false;
+        private Parser _parser;
 
         public Request()
         {
@@ -867,6 +896,7 @@ namespace NSoup.Helper
             _data = new List<KeyVal>();
             _method = NSoup.Method.Get;
             _headers["Accept-Encoding"] = "gzip";
+            _parser = NSoup.Parse.Parser.HtmlParser();
         }
 
         public int Timeout()
@@ -903,9 +933,10 @@ namespace NSoup.Helper
             return _ignoreHttpErrors;
         }
 
-        public void IgnoreHttpErrors(bool ignoreHttpErrors)
+        public IRequest IgnoreHttpErrors(bool ignoreHttpErrors)
         {
             this._ignoreHttpErrors = ignoreHttpErrors;
+            return this;
         }
 
         public bool IgnoreContentType()
@@ -913,9 +944,10 @@ namespace NSoup.Helper
             return _ignoreContentType;
         }
 
-        public void IgnoreContentType(bool ignoreContentType)
+        public IRequest IgnoreContentType(bool ignoreContentType)
         {
             this._ignoreContentType = ignoreContentType;
+            return this;
         }
 
         public IRequest Data(KeyVal keyval)
@@ -933,6 +965,17 @@ namespace NSoup.Helper
         public ICollection<KeyVal> Data()
         {
             return _data;
+        }
+
+        public IRequest Parser(Parser parser)
+        {
+            this._parser = parser;
+            return this;
+        }
+
+        public Parser Parser()
+        {
+            return _parser;
         }
     }
 

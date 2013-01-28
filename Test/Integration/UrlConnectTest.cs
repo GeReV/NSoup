@@ -5,6 +5,7 @@ using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSoup.Nodes;
 using NSoup;
+using System.IO;
 
 namespace Test.Integration
 {
@@ -16,7 +17,7 @@ namespace Test.Integration
     /// Ported to .NET by: Amir Grozki
     /// -->
     [TestClass]
-    [Ignore] // ignored by default so tests don't require network access. comment out to enable.
+    //[Ignore] // ignored by default so tests don't require network access. comment out to enable.
     public class UrlConnectTest
     {
         public UrlConnectTest()
@@ -66,7 +67,7 @@ namespace Test.Integration
         //
         #endregion
 
-        private static string echoURL = "http://infohound.net/tools/q.pl";
+        private static string echoURL = "http://direct.infohound.net/tools/q.pl";
 
         [TestMethod]
         public void fetchURl()
@@ -82,10 +83,10 @@ namespace Test.Integration
             IResponse res = NSoup.NSoupClient.Connect("http://www.baidu.com/").Timeout(10 * 1000).Execute();
             Document doc = res.Parse();
 
-            Assert.AreEqual("GB2312", doc.Settings.Encoding.WebName.ToUpperInvariant());
+            Assert.AreEqual("GB2312", doc.OutputSettings().Encoding.WebName.ToUpperInvariant());
             Assert.AreEqual("GB2312", res.Charset().ToUpperInvariant());
             Assert.IsTrue(res.HasCookie("BAIDUID"));
-            Assert.AreEqual("text/html;charset=gb2312", res.ContentType());
+            Assert.AreEqual("text/html;charset=gbk", res.ContentType());
         }
 
         [TestMethod]
@@ -97,9 +98,36 @@ namespace Test.Integration
             {
                 Document doc = NSoupClient.Parse(new Uri(url), 3000);
             }
+            catch (UnsupportedMimeTypeException e)
+            {
+                threw = true;
+                Assert.AreEqual("Unhandled content type. Must be text/*, application/xml, or application/xhtml+xml", e.Message.ToString());
+                Assert.AreEqual(url, e.Url);
+                Assert.AreEqual("image/png", e.MimeType);
+            }
             catch (System.IO.IOException)
             {
                 threw = true;
+            }
+            Assert.IsTrue(threw);
+        }
+
+        [TestMethod]
+        public void exceptOnUnsupportedProtocol()
+        {
+            String url = "file://etc/passwd";
+            bool threw = false;
+            try
+            {
+                Document doc = NSoupClient.Connect(url).Get();
+            }
+            catch (InvalidOperationException e)
+            {
+                threw = true;
+                Assert.AreEqual("Only http & https protocols supported", e.Message.ToString());
+            }
+            catch (IOException)
+            {
             }
             Assert.IsTrue(threw);
         }
@@ -150,15 +178,26 @@ namespace Test.Integration
         [TestMethod]
         public void followsTempRedirect()
         {
-            IConnection con = NSoupClient.Connect("http://infohound.net/tools/302.pl"); // http://jsoup.org
+            IConnection con = NSoupClient.Connect("http://direct.infohound.net/tools/302.pl"); // http://jsoup.org
             Document doc = con.Get();
             Assert.IsTrue(doc.Title.Contains("jsoup"));
         }
 
         [TestMethod]
+        public void postRedirectsFetchWithGet()
+        {
+            IConnection con = NSoupClient.Connect("http://direct.infohound.net/tools/302.pl")
+                    .Data("Argument", "Riposte")
+                    .Method(NSoup.Method.Post);
+            IResponse res = con.Execute();
+            Assert.AreEqual("http://jsoup.org", res.Url().ToString());
+            Assert.AreEqual(NSoup.Method.Get, res.Method());
+        }
+
+        [TestMethod]
         public void followsRedirectToHttps()
         {
-            IConnection con = NSoupClient.Connect("http://infohound.net/tools/302-secure.pl"); // https://www.google.com
+            IConnection con = NSoupClient.Connect("http://direct.infohound.net/tools/302-secure.pl"); // https://www.google.com
             con.Data("id", "5");
             Document doc = con.Get();
             Assert.IsTrue(doc.Title.Contains("Google"));
@@ -167,7 +206,7 @@ namespace Test.Integration
         [TestMethod]
         public void followsRelativeRedirect()
         {
-            IConnection con = NSoupClient.Connect("http://infohound.net/tools/302-rel.pl"); // to ./ - /tools/
+            IConnection con = NSoupClient.Connect("http://direct.infohound.net/tools/302-rel.pl"); // to ./ - /tools/
             Document doc = con.Post();
             Assert.IsTrue(doc.Title.Contains("HTML Tidy Online"));
         }
@@ -175,15 +214,22 @@ namespace Test.Integration
         [TestMethod]
         public void throwsExceptionOnError()
         {
-            IConnection con = NSoupClient.Connect("http://infohound.net/tools/404");
+            string url = "http://direct.infohound.net/tools/404";
+            IConnection con = NSoupClient.Connect(url);
             bool threw = false;
             try
             {
                 Document doc = con.Get();
             }
-            catch (System.IO.IOException)
+            catch (HttpStatusException e)
             {
                 threw = true;
+                Assert.AreEqual("org.jsoup.HttpStatusException: HTTP error fetching URL. Status=404, URL=http://direct.infohound.net/tools/404", e.ToString());
+                Assert.AreEqual(url, e.Url);
+                Assert.AreEqual(404, e.StatusCode);
+            }
+            catch (System.IO.IOException)
+            {
             }
             Assert.IsTrue(threw);
         }
@@ -191,7 +237,7 @@ namespace Test.Integration
         [TestMethod]
         public void ignoresExceptionIfSoConfigured()
         {
-            IConnection con = NSoupClient.Connect("http://infohound.net/tools/404").IgnoreHttpErrors(true);
+            IConnection con = NSoupClient.Connect("http://direct.infohound.net/tools/404").IgnoreHttpErrors(true);
             IResponse res = con.Execute();
             Document doc = res.Parse();
             Assert.AreEqual(System.Net.HttpStatusCode.NotFound, res.StatusCode());
@@ -201,7 +247,7 @@ namespace Test.Integration
         [TestMethod]
         public void doesntRedirectIfSoConfigured()
         {
-            IConnection con = NSoupClient.Connect("http://infohound.net/tools/302.pl").FollowRedirects(false);
+            IConnection con = NSoupClient.Connect("http://direct.infohound.net/tools/302.pl").FollowRedirects(false);
             IResponse res = con.Execute();
             Assert.IsTrue(res.StatusCode() == (System.Net.HttpStatusCode)302);
         }
@@ -209,11 +255,11 @@ namespace Test.Integration
         [TestMethod]
         public void redirectsResponseCookieToNextResponse()
         {
-            IConnection con = NSoupClient.Connect("http://infohound.net/tools/302-cookie.pl");
+            IConnection con = NSoupClient.Connect("http://direct.infohound.net/tools/302-cookie.pl");
             IResponse res = con.Execute();
             Assert.AreEqual("asdfg123", res.Cookie("token")); // confirms that cookies set on 1st hit are presented in final result
             Document doc = res.Parse();
-            Assert.AreEqual("token=asdfg123", ihVal("HTTP_COOKIE", doc)); // confirms that redirected hit saw cookie
+            Assert.AreEqual("uid=jhy; token=asdfg123", ihVal("HTTP_COOKIE", doc)); // confirms that redirected hit saw cookie
         }
 
         [TestMethod]
@@ -222,7 +268,7 @@ namespace Test.Integration
             bool threw = false;
             try
             {
-                Document doc = NSoupClient.Connect("http://infohound.net/tools/loop.pl").Get();
+                Document doc = NSoupClient.Connect("http://direct.infohound.net/tools/loop.pl").Get();
             }
             catch (System.IO.IOException e)
             {
@@ -230,6 +276,35 @@ namespace Test.Integration
                 threw = true;
             }
             Assert.IsTrue(threw);
+        }
+
+        [TestMethod]
+        public void multiCookieSet()
+        {
+            IConnection con = NSoupClient.Connect("http://direct.infohound.net/tools/302-cookie.pl");
+            IResponse res = con.Execute();
+
+            // test cookies set by redirect:
+            IDictionary<string, string> cookies = res.Cookies();
+            Assert.AreEqual("asdfg123", cookies["token"]);
+            Assert.AreEqual("jhy", cookies["uid"]);
+
+            // send those cookies into the echo URL by map:
+            Document doc = NSoupClient.Connect(echoURL).Cookies(cookies).Get();
+            Assert.AreEqual("uid=jhy; token=asdfg123", ihVal("HTTP_COOKIE", doc));
+        }
+
+        [TestMethod]
+        public void handlesDodgyCharset()
+        {
+            // tests that when we get back "UFT8", that it is recognised as unsupported, and falls back to default instead
+            String url = "http://direct.infohound.net/tools/bad-charset.pl";
+            IResponse res = NSoupClient.Connect(url).Execute();
+            Assert.AreEqual("text/html; charset=UFT8", res.Header("Content-Type")); // from the header
+            Assert.AreEqual(null, res.Charset()); // tried to get from header, not supported, so returns null
+            Document doc = res.Parse(); // would throw an error if charset unsupported
+            Assert.IsTrue(doc.Text().Contains("Hello!"));
+            Assert.AreEqual("UTF-8", res.Charset()); // set from default on parse
         }
     }
 }

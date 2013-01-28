@@ -10,7 +10,7 @@ namespace NSoup.Helper
     /// Provides a descending iterator and other 1.6 methods to allow support on the 1.5 JRE.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    internal class DescendableLinkedList<T> : LinkedList<T> where T : class
+    public class DescendableLinkedList<T> : LinkedList<T> where T : class
     {
 
         /// <summary>
@@ -30,21 +30,21 @@ namespace NSoup.Helper
             return new DescendingEnumerator<T>(this);
         }
 
-        private class DescendingEnumerator<T> : IEnumerator<T> where T : class
+        private class DescendingEnumerator<V> : IEnumerator<V> where V : class
         {
-            private LinkedList<T> list;
-            private LinkedListNode<T> curr = null;
+            private LinkedList<V> list;
+            private LinkedListNode<V> curr = null;
 
             private bool first = true;
 
-            public DescendingEnumerator(LinkedList<T> list)
+            public DescendingEnumerator(LinkedList<V> list)
             {
                 this.list = list;
             }
 
-            #region IEnumerator<T> Members
+            #region IEnumerator<V> Members
 
-            public T Current
+            public V Current
             {
                 get { return curr == null ? null : curr.Value; }
             }

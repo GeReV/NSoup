@@ -5,6 +5,8 @@ using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSoup.Nodes;
 using NSoup.Parse;
+using NSoup;
+using NSoup.Select;
 
 namespace Test.Nodes
 {
@@ -85,6 +87,18 @@ namespace Test.Nodes
             Element dodgyBase = new Element(tag, "wtf://no-such-protocol/", attribs);
             Assert.AreEqual("http://bar/qux", dodgyBase.AbsUrl("absHref")); // base fails, but href good, so get that
             Assert.AreEqual("", dodgyBase.AbsUrl("relHref")); // base fails, only rel href, so return nothing 
+        }
+
+        [TestMethod]
+        public void setBaseUriIsRecursive()
+        {
+            Document doc = NSoupClient.Parse("<div><p></p></div>");
+            string baseUri = "http://jsoup.org";
+            doc.BaseUri = baseUri;
+
+            Assert.AreEqual(baseUri, doc.BaseUri);
+            Assert.AreEqual(baseUri, doc.Select("div").First.BaseUri);
+            Assert.AreEqual(baseUri, doc.Select("p").First.BaseUri);
         }
 
         [TestMethod]
@@ -232,6 +246,65 @@ namespace Test.Nodes
             Node node = span.Unwrap();
             Assert.AreEqual("<div>One  Two</div>", TextUtil.StripNewLines(doc.Body.Html()));
             Assert.IsTrue(node == null);
+        }
+
+        [TestMethod]
+        public void traverse()
+        {
+            Document doc = NSoupClient.Parse("<div><p>Hello</p></div><div>There</div>");
+            StringBuilder accum = new StringBuilder();
+            doc.Select("div").First.Traverse(new TestNodeVisitor(accum));
+            Assert.AreEqual("<div><p><#text></#text></p></div>", accum.ToString());
+        }
+
+        private class TestNodeVisitor : NodeVisitor
+        {
+            StringBuilder accum;
+
+            public TestNodeVisitor(StringBuilder accum)
+            {
+                this.accum = accum;
+            }
+
+            public void Head(Node node, int depth)
+            {
+                accum.Append("<" + node.NodeName + ">");
+            }
+
+            public void Tail(Node node, int depth)
+            {
+                accum.Append("</" + node.NodeName + ">");
+            }
+        }
+
+        [TestMethod]
+        public void orphanNodeReturnsNullForSiblingElements()
+        {
+            Node node = new Element(Tag.ValueOf("p"), "");
+            Element el = new Element(Tag.ValueOf("p"), "");
+
+            Assert.AreEqual(0, node.SiblingIndex);
+            Assert.AreEqual(0, node.SiblingNodes.Count);
+
+            Assert.IsNull(node.PreviousSibling);
+            Assert.IsNull(node.NextSibling);
+
+            Assert.AreEqual(0, el.SiblingElements.Count);
+            Assert.IsNull(el.PreviousElementSibling);
+            Assert.IsNull(el.NextElementSibling);
+        }
+
+        [TestMethod]
+        public void nodeIsNotASiblingOfItself()
+        {
+            Document doc = NSoupClient.Parse("<div><p>One<p>Two<p>Three</div>");
+            Element p2 = doc.Select("p")[1];
+
+            Assert.AreEqual("Two", p2.Text());
+            IList<Node> nodes = p2.SiblingNodes;
+            Assert.AreEqual(2, nodes.Count);
+            Assert.AreEqual("<p>One</p>", nodes[0].OuterHtml());
+            Assert.AreEqual("<p>Three</p>", nodes[1].OuterHtml());
         }
     }
 }

@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSoup.Nodes;
 using NSoup.Select;
+using NSoup;
 
 namespace Test.Parser
 {
@@ -84,6 +85,16 @@ namespace Test.Parser
         }
 
         [TestMethod]
+        public void handlesNewLinesAndReturns()
+        {
+            string html = "<a\r\nfoo='bar\r\nqux'\r\nbar\r\n=\r\ntwo>One</a>";
+            Element el = NSoupClient.Parse(html).Select("a").First;
+            Assert.AreEqual(2, el.Attributes.Count);
+            Assert.AreEqual("bar\r\nqux", el.Attr("foo")); // currently preserves newlines in quoted attributes. todo confirm if should.
+            Assert.AreEqual("two", el.Attr("bar"));
+        }
+
+        [TestMethod]
         public void parsesEmptyString()
         {
             string html = "<a />";
@@ -108,8 +119,16 @@ namespace Test.Parser
         {
             string html = "<a id=1 href='?foo=bar&mid&lt=true'>One</a> <a id=2 href='?foo=bar&lt;qux&lg=1'>Two</a>";
             Elements els = NSoup.NSoupClient.Parse(html).Select("a");
-            Assert.AreEqual("?foo=bar∣&lt=true", els.First.Attr("href")); // &mid gets to ∣ because not tailed by =; lt is so not unescaped
+            Assert.AreEqual("?foo=bar&mid&lt=true", els.First.Attr("href"));
             Assert.AreEqual("?foo=bar<qux&lg=1", els.Last.Attr("href"));
+        }
+
+        [TestMethod]
+        public void moreAttributeUnescapes()
+        {
+            String html = "<a href='&wr_id=123&mid-size=true&ok=&wr'>Check</a>";
+            Elements els = NSoupClient.Parse(html).Select("a");
+            Assert.AreEqual("&wr_id=123&mid-size=true&ok=&wr", els.First.Attr("href"));
         }
     }
 }

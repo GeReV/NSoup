@@ -5,6 +5,7 @@ using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSoup.Nodes;
 using NSoup.Select;
+using NSoup;
 
 namespace Test.Nodes
 {
@@ -317,7 +318,7 @@ namespace Test.Nodes
         public void testSetIndent()
         {
             Document doc = NSoup.NSoupClient.Parse("<div><p>Hello\nthere</p></div>");
-            doc.Settings.IndentAmount(0);
+            doc.OutputSettings().IndentAmount(0);
             Assert.AreEqual("<html>\n<head></head>\n<body>\n<div>\n<p>Hello there</p>\n</div>\n</body>\n</html>", doc.Html());
         }
 
@@ -325,7 +326,7 @@ namespace Test.Nodes
         public void testNotPretty()
         {
             Document doc = NSoup.NSoupClient.Parse("<div>   \n<p>Hello\n there</p></div>");
-            doc.Settings.PrettyPrint(false);
+            doc.OutputSettings().PrettyPrint(false);
             Assert.AreEqual("<html><head></head><body><div>   \n<p>Hello\n there</p></div></body></html>", doc.Html());
         }
 
@@ -335,6 +336,14 @@ namespace Test.Nodes
             // don't put newlines into empty blocks
             Document doc = NSoup.NSoupClient.Parse("<section><div></div></section>");
             Assert.AreEqual("<section>\n <div></div>\n</section>", doc.Select("section").First.OuterHtml());
+        }
+
+        [TestMethod]
+        public void testNoIndentOnScriptAndStyle()
+        {
+            // don't newline+indent closing </script> and </style> tags
+            Document doc = NSoupClient.Parse("<script>one\ntwo</script>\n<style>three\nfour</style>");
+            Assert.AreEqual("<script>one\ntwo</script> \n<style>three\nfour</style>", doc.Head.Html());
         }
 
         [TestMethod]
@@ -618,9 +627,71 @@ namespace Test.Nodes
         public void testHtmlContainsOuter()
         {
             Document doc = NSoup.NSoupClient.Parse("<title>Check</title> <div>Hello there</div>");
-            doc.GetOutputSettings().IndentAmount(0);
+            doc.OutputSettings().IndentAmount(0);
             Assert.IsTrue(doc.Html().Contains(doc.Select("title").OuterHtml()));
             Assert.IsTrue(doc.Html().Contains(doc.Select("div").OuterHtml()));
+        }
+
+        [TestMethod]
+        public void testGetTextNodes()
+        {
+            Document doc = NSoupClient.Parse("<p>One <span>Two</span> Three <br> Four</p>");
+            IList<TextNode> textNodes = doc.Select("p").First.TextNodes;
+
+            Assert.AreEqual(3, textNodes.Count);
+            Assert.AreEqual("One ", textNodes[0].Text());
+            Assert.AreEqual(" Three ", textNodes[1].Text());
+            Assert.AreEqual(" Four", textNodes[2].Text());
+
+            Assert.AreEqual(0, doc.Select("br").First.TextNodes.Count);
+        }
+
+        [TestMethod]
+        public void testManipulateTextNodes()
+        {
+            Document doc = NSoupClient.Parse("<p>One <span>Two</span> Three <br> Four</p>");
+            Element p = doc.Select("p").First;
+            IList<TextNode> textNodes = p.TextNodes;
+
+            textNodes[1].Text(" three-more ");
+            textNodes[2].SplitText(3).Text("-ur");
+
+            Assert.AreEqual("One Two three-more Fo-ur", p.Text());
+            Assert.AreEqual("One three-more Fo-ur", p.OwnText());
+            Assert.AreEqual(4, p.TextNodes.Count); // grew because of split
+        }
+
+        [TestMethod]
+        public void testGetDataNodes()
+        {
+            Document doc = NSoupClient.Parse("<script>One Two</script> <style>Three Four</style> <p>Fix Six</p>");
+            Element script = doc.Select("script").First;
+            Element style = doc.Select("style").First;
+            Element p = doc.Select("p").First;
+
+            IList<DataNode> scriptData = script.DataNodes;
+            Assert.AreEqual(1, scriptData.Count);
+            Assert.AreEqual("One Two", scriptData[0].GetWholeData());
+
+            IList<DataNode> styleData = style.DataNodes;
+            Assert.AreEqual(1, styleData.Count);
+            Assert.AreEqual("Three Four", styleData[0].GetWholeData());
+
+            IList<DataNode> pData = p.DataNodes;
+            Assert.AreEqual(0, pData.Count);
+        }
+
+        [TestMethod]
+        public void elementIsNotASiblingOfItself()
+        {
+            Document doc = NSoupClient.Parse("<div><p>One<p>Two<p>Three</div>");
+            Element p2 = doc.Select("p")[1];
+
+            Assert.AreEqual("Two", p2.Text());
+            Elements els = p2.SiblingElements;
+            Assert.AreEqual(2, els.Count);
+            Assert.AreEqual("<p>One</p>", els[0].OuterHtml());
+            Assert.AreEqual("<p>Three</p>", els[1].OuterHtml());
         }
     }
 }

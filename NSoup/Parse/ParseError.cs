@@ -9,41 +9,21 @@ namespace NSoup.Parse
     /// A Parse Error records an error in the input HTML that occurs in either the tokenisation or the tree building phase.
     /// </summary>
     // todo: currently not ready for public consumption. revisit api, and exposure methods
-    internal class ParseError
+    public class ParseError
     {
-        private string _errorMsg;
+        
         private int _pos;
-        private char _c;
-        private TokeniserState _tokeniserState;
-        private TreeBuilderState _treeBuilderState;
-        private Token _token;
+        private string _errorMsg;
 
-        public ParseError(string errorMsg, char c, TokeniserState tokeniserState, int pos)
+        public ParseError(int pos, string errorMsg)
         {
-            this._errorMsg = errorMsg;
-            this._c = c;
-            this._tokeniserState = tokeniserState;
             this._pos = pos;
+            this._errorMsg = errorMsg;
         }
 
-        public ParseError(string errorMsg, TokeniserState tokeniserState, int pos)
+        public ParseError(int pos, string errorFormat, params object[] args)
         {
-            this._errorMsg = errorMsg;
-            this._tokeniserState = tokeniserState;
-            this._pos = pos;
-        }
-
-        public ParseError(string errorMsg, int pos)
-        {
-            this._errorMsg = errorMsg;
-            this._pos = pos;
-        }
-
-        public ParseError(string errorMsg, TreeBuilderState treeBuilderState, Token token, int pos)
-        {
-            this._errorMsg = errorMsg;
-            this._treeBuilderState = treeBuilderState;
-            this._token = token;
+            this._errorMsg = string.Format(errorFormat, args);
             this._pos = pos;
         }
 
@@ -55,6 +35,11 @@ namespace NSoup.Parse
         public int Position
         {
             get { return _pos; }
+        }
+
+        public override string ToString()
+        {
+            return _pos + ": " + _errorMsg;
         }
     }
 }

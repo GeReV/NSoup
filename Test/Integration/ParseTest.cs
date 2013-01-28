@@ -143,10 +143,10 @@ namespace Test.Integration
                 Assert.AreEqual("http://news.baidu.com/", newsLink.AbsUrl("href")); // This was changed due to System.Uri's behavior. I think this change is acceptable.
 
                 // check auto-detect from meta
-                Assert.AreEqual("GB2312", doc.Settings.Encoding.WebName.ToUpperInvariant());
+                Assert.AreEqual("GB2312", doc.OutputSettings().Encoding.WebName.ToUpperInvariant());
                 Assert.AreEqual("<title>百度一下，你就知道      </title>", doc.Select("title").OuterHtml());
 
-                doc.Settings.SetEncoding("ascii");
+                doc.OutputSettings().SetEncoding("ascii");
                 Assert.AreEqual("<title>&#30334;&#24230;&#19968;&#19979;&#65292;&#20320;&#23601;&#30693;&#36947;      </title>",
                     doc.Select("title").OuterHtml());
             }
@@ -160,7 +160,7 @@ namespace Test.Integration
             Document doc = NSoup.NSoupClient.Parse(input, null,
                 "http://www.baidu.com/"); // http charset is gb2312, but NOT specifying it, to test http-equiv parse
             // check auto-detect from meta
-            Assert.AreEqual("GB2312", doc.GetOutputSettings().Encoding.WebName.ToUpperInvariant());
+            Assert.AreEqual("GB2312", doc.OutputSettings().Encoding.WebName.ToUpperInvariant());
             Assert.AreEqual("<title>百度一下，你就知道</title>", doc.Select("title").OuterHtml());
         }
 
@@ -172,20 +172,20 @@ namespace Test.Integration
             {
                 Document doc = NSoup.NSoupClient.Parse(input, null, "http://example.com/"); //gb2312, has html5 <meta charset>
                 Assert.AreEqual("新", doc.Text());
-                Assert.AreEqual("GB2312", doc.Settings.Encoding.WebName.ToUpperInvariant());
+                Assert.AreEqual("GB2312", doc.OutputSettings().Encoding.WebName.ToUpperInvariant());
             }
             // double check, no charset, falls back to utf8 which is incorrect
             using (Stream input = getFile("Test.htmltests.meta-charset-2.html"))
             {
                 Document doc = NSoup.NSoupClient.Parse(input, null, "http://example.com"); // gb2312, no charset
-                Assert.AreEqual("UTF-8", doc.Settings.Encoding.WebName.ToUpperInvariant());
+                Assert.AreEqual("UTF-8", doc.OutputSettings().Encoding.WebName.ToUpperInvariant());
                 Assert.IsFalse("新".Equals(doc.Text()));
             }
             // confirm fallback to utf8
             using (Stream input = getFile("Test.htmltests.meta-charset-3.html"))
             {
                 Document doc = NSoup.NSoupClient.Parse(input, null, "http://example.com/"); // utf8, no charset
-                Assert.AreEqual("UTF-8", doc.Settings.Encoding.WebName.ToUpperInvariant());
+                Assert.AreEqual("UTF-8", doc.OutputSettings().Encoding.WebName.ToUpperInvariant());
                 Assert.AreEqual("新", doc.Text());
             }
         }

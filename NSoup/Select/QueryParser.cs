@@ -62,21 +62,8 @@ namespace NSoup.Select
                 // hierarchy and extras
                 bool seenWhite = _tq.ConsumeWhitespace();
 
-                if (_tq.MatchChomp(","))
+                if (_tq.MatchesAny(combinators))
                 { // group or
-                    CombiningEvaluator.Or or = new CombiningEvaluator.Or(_evals);
-
-                    _evals.Clear();
-                    _evals.Add(or);
-
-                    while (!_tq.IsEmpty)
-                    {
-                        string subQuery = _tq.ChompTo(",");
-                        or.Add(Parse(subQuery));
-                    }
-                }
-                else if (_tq.MatchesAny(combinators))
-                {
                     Combinator(_tq.Consume());
                 }
                 else if (seenWhite)
@@ -103,41 +90,74 @@ namespace NSoup.Select
 
             string subQuery = ConsumeSubQuery(); // support multi > childs
 
-            Evaluator e;
+            Evaluator rootEval; // the new topmost evaluator
+            Evaluator currentEval; // the evaluator the new eval will be combined to. could be root, or rightmost or.
+            Evaluator newEval = Parse(subQuery); // the evaluator to add into target evaluator
+            bool replaceRightMost = false;
 
-            if (_evals.Count == 1)
+            if (_evals.Count == 1) {
+            rootEval = currentEval = _evals[0];
+            // make sure OR (,) has precedence:
+            if (rootEval is CombiningEvaluator.Or && combinator != ',')
             {
-                e = _evals[0];
+                currentEval = ((CombiningEvaluator.Or)currentEval).RightMostEvaluator();
+                replaceRightMost = true;
             }
-            else
-            {
-                e = new CombiningEvaluator.And(_evals);
+        }
+        else {
+            rootEval = currentEval = new CombiningEvaluator.And(_evals);
             }
-
             _evals.Clear();
 
             Evaluator f = Parse(subQuery);
 
+            // for most combinators: change the current eval into an AND of the current eval and the new eval
             if (combinator == '>')
             {
-                _evals.Add(new CombiningEvaluator.And(f, new StructuralEvaluator.ImmediateParent(e)));
+                currentEval = new CombiningEvaluator.And(newEval, new StructuralEvaluator.ImmediateParent(currentEval));
             }
             else if (combinator == ' ')
             {
-                _evals.Add(new CombiningEvaluator.And(f, new StructuralEvaluator.Parent(e)));
+                currentEval = new CombiningEvaluator.And(newEval, new StructuralEvaluator.Parent(currentEval));
             }
             else if (combinator == '+')
             {
-                _evals.Add(new CombiningEvaluator.And(f, new StructuralEvaluator.ImmediatePreviousSibling(e)));
+                currentEval = new CombiningEvaluator.And(newEval, new StructuralEvaluator.ImmediatePreviousSibling(currentEval));
             }
             else if (combinator == '~')
             {
-                _evals.Add(new CombiningEvaluator.And(f, new StructuralEvaluator.PreviousSibling(e)));
+                currentEval = new CombiningEvaluator.And(newEval, new StructuralEvaluator.PreviousSibling(currentEval));
+            }
+            else if (combinator == ',')
+            { // group or.
+                CombiningEvaluator.Or or;
+                if (currentEval is CombiningEvaluator.Or)
+                {
+                    or = (CombiningEvaluator.Or)currentEval;
+                    or.Add(newEval);
+                }
+                else
+                {
+                    or = new CombiningEvaluator.Or();
+                    or.Add(currentEval);
+                    or.Add(newEval);
+                }
+                currentEval = or;
             }
             else
             {
                 throw new Selector.SelectorParseException("Unknown combinator: " + combinator);
             }
+
+            if (replaceRightMost)
+            {
+                ((CombiningEvaluator.Or)rootEval).ReplaceRightMostEvaluator(currentEval);
+            }
+            else
+            {
+                rootEval = currentEval;
+            }
+            _evals.Add(rootEval);
         }
 
         private string ConsumeSubQuery()

@@ -18,7 +18,7 @@ namespace NSoup.Nodes
     /// -->
     public abstract class Node : ICloneable
     {
-        private Node _parentNode;
+        private Node _parentNode = null;
         protected IList<Node> _childNodes;
         protected Attributes _attributes;
         private string _baseUri;
@@ -40,7 +40,7 @@ namespace NSoup.Nodes
                 throw new ArgumentNullException("attributes");
             }
 
-            _childNodes = new List<Node>();
+            this._childNodes = new List<Node>();
             this._baseUri = baseUri.Trim();
             this._attributes = attributes;
         }
@@ -153,7 +153,7 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
-        /// Gets or sets the base URI of this node.
+        /// Gets or sets the base URI of this node and all of its descendants.
         /// </summary>
         public string BaseUri
         {
@@ -164,8 +164,28 @@ namespace NSoup.Nodes
                 {
                     throw new ArgumentNullException();
                 }
-                this._baseUri = value;
+
+                string baseUri = value;
+
+                Traverse(new BaseUriNodeVisitor(value));
             }
+        }
+
+        private class BaseUriNodeVisitor : NodeVisitor
+        {
+            private string _baseUri;
+
+            public BaseUriNodeVisitor(string baseUri)
+            {
+                this._baseUri = baseUri;
+            }
+
+            public void Head(NSoup.Nodes.Node node, int depth)
+            {
+                node._baseUri = this._baseUri;
+            }
+
+            public void Tail(NSoup.Nodes.Node node, int depth) { }
         }
 
         /// <summary>
@@ -267,7 +287,12 @@ namespace NSoup.Nodes
         /// </summary>
         public IList<Node> ChildNodes
         {
-            get { return _childNodes; }
+            get
+            {
+                // actually returns the real list, as this method is hit many times during selection, and so is a GC time-sink
+                // leaving the documentation as is (warning of unmodifiability) to discourage out-of-API modifications
+                return _childNodes;
+            }
             private set { _childNodes = value; }
         }
 
@@ -330,7 +355,7 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
-        /// Insert the specified HTML into the DOM before this node (i.e. as a preceeding sibling).
+        /// Insert the specified HTML into the DOM before this node (i.e. as a preceding sibling).
         /// </summary>
         /// <param name="html">HTML to add before this node</param>
         /// <returns>this node, for chaining</returns>
@@ -343,7 +368,7 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
-        /// Insert the specified node into the DOM before this node (i.e. as a preceeding sibling).
+        /// Insert the specified node into the DOM before this node (i.e. as a preceding sibling).
         /// </summary>
         /// <param name="node">node to add before this node</param>
         /// <returns>this node, for chaining</returns>
@@ -598,12 +623,30 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
-        /// Retrieves this node's sibling nodes. Effectively, <see cref="ChildNodes"/>, node.Parent.ChildNodes.
+        /// Retrieves this node's sibling nodes. Similar to <see cref="ChildNodes"/>, node.Parent.ChildNodes, but does not
+        /// include this node (a node is not a sibling of itself).
         /// </summary>
-        /// <returns>node siblings, including this node</returns>
+        /// <returns>Node siblings. If the node has no parent, returns an empty list.</returns>
         public IList<Node> SiblingNodes
         {
-            get { return ParentNode.ChildNodes; } // TODO: should this strip out this node? i.e. not a sibling of self?
+            get
+            {
+                if (ParentNode == null)
+                {
+                    return new List<Node>();
+                }
+
+                IList<Node> nodes = ParentNode.ChildNodes;
+                List<Node> siblings = new List<Node>(nodes.Count - 1);
+                foreach (Node node in nodes)
+                {
+                    if (node != this)
+                    {
+                        siblings.Add(node);
+                    }
+                }
+                return siblings;
+            }
         }
 
         /// <summary>
@@ -638,6 +681,11 @@ namespace NSoup.Nodes
         {
             get
             {
+                if (ParentNode == null)
+                {
+                    return null; // root
+                }
+
                 List<Node> siblings = _parentNode.ChildNodes.ToList();
                 int index = SiblingIndex;
                 if (index > 0)
@@ -662,12 +710,29 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
+        /// Perform a depth-first traversal through this node and its descendants.
+        /// </summary>
+        /// <param name="nodeVisitor">The visitor callbacks to perform on each node</param>
+        /// <returns>This node, for chaining</returns>
+        public Node Traverse(NodeVisitor nodeVisitor)
+        {
+            if (nodeVisitor == null)
+            {
+                throw new ArgumentNullException("nodeVisitor");
+            }
+
+            NodeTraversor traversor = new NodeTraversor(nodeVisitor);
+            traversor.Traverse(this);
+            return this;
+        }
+
+        /// <summary>
         /// Get the outer HTML of this node.
         /// </summary>
         /// <returns>HTML</returns>
         public virtual string OuterHtml()
         {
-            StringBuilder accum = new StringBuilder(32 * 1024);
+            StringBuilder accum = new StringBuilder(128);
             OuterHtml(accum);
             return accum.ToString();
         }
@@ -678,25 +743,25 @@ namespace NSoup.Nodes
         }
 
         // if this node has no document (or parent), retrieve the default output settings
-        private Document.OutputSettings GetOutputSettings()
+        private OutputSettings GetOutputSettings()
         {
-            return OwnerDocument != null ? OwnerDocument.GetOutputSettings() : (new Document(string.Empty)).GetOutputSettings();
+            return OwnerDocument != null ? OwnerDocument.OutputSettings() : (new Document(string.Empty)).OutputSettings();
         }
 
         /// <summary>
         /// Gets the outer HTML of this node.
         /// </summary>
         /// <param name="accum">accumulator to place HTML into</param>
-        public abstract void OuterHtmlHead(StringBuilder accum, int depth, Document.OutputSettings output);
+        public abstract void OuterHtmlHead(StringBuilder accum, int depth, OutputSettings output);
 
-        public abstract void OuterHtmlTail(StringBuilder accum, int depth, Document.OutputSettings output);
+        public abstract void OuterHtmlTail(StringBuilder accum, int depth, OutputSettings output);
 
         public override string ToString()
         {
             return OuterHtml();
         }
 
-        protected void Indent(StringBuilder accum, int depth, Document.OutputSettings output)
+        protected void Indent(StringBuilder accum, int depth, OutputSettings output)
         {
             accum.Append("\n").Append(StringUtil.Padding(depth * output.IndentAmount()));
         }
@@ -768,9 +833,9 @@ namespace NSoup.Nodes
         private class OuterHtmlVisitor : NodeVisitor
         {
             private StringBuilder _accum;
-            private Document.OutputSettings _output;
+            private OutputSettings _output;
 
-            public OuterHtmlVisitor(StringBuilder accum, Document.OutputSettings output)
+            public OuterHtmlVisitor(StringBuilder accum, OutputSettings output)
             {
                 this._accum = accum;
                 this._output = output;

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using NSoup.Parse;
 using NSoup.Select;
+using NSoup.Helper;
 
 namespace NSoup.Nodes
 {
@@ -78,8 +79,9 @@ namespace NSoup.Nodes
         {
             get
             {
+                // title is a preserve whitespace tag (for document output), but normalised here
                 Element titleEl = GetElementsByTag("title").First;
-                return titleEl != null ? titleEl.Text().Trim() : string.Empty;
+                return titleEl != null ? StringUtil.NormaliseWhitespace(titleEl.Text()).Trim() : string.Empty;
             }
             set
             {
@@ -102,9 +104,25 @@ namespace NSoup.Nodes
         /// <summary>
         /// Gets the document's output settings.
         /// </summary>
-        public OutputSettings GetOutputSettings()
+        public OutputSettings OutputSettings()
         {
             return _outputSettings;
+        }
+
+        /// <summary>
+        /// Sets the document's output settings.
+        /// </summary>
+        /// <param name="outputSettings">New output settings</param>
+        /// <returns>This document, for chaining</returns>
+        public Document OutputSettings(OutputSettings outputSettings)
+        {
+            if (outputSettings == null)
+            {
+                throw new ArgumentNullException("outputSettings");
+            }
+            
+            this._outputSettings = outputSettings;
+            return this;
         }
 
         /// <summary>
@@ -274,165 +292,156 @@ namespace NSoup.Nodes
             return clone;
         }
 
-        /// <summary>
-        /// A Document's output settings control the form of the Text() and H   tml() methods.
-        /// </summary>
-        public class OutputSettings : ICloneable
-        {
-            private Entities.EscapeMode _escapeMode = Entities.EscapeMode.Base;
-            private Encoding _encoding = Encoding.UTF8;
-            private Encoder _encoder = null;
-            private bool _prettyPrint = true;
-            private int _indentAmount = 1;
-
-            public OutputSettings()
-            {
-                _encoder = _encoding.GetEncoder();
-            }
-
-            /// <summary>
-            /// Gets or sets the document's current HTML escape mode: <code>base</code>, which provides a limited set of named HTML 
-            /// entities and escapes other characters as numbered entities for maximum compatibility; or <code>extended</code>, 
-            /// which uses the complete set of HTML named entities. 
-            /// <p> 
-            /// The default escape mode is <code>base</code>. 
-            /// </summary>
-            public Entities.EscapeMode EscapeMode
-            {
-                get { return _escapeMode; }
-                set { this._escapeMode = value; }
-            }
-
-            /// <summary>
-            /// Set the document's escape mode
-            /// </summary>
-            /// <param name="escapeMode">the new escape mode to use</param>
-            /// <returns>the document's output settings, for chaining</returns>
-            public OutputSettings SetEscapeMode(Entities.EscapeMode escapeMode)
-            {
-                this._escapeMode = escapeMode;
-                return this;
-            }
-
-            /// <summary>
-            /// Gets or sets the document's current output charset, which is used to control which characters are escaped when 
-            /// generating HTML (via the <code>html()</code> methods), and which are kept intact. 
-            /// <p> 
-            /// Where possible (when parsing from a URL or File), the document's output charset is automatically set to the 
-            /// input charset. Otherwise, it defaults to UTF-8.
-            /// </summary>
-            public Encoding Encoding
-            {
-                get { return _encoding; }
-                set
-                {
-                    this._encoding = value;
-                    this._encoder = value.GetEncoder();
-                }
-            }
-
-            /// <summary>
-            /// Update the document's output charset.
-            /// </summary>
-            /// <param name="encoding">the new encoding to use.</param>
-            /// <returns>the document's output settings, for chaining</returns>
-            public OutputSettings SetEncoding(Encoding encoding)
-            {
-                // todo: this should probably update the doc's meta charset
-                this.Encoding = encoding;
-                return this;
-            }
-
-            /// <summary>
-            /// Update the document's output charset.
-            /// </summary>
-            /// <param name="encoding">the new charset (by name) to use.</param>
-            /// <returns>the document's output settings, for chaining</returns>
-            public OutputSettings SetEncoding(string encoding)
-            {
-                SetEncoding(Encoding.GetEncoding(encoding));
-                return this;
-            }
-
-            public Encoder Encoder
-            {
-                get { return _encoder; }
-            }
-
-            /// <summary>
-            /// Get if pretty printing is enabled. Default is true. If disabled, the HTML output methods will not re-format 
-            /// the output, and the output will generally look like the input.
-            /// </summary>
-            /// <returns>if pretty printing is enabled.</returns>
-            public bool PrettyPrint()
-            {
-                return _prettyPrint;
-            }
-
-            /// <summary>
-            /// Enable or disable pretty printing.
-            /// </summary>
-            /// <param name="pretty">new pretty print setting</param>
-            /// <returns>this, for chaining</returns>
-            public OutputSettings PrettyPrint(bool pretty)
-            {
-                _prettyPrint = pretty;
-                return this;
-            }
-
-            /// <summary>
-            /// Get the current tag indent amount, used when pretty printing.
-            /// </summary>
-            /// <returns>the current indent amount</returns>
-            public int IndentAmount()
-            {
-                return _indentAmount;
-            }
-
-            /// <summary>
-            /// Set the indent amount for pretty printing
-            /// </summary>
-            /// <param name="indentAmount">number of spaces to use for indenting each level. Must be >= 0.</param>
-            /// <returns>this, for chaining</returns>
-            public OutputSettings IndentAmount(int indentAmount)
-            {
-                if (indentAmount < 0)
-                {
-                    throw new ArgumentOutOfRangeException("indentAmount");
-                }
-                this._indentAmount = indentAmount;
-                return this;
-            }
-
-            #region ICloneable Members
-
-            public object Clone()
-            {
-                OutputSettings clone = new OutputSettings();
-
-                clone.SetEncoding(_encoding.WebName); // new charset and charset encoder
-                clone.EscapeMode = _escapeMode;
-                clone.PrettyPrint(_prettyPrint);
-                clone.IndentAmount(_indentAmount);
-
-                return clone;
-            }
-
-            #endregion
-        }
-
-        /// <summary>
-        /// Gets the document's current output settings.
-        /// </summary>
-        /// <remarks>Changed to "Settings" due to ambiguity between property and class.</remarks>
-        public OutputSettings Settings
-        {
-            get { return _outputSettings; }
-        }
-
         public enum QuirksModeEnum
         {
             NoQuirks, Quirks, LimitedQuirks
         }
+    }
+
+    /// <summary>
+    /// A Document's output settings control the form of the Text() and H   tml() methods.
+    /// </summary>
+    public class OutputSettings : ICloneable
+    {
+        private Entities.EscapeMode _escapeMode = Entities.EscapeMode.Base;
+        private Encoding _encoding = Encoding.UTF8;
+        private Encoder _encoder = null;
+        private bool _prettyPrint = true;
+        private int _indentAmount = 1;
+
+        public OutputSettings()
+        {
+            _encoder = _encoding.GetEncoder();
+        }
+
+        /// <summary>
+        /// Gets or sets the document's current HTML escape mode: <code>base</code>, which provides a limited set of named HTML 
+        /// entities and escapes other characters as numbered entities for maximum compatibility; or <code>extended</code>, 
+        /// which uses the complete set of HTML named entities. 
+        /// <p> 
+        /// The default escape mode is <code>base</code>. 
+        /// </summary>
+        public Entities.EscapeMode EscapeMode
+        {
+            get { return _escapeMode; }
+            set { this._escapeMode = value; }
+        }
+
+        /// <summary>
+        /// Set the document's escape mode
+        /// </summary>
+        /// <param name="escapeMode">the new escape mode to use</param>
+        /// <returns>the document's output settings, for chaining</returns>
+        public OutputSettings SetEscapeMode(Entities.EscapeMode escapeMode)
+        {
+            this._escapeMode = escapeMode;
+            return this;
+        }
+
+        /// <summary>
+        /// Gets or sets the document's current output charset, which is used to control which characters are escaped when 
+        /// generating HTML (via the <code>html()</code> methods), and which are kept intact. 
+        /// <p> 
+        /// Where possible (when parsing from a URL or File), the document's output charset is automatically set to the 
+        /// input charset. Otherwise, it defaults to UTF-8.
+        /// </summary>
+        public Encoding Encoding
+        {
+            get { return _encoding; }
+            set
+            {
+                this._encoding = value;
+                this._encoder = value.GetEncoder();
+            }
+        }
+
+        /// <summary>
+        /// Update the document's output charset.
+        /// </summary>
+        /// <param name="encoding">the new encoding to use.</param>
+        /// <returns>the document's output settings, for chaining</returns>
+        public OutputSettings SetEncoding(Encoding encoding)
+        {
+            // todo: this should probably update the doc's meta charset
+            this.Encoding = encoding;
+            return this;
+        }
+
+        /// <summary>
+        /// Update the document's output charset.
+        /// </summary>
+        /// <param name="encoding">the new charset (by name) to use.</param>
+        /// <returns>the document's output settings, for chaining</returns>
+        public OutputSettings SetEncoding(string encoding)
+        {
+            SetEncoding(Encoding.GetEncoding(encoding));
+            return this;
+        }
+
+        public Encoder Encoder
+        {
+            get { return _encoder; }
+        }
+
+        /// <summary>
+        /// Get if pretty printing is enabled. Default is true. If disabled, the HTML output methods will not re-format 
+        /// the output, and the output will generally look like the input.
+        /// </summary>
+        /// <returns>if pretty printing is enabled.</returns>
+        public bool PrettyPrint()
+        {
+            return _prettyPrint;
+        }
+
+        /// <summary>
+        /// Enable or disable pretty printing.
+        /// </summary>
+        /// <param name="pretty">new pretty print setting</param>
+        /// <returns>this, for chaining</returns>
+        public OutputSettings PrettyPrint(bool pretty)
+        {
+            _prettyPrint = pretty;
+            return this;
+        }
+
+        /// <summary>
+        /// Get the current tag indent amount, used when pretty printing.
+        /// </summary>
+        /// <returns>the current indent amount</returns>
+        public int IndentAmount()
+        {
+            return _indentAmount;
+        }
+
+        /// <summary>
+        /// Set the indent amount for pretty printing
+        /// </summary>
+        /// <param name="indentAmount">number of spaces to use for indenting each level. Must be >= 0.</param>
+        /// <returns>this, for chaining</returns>
+        public OutputSettings IndentAmount(int indentAmount)
+        {
+            if (indentAmount < 0)
+            {
+                throw new ArgumentOutOfRangeException("indentAmount");
+            }
+            this._indentAmount = indentAmount;
+            return this;
+        }
+
+        #region ICloneable Members
+
+        public object Clone()
+        {
+            OutputSettings clone = new OutputSettings();
+
+            clone.SetEncoding(_encoding.WebName); // new charset and charset encoder
+            clone.EscapeMode = _escapeMode;
+            clone.PrettyPrint(_prettyPrint);
+            clone.IndentAmount(_indentAmount);
+
+            return clone;
+        }
+
+        #endregion
     }
 }

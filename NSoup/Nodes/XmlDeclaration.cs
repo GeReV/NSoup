@@ -47,7 +47,7 @@ namespace NSoup.Nodes
             return Attributes.GetValue(DECL_KEY);
         }
 
-        public override void OuterHtmlHead(StringBuilder accum, int depth, Document.OutputSettings output)
+        public override void OuterHtmlHead(StringBuilder accum, int depth, OutputSettings output)
         {
             accum
                 .Append("<")
@@ -56,7 +56,7 @@ namespace NSoup.Nodes
                 .Append(">");
         }
 
-        public override void OuterHtmlTail(StringBuilder accum, int depth, Document.OutputSettings output) { }
+        public override void OuterHtmlTail(StringBuilder accum, int depth, OutputSettings output) { }
 
         public override string ToString()
         {

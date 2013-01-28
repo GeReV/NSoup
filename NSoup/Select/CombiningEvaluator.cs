@@ -25,6 +25,21 @@ namespace NSoup.Select
             this._evaluators.AddRange(evaluators);
         }
 
+        public Evaluator RightMostEvaluator()
+        {
+            return _evaluators.Count > 0 ? _evaluators[_evaluators.Count - 1] : null;
+        }
+
+        public void ReplaceRightMostEvaluator(Evaluator replacement)
+        {
+            _evaluators[_evaluators.Count - 1] = replacement;
+        }
+
+        public List<Evaluator> Evaluators
+        {
+            get { return _evaluators; }
+        }
+
         public sealed class And : CombiningEvaluator
         {
             public And(ICollection<Evaluator> evaluators)
@@ -39,8 +54,9 @@ namespace NSoup.Select
 
             public override bool Matches(Element root, Element node)
             {
-                foreach (Evaluator s in _evaluators)
+                for (int i = 0; i < _evaluators.Count; i++)
                 {
+                    Evaluator s = _evaluators[i];
                     if (!s.Matches(root, node))
                     {
                         return false;
@@ -71,6 +87,10 @@ namespace NSoup.Select
                 }
             }
 
+            public Or()
+                : base()
+            {}
+
             public void Add(Evaluator e)
             {
                 _evaluators.Add(e);
@@ -78,8 +98,9 @@ namespace NSoup.Select
 
             public override bool Matches(Element root, Element node)
             {
-                foreach (Evaluator s in _evaluators)
+                for (int i = 0; i < _evaluators.Count; i++)
                 {
+                    Evaluator s = _evaluators[i];
                     if (s.Matches(root, node))
                     {
                         return true;

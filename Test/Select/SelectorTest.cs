@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSoup.Nodes;
 using NSoup.Select;
+using NSoup;
 
 namespace Test.Select
 {
@@ -732,6 +733,21 @@ namespace Test.Select
             Elements el1 = doc.Select("div:not(.left)");
             Assert.AreEqual(1, el1.Count);
             Assert.AreEqual("1", el1.First.Id);
+        }
+
+        [TestMethod]
+        public void handlesCommasInSelector()
+        {
+            Document doc = NSoupClient.Parse("<p name='1,2'>One</p><div>Two</div><ol><li>123</li><li>Text</li></ol>");
+
+            Elements ps = doc.Select("[name=1,2]");
+            Assert.AreEqual(1, ps.Count);
+
+            Elements containers = doc.Select("div, li:matches([0-9,]+)");
+            Assert.AreEqual(2, containers.Count);
+            Assert.AreEqual("div", containers[0].TagName());
+            Assert.AreEqual("li", containers[1].TagName());
+            Assert.AreEqual("123", containers[1].Text());
         }
     }
 }

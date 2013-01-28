@@ -8,7 +8,7 @@ namespace NSoup.Parse
     /**
      * States and Transition activations for the Tokeniser.
      */
-    internal abstract class TokeniserState
+    public abstract class TokeniserState
     {
         #region Subclasses
 
@@ -236,13 +236,14 @@ namespace NSoup.Parse
             public override void Read(Tokeniser t, CharacterReader r)
             {
                 // previous TagOpen state did NOT Consume, will have a letter char in current
-                string tagName = r.ConsumeToAny('\t', '\n', '\f', ' ', '/', '>', _nullChar).ToLowerInvariant();
+                string tagName = r.ConsumeToAny('\t', '\n', '\r', '\f', ' ', '/', '>', _nullChar).ToLowerInvariant();
                 t.TagPending.AppendTagName(tagName);
 
                 switch (r.Consume())
                 {
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                         t.Transition(BeforeAttributeName);
@@ -326,6 +327,7 @@ namespace NSoup.Parse
                 {
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                         if (t.IsAppropriateEndTagToken())
@@ -421,6 +423,7 @@ namespace NSoup.Parse
                     {
                         case '\t':
                         case '\n':
+                        case '\r':
                         case '\f':
                         case ' ':
                             t.Transition(BeforeAttributeName);
@@ -508,6 +511,7 @@ namespace NSoup.Parse
                     {
                         case '\t':
                         case '\n':
+                        case '\r':
                         case '\f':
                         case ' ':
                             t.Transition(BeforeAttributeName);
@@ -718,7 +722,7 @@ namespace NSoup.Parse
                     string name = r.ConsumeLetterSequence();
                     t.TagPending.AppendTagName(name.ToLowerInvariant());
                     t.DataBuffer.Append(name);
-                    r.Advance();
+                    
                     return;
                 }
 
@@ -729,6 +733,7 @@ namespace NSoup.Parse
                     {
                         case '\t':
                         case '\n':
+                        case '\r':
                         case '\f':
                         case ' ':
                             t.Transition(BeforeAttributeName);
@@ -775,6 +780,7 @@ namespace NSoup.Parse
                 {
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                     case '/':
@@ -925,6 +931,7 @@ namespace NSoup.Parse
                 {
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                     case '/':
@@ -956,6 +963,7 @@ namespace NSoup.Parse
                 {
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                         break; // ignore whitespace
@@ -998,7 +1006,7 @@ namespace NSoup.Parse
             // from before attribute name
             public override void Read(Tokeniser t, CharacterReader r)
             {
-                string name = r.ConsumeToAny('\t', '\n', '\f', ' ', '/', '=', '>', _nullChar, '"', '\'', '<');
+                string name = r.ConsumeToAny('\t', '\n', '\r', '\f', ' ', '/', '=', '>', _nullChar, '"', '\'', '<');
                 t.TagPending.AppendAttributeName(name.ToLowerInvariant());
 
                 char c = r.Consume();
@@ -1006,6 +1014,7 @@ namespace NSoup.Parse
                 {
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                         t.Transition(AfterAttributeName);
@@ -1047,6 +1056,7 @@ namespace NSoup.Parse
                 {
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                         // ignore
@@ -1095,6 +1105,7 @@ namespace NSoup.Parse
                 {
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                         // ignore
@@ -1219,7 +1230,7 @@ namespace NSoup.Parse
         {
             public override void Read(Tokeniser t, CharacterReader r)
             {
-                string value = r.ConsumeToAny('\t', '\n', '\f', ' ', '&', '>', _nullChar, '"', '\'', '<', '=', '`');
+                string value = r.ConsumeToAny('\t', '\n', '\r', '\f', ' ', '&', '>', _nullChar, '"', '\'', '<', '=', '`');
                 if (value.Length > 0)
                 {
                     t.TagPending.AppendAttributeValue(value);
@@ -1230,6 +1241,7 @@ namespace NSoup.Parse
                 {
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                         t.Transition(BeforeAttributeName);
@@ -1280,6 +1292,7 @@ namespace NSoup.Parse
                 {
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                         t.Transition(BeforeAttributeName);
@@ -1443,6 +1456,7 @@ namespace NSoup.Parse
                         break;
                     case _nullChar:
                         t.Error(this);
+                        r.Advance();
                         t.CommentPending.Data.Append(_replacementChar);
                         break;
                     case _eof:
@@ -1561,6 +1575,7 @@ namespace NSoup.Parse
                 {
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                         t.Transition(BeforeDoctypeName);
@@ -1594,6 +1609,7 @@ namespace NSoup.Parse
                 {
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                         break; // ignore whitespace
@@ -1636,6 +1652,7 @@ namespace NSoup.Parse
                         break;
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                         t.Transition(AfterDoctypeName);
@@ -1668,7 +1685,11 @@ namespace NSoup.Parse
                     t.Transition(Data);
                     return;
                 }
-                if (r.Matches('>'))
+                if (r.MatchesAny('\t', '\n', '\r', '\f', ' '))
+                {
+                    r.Advance(); // ignore whitespace
+                }
+                else if (r.Matches('>'))
                 {
                     t.EmitDoctypePending();
                     t.AdvanceTransition(Data);
@@ -1699,6 +1720,7 @@ namespace NSoup.Parse
                 {
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                         t.Transition(BeforeDoctypePublicIdentifier);
@@ -1742,6 +1764,7 @@ namespace NSoup.Parse
                 {
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                         break;
@@ -1846,6 +1869,7 @@ namespace NSoup.Parse
                 {
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                         t.Transition(BetweenDoctypePublicAndSystemIdentifiers);
@@ -1887,6 +1911,7 @@ namespace NSoup.Parse
                 {
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                         break;
@@ -1927,6 +1952,7 @@ namespace NSoup.Parse
                 {
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                         t.Transition(BeforeDoctypeSystemIdentifier);
@@ -1970,6 +1996,7 @@ namespace NSoup.Parse
                 {
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                         break;
@@ -2074,6 +2101,7 @@ namespace NSoup.Parse
                 {
                     case '\t':
                     case '\n':
+                    case '\r':
                     case '\f':
                     case ' ':
                         break;
@@ -2203,5 +2231,10 @@ namespace NSoup.Parse
         private static readonly char _replacementChar = Tokeniser.ReplacementChar;
         private static readonly string _replacementStr = new string(Tokeniser.ReplacementChar, 1);
         private const char _eof = CharacterReader.EOF;
+
+        public override string ToString()
+        {
+            return this.GetType().Name.Replace("State", string.Empty);
+        }
     }
 }

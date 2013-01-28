@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSoup.Nodes;
 using NSoup.Safety;
+using NSoup;
 
 namespace Test.Safety
 {
@@ -181,9 +182,17 @@ namespace Test.Safety
         [TestMethod]
         public void resolvesRelativeLinks()
         {
-            string html = "<a href='/foo'>Link</a>";
-            string clean = NSoup.NSoupClient.Clean(html, "http://example.com/", Whitelist.Basic);
-            Assert.AreEqual("<a href=\"http://example.com/foo\" rel=\"nofollow\">Link</a>", clean);
+            String html = "<a href='/foo'>Link</a><img src='/bar'>";
+            String clean = NSoupClient.Clean(html, "http://example.com/", Whitelist.BasicWithImages);
+            Assert.AreEqual("<a href=\"http://example.com/foo\" rel=\"nofollow\">Link</a>\n<img src=\"http://example.com/bar\" />", clean);
+        }
+
+        [TestMethod]
+        public void preservesRelatedLinksIfConfigured()
+        {
+            string html = "<a href='/foo'>Link</a><img src='/bar'> <img src='javascript:alert()'>";
+            string clean = NSoupClient.Clean(html, "http://example.com/", Whitelist.BasicWithImages.PreserveRelativeLinks(true));
+            Assert.AreEqual("<a href=\"/foo\" rel=\"nofollow\">Link</a>\n<img src=\"/bar\" /> \n<img />", clean);
         }
 
         [TestMethod]
@@ -192,6 +201,84 @@ namespace Test.Safety
             string html = "<a href='/foo'>Link</a>";
             string clean = NSoup.NSoupClient.Clean(html, Whitelist.Basic);
             Assert.AreEqual("<a rel=\"nofollow\">Link</a>", clean);
+        }
+
+        [TestMethod]
+        public void handlesCustomProtocols()
+        {
+            String html = "<img src='cid:12345' /> <img src='data:gzzt' />";
+            String dropped = NSoupClient.Clean(html, Whitelist.BasicWithImages);
+            Assert.AreEqual("<img /> \n<img />", dropped);
+
+            String preserved = NSoupClient.Clean(html, Whitelist.BasicWithImages.AddProtocols("img", "src", "cid", "data"));
+            Assert.AreEqual("<img src=\"cid:12345\" /> \n<img src=\"data:gzzt\" />", preserved);
+        }
+
+        [TestMethod]
+        public void handlesAllPseudoTag()
+        {
+            String html = "<p class='foo' src='bar'><a class='qux'>link</a></p>";
+            Whitelist whitelist = new Whitelist()
+                    .AddAttributes(":all", "class")
+                    .AddAttributes("p", "style")
+                    .AddTags("p", "a");
+
+            String clean = NSoupClient.Clean(html, whitelist);
+            Assert.AreEqual("<p class=\"foo\"><a class=\"qux\">link</a></p>", clean);
+        }
+
+        [TestMethod]
+        public void addsTagOnAttributesIfNotSet()
+        {
+            String html = "<p class='foo' src='bar'>One</p>";
+            Whitelist whitelist = new Whitelist()
+                .AddAttributes("p", "class");
+            // ^^ whitelist does not have explicit tag add for p, inferred from add attributes.
+            String clean = NSoupClient.Clean(html, whitelist);
+            Assert.AreEqual("<p class=\"foo\">One</p>", clean);
+        }
+
+        [TestMethod]
+        public void supplyOutputSettings()
+        {
+            // test that one can override the default document output settings
+            OutputSettings os = new OutputSettings();
+            os.PrettyPrint(false);
+            os.EscapeMode = Entities.EscapeMode.Extended;
+
+            string html = "<div><p>&bernou;</p></div>";
+            string customOut = NSoupClient.Clean(html, "http://foo.com/", Whitelist.Relaxed, os);
+            string defaultOut = NSoupClient.Clean(html, "http://foo.com/", Whitelist.Relaxed);
+            Assert.AreNotSame(defaultOut, customOut);
+
+            Assert.AreEqual("<div><p>&bernou;</p></div>", customOut);
+            Assert.AreEqual("<div>\n" +
+                " <p>ג„¬</p>\n" +
+                "</div>", defaultOut);
+
+            os.Encoding = Encoding.ASCII;
+            os.EscapeMode = Entities.EscapeMode.Base;
+            String customOut2 = NSoupClient.Clean(html, "http://foo.com/", Whitelist.Relaxed, os);
+            Assert.AreEqual("<div><p>&#8492;</p></div>", customOut2);
+        }
+
+        [TestMethod]
+        public void handlesFramesets()
+        {
+            String dirty = "<html><head><script></script><noscript></noscript></head><frameset><frame src=\"foo\" /><frame src=\"foo\" /></frameset></html>";
+            String clean = NSoupClient.Clean(dirty, Whitelist.Basic);
+            Assert.AreEqual("", clean); // nothing good can come out of that
+
+            Document dirtyDoc = NSoupClient.Parse(dirty);
+            Document cleanDoc = new Cleaner(Whitelist.Basic).Clean(dirtyDoc);
+            Assert.IsFalse(cleanDoc == null);
+            Assert.AreEqual(0, cleanDoc.Body.ChildNodes.Count);
+        }
+
+        [TestMethod]
+        public void cleansInternationalText()
+        {
+            Assert.AreEqual("׀¿ׁ€׀¸׀²׀µׁ‚", NSoupClient.Clean("׀¿ׁ€׀¸׀²׀µׁ‚", Whitelist.None));
         }
     }
 }

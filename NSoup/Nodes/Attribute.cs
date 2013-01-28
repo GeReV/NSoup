@@ -105,10 +105,10 @@ namespace NSoup.Nodes
         /// </summary>
         public string Html()
         {
-            return string.Format("{0}=\"{1}\"", _key, Entities.Escape(_value, (new Document(string.Empty).Settings)));
+            return string.Format("{0}=\"{1}\"", _key, Entities.Escape(_value, (new Document(string.Empty).OutputSettings())));
         }
 
-        public void Html(StringBuilder accum, Document.OutputSettings output)
+        public void Html(StringBuilder accum, OutputSettings output)
         {
             accum.Append(Key)
                 .Append("=\"")
@@ -126,7 +126,7 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
-        /// Create a new Attribute from an unencoded key and a HMTL attribute encoded value.
+        /// Create a new Attribute from an unencoded key and a HTML attribute encoded value.
         /// </summary>
         /// <param name="unencodedKey">assumes the key is not encoded, as can be only run of simple \w chars.</param>
         /// <param name="encodedValue">HTML attribute encoded value</param>
@@ -177,7 +177,7 @@ namespace NSoup.Nodes
         {
             try
             {
-                return new Attribute(Key, Value); // only fields are immutable strings key and value, so no more deep copy reqd
+                return new Attribute(Key, Value); // only fields are immutable strings key and value, so no more deep copy required
             }
             catch
             {

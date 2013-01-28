@@ -196,11 +196,11 @@ namespace NSoup.Nodes
         public string Html()
         {
             StringBuilder accum = new StringBuilder();
-            Html(accum, (new Document(string.Empty).Settings)); // output settings a bit funky, but this html() seldom used
+            Html(accum, (new Document(string.Empty).OutputSettings())); // output settings a bit funky, but this html() seldom used
             return accum.ToString();
         }
 
-        public void Html(StringBuilder accum, Document.OutputSettings output)
+        public void Html(StringBuilder accum, OutputSettings output)
         {
             if (attributes == null)
             {

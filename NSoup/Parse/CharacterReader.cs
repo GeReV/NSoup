@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -7,13 +8,13 @@ using System.Text.RegularExpressions;
 namespace NSoup.Parse
 {
     /// <summary>
-    /// CharacterReader cosumes tokens off a string. To replace the old TokenQueue.
+    /// CharacterReader consumes tokens off a string. To replace the old TokenQueue.
     /// </summary>
-    internal class CharacterReader
+    public class CharacterReader
     {
         public const char EOF = (char)254;
 
-        private readonly string _input;
+        private readonly char[] _input;
         private readonly int _length;
         private int _pos = 0;
         private int _mark = 0;
@@ -27,7 +28,7 @@ namespace NSoup.Parse
 
             input = Regex.Replace(input, "\r\n?", "\n"); // normalise carriage returns to newlines
 
-            this._input = input;
+            this._input = input.ToCharArray();
             this._length = input.Length;
         }
 
@@ -75,19 +76,67 @@ namespace NSoup.Parse
 
         public string ConsumeAsString()
         {
-            string s = _input.Substring(_pos, 1);
+            string s = new string(_input, _pos, 1);
             _pos++;
 
             return s;
         }
 
+        /// <summary>
+        /// Returns the number of characters between the current position and the next instance of the input char
+        /// </summary>
+        /// <param name="c">Scan target</param>
+        /// <returns>Offset between current position and next instance of target. -1 if not found</returns>
+        public int NextIndexOf(char c)
+        {
+            // doesn't handle scanning for surrogates
+            for (int i = _pos; i < _length; i++)
+            {
+                if (c == _input[i])
+                    return i - _pos;
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// Returns the number of characters between the current position and the next instance of the input sequence
+        /// </summary>
+        /// <param name="seq">Scan target</param>
+        /// <returns>Offset between current position and next instance of target. -1 if not found.</returns>
+        public int NextIndexOf(string seq)
+        {
+            // doesn't handle scanning for surrogates
+            char startChar = seq[0];
+            for (int offset = _pos; offset < _length; offset++)
+            {
+                // scan to first instance of startchar:
+                if (startChar != _input[offset])
+                {
+                    while (++offset < _length && startChar != _input[offset]);
+                }
+                if (offset < _length)
+                {
+                    int i = offset + 1;
+                    int last = i + seq.Length - 1;
+                    
+                    for (int j = 1; i < last && seq[j] == _input[i]; i++, j++) ;
+                    
+                    if (i == last) // found full sequence
+                    {
+                        return offset - _pos;
+                    }
+                }
+            }
+            return -1;
+        }
+
         public string ConsumeTo(char c)
         {
-            int offset = _input.IndexOf(c, _pos);
+            int offset = NextIndexOf(c);
             if (offset != -1)
             {
-                string consumed = _input.Substring(_pos, offset - _pos);
-                _pos += consumed.Length;
+                string consumed = new string(_input, _pos, offset);
+                _pos += offset;
                 return consumed;
             }
             else
@@ -98,12 +147,12 @@ namespace NSoup.Parse
 
         public string ConsumeTo(string seq)
         {
-            int offset = _input.IndexOf(seq, _pos);
+            int offset = NextIndexOf(seq);
 
             if (offset != -1)
             {
-                string consumed = _input.Substring(_pos, offset - _pos);
-                _pos += consumed.Length;
+                string consumed = new string(_input, _pos, offset);
+                _pos += offset;
                 return consumed;
             }
             else
@@ -117,12 +166,11 @@ namespace NSoup.Parse
             int start = _pos;
 
             bool flag = false;
-            while (!IsEmpty() && !flag)
+            while (_pos < _length && !flag)
             {
-                char c = _input[_pos];
-                foreach (char seek in seq)
+                for (int i = 0; i < seq.Length; i++)
                 {
-                    if (seek == c)
+                    if (_input[_pos] == seq[i])
                     {
                         flag = true; // Break outer loop.
                         _pos--; // Nullify next pos++ operation.
@@ -132,20 +180,20 @@ namespace NSoup.Parse
                 _pos++;
             }
 
-            return _pos > start ? _input.Substring(start, _pos - start) : string.Empty;
+            return _pos > start ? new string(_input, start, _pos - start) : string.Empty;
         }
 
         public string ConsumeToEnd()
         {
-            string data = _input.Substring(_pos);
-            _pos = _input.Length;
+            string data = new string(_input, _pos, _length - _pos);
+            _pos = _length;
             return data;
         }
 
         public string ConsumeLetterSequence()
         {
             int start = _pos;
-            while (!IsEmpty())
+            while (_pos < _length)
             {
                 char c = _input[_pos];
                 if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))
@@ -158,16 +206,16 @@ namespace NSoup.Parse
                 }
             }
 
-            return _input.Substring(start, _pos - start);
+            return new string(_input, start, _pos - start);
         }
 
-        public string ConsumeHexSequence()
+        public string ConsumeLetterThenDigitSequence()
         {
             int start = _pos;
-            while (!IsEmpty())
+            while (_pos < _length)
             {
                 char c = _input[_pos];
-                if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'))
+                if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))
                 {
                     _pos++;
                 }
@@ -176,12 +224,6 @@ namespace NSoup.Parse
                     break;
                 }
             }
-            return _input.Substring(start, _pos - start);
-        }
-
-        public string ConsumeDigitSequence()
-        {
-            int start = _pos;
             while (!IsEmpty())
             {
                 char c = _input[_pos];
@@ -194,7 +236,43 @@ namespace NSoup.Parse
                     break;
                 }
             }
-            return _input.Substring(start, _pos - start);
+
+            return new string(_input, start, _pos - start);
+        }
+
+        public string ConsumeHexSequence()
+        {
+            int start = _pos;
+            while (_pos < _length) {
+                char c = _input[_pos];
+                if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'))
+                {
+                    _pos++;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            return new string(_input, start, _pos - start);
+        }
+
+        public string ConsumeDigitSequence()
+        {
+            int start = _pos;
+            while (_pos < _length)
+            {
+                char c = _input[_pos];
+                if (c >= '0' && c <= '9')
+                {
+                    _pos++;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            return new string(_input, start, _pos - start);
         }
 
         public bool Matches(char c)
@@ -205,16 +283,41 @@ namespace NSoup.Parse
 
         public bool Matches(string seq)
         {
-            return _input.Substring(_pos).StartsWith(seq);
+            int scanLength = seq.Length;
+            if (scanLength > _length - _pos)
+            {
+                return false;
+            }
+
+            for (int offset = 0; offset < scanLength; offset++)
+            {
+                if (seq[offset] != _input[_pos + offset])
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         public bool MatchesIgnoreCase(string seq)
         {
-            if (_input.Length - _pos < seq.Length)
+            int scanLength = seq.Length;
+            if (scanLength > _length - _pos)
             {
                 return false;
             }
-            return _input.Substring(_pos, seq.Length).Equals(seq, StringComparison.InvariantCultureIgnoreCase);
+
+            for (int offset = 0; offset < scanLength; offset++)
+            {
+                char upScan = char.ToUpperInvariant(seq[offset]);
+                char upTarget = char.ToUpperInvariant(_input[_pos + offset]);
+                if (upScan != upTarget)
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         public bool MatchesAny(params char[] seq)
@@ -284,15 +387,15 @@ namespace NSoup.Parse
         public bool ContainsIgnoreCase(string seq)
         {
             // used to check presence of </title>, </style>. only finds consistent case.
-            string loScan = seq.ToLowerInvariant();
-            string hiScan = seq.ToUpperInvariant();
-            return (_input.IndexOf(loScan, _pos) > -1) || (_input.IndexOf(hiScan, _pos) > -1);
+            string loScan = seq.ToLower(CultureInfo.CreateSpecificCulture("en-US"));
+            string hiScan = seq.ToUpper(CultureInfo.CreateSpecificCulture("en-US"));
+            return (NextIndexOf(loScan) > -1) || (NextIndexOf(hiScan) > -1);
         }
 
 
         public override String ToString()
         {
-            return _input.Substring(_pos);
+            return new string(_input, _pos, _length - _pos);
         }
     }
 }

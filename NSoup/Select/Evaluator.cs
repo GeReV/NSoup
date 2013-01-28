@@ -104,7 +104,7 @@ namespace NSoup.Select
         }
 
         /// <summary>
-        /// Evaluator for attibute name matching
+        /// Evaluator for attribute name matching
         /// </summary>
         public sealed class Attribute : Evaluator
         {
@@ -413,7 +413,7 @@ namespace NSoup.Select
         }
 
         /// <summary>
-        /// Evaluator for matching Element (and its descendents) text
+        /// Evaluator for matching Element (and its descendants) text
         /// </summary>
         public sealed class ContainsText : Evaluator
         {
@@ -459,7 +459,7 @@ namespace NSoup.Select
         }
 
         /// <summary>
-        /// Evaluator for matching Element (and its descendents) text with regex
+        /// Evaluator for matching Element (and its descendants) text with regex
         /// </summary>
         public sealed class MatchesRegex : Evaluator
         {

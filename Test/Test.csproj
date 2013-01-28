@@ -1,19 +1,21 @@
-﻿<Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.21022</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{76A43BB3-E802-4407-9559-B438C4F22030}</ProjectGuid>
+    <ProjectGuid>{B9BBCF9A-4E79-4A90-8401-C11D4D7A86B0}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Test</RootNamespace>
     <AssemblyName>Test</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
-    <SignAssembly>true</SignAssembly>
-    <AssemblyOriginatorKeyFile>NSoupTest.snk</AssemblyOriginatorKeyFile>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+    <ReferencePath>$(ProgramFiles)\Common Files\microsoft shared\VSTT\$(VisualStudioVersion)\UITestExtensionPackages</ReferencePath>
+    <IsCodedUITest>False</IsCodedUITest>
+    <TestProjectType>UnitTest</TestProjectType>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -32,46 +34,56 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>NSoupTest.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
     <Reference Include="System" />
-    <Reference Include="System.Core">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Data" />
-    <Reference Include="System.Data.DataSetExtensions">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Web" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Xml.Linq">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
   </ItemGroup>
+  <Choose>
+    <When Condition="('$(VisualStudioVersion)' == '10.0' or '$(VisualStudioVersion)' == '') and '$(TargetFrameworkVersion)' == 'v3.5'">
+      <ItemGroup>
+        <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <ItemGroup>
+        <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework" />
+      </ItemGroup>
+    </Otherwise>
+  </Choose>
   <ItemGroup>
+    <Compile Include="Helper\DataUtilTest.cs" />
     <Compile Include="Helper\HttpConnectionTest.cs" />
     <Compile Include="Helper\StringUtilTest.cs" />
-    <Compile Include="Helper\DataUtilTest.cs" />
     <Compile Include="Integration\Benchmark.cs" />
+    <Compile Include="Integration\ParseTest.cs" />
     <Compile Include="Integration\UrlConnectTest.cs" />
-    <Compile Include="Nodes\TextNodeTest.cs" />
-    <Compile Include="Nodes\NodeTest.cs" />
     <Compile Include="Nodes\DocumentTest.cs" />
     <Compile Include="Nodes\ElementTest.cs" />
     <Compile Include="Nodes\EntitiesTest.cs" />
+    <Compile Include="Nodes\NodeTest.cs" />
+    <Compile Include="Nodes\TextNodeTest.cs" />
     <Compile Include="Parser\AttributeParseTest.cs" />
-    <Compile Include="Parser\ParserTest.cs" />
+    <Compile Include="Parser\CharacterReaderTest.cs" />
+    <Compile Include="Parser\HtmlParserTest.cs" />
     <Compile Include="Parser\TagTest.cs" />
     <Compile Include="Parser\TokenQueueTests.cs" />
+    <Compile Include="Parser\XmlTreeBuilderTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Integration\ParseTest.cs" />
     <Compile Include="Safety\CleanerTest.cs" />
-    <Compile Include="Select\SelectorTest.cs" />
     <Compile Include="Select\ElementsTest.cs" />
+    <Compile Include="Select\SelectorTest.cs" />
+    <Compile Include="Select\QueryParserTest.cs" />
     <Compile Include="TextUtil.cs" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="htmltests\xml-test.xml" />
     <EmbeddedResource Include="htmltests\baidu-cn-home.html" />
+    <EmbeddedResource Include="htmltests\baidu-variant.html" />
     <EmbeddedResource Include="htmltests\google-ipod.html" />
     <EmbeddedResource Include="htmltests\meta-charset-1.html" />
     <EmbeddedResource Include="htmltests\meta-charset-2.html" />
@@ -80,26 +92,39 @@
     <EmbeddedResource Include="htmltests\nyt-article-1.html" />
     <EmbeddedResource Include="htmltests\smh-biz-article-1.html" />
     <EmbeddedResource Include="htmltests\thumb.jpg" />
+    <EmbeddedResource Include="htmltests\yahoo-article-1.html" />
     <EmbeddedResource Include="htmltests\yahoo-jp.html" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\NSoup\NSoup.csproj">
-      <Project>{EA189DC2-2C8D-4B50-BEE8-8964D6BEDF33}</Project>
-      <Name>NSoup</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="htmltests\README" />
     <None Include="NSoupTest.snk" />
-    <Shadow Include="Test References\NSoup.accessor" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="htmltests\yahoo-article-1.html" />
+    <ProjectReference Include="..\NSoup\NSoup.csproj">
+      <Project>{ea189dc2-2c8d-4b50-bee8-8964d6bedf33}</Project>
+      <Name>NSoup</Name>
+    </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="htmltests\baidu-variant.html" />
-  </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Choose>
+    <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
+      <ItemGroup>
+        <Reference Include="Microsoft.VisualStudio.QualityTools.CodedUITestFramework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+          <Private>False</Private>
+        </Reference>
+        <Reference Include="Microsoft.VisualStudio.TestTools.UITest.Common, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+          <Private>False</Private>
+        </Reference>
+        <Reference Include="Microsoft.VisualStudio.TestTools.UITest.Extension, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+          <Private>False</Private>
+        </Reference>
+        <Reference Include="Microsoft.VisualStudio.TestTools.UITesting, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+          <Private>False</Private>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

@@ -5,6 +5,7 @@ using System.Text;
 using NSoup.Nodes;
 using System.Net;
 using NSoup.Helper;
+using NSoup.Parse;
 
 namespace NSoup
 {
@@ -121,7 +122,7 @@ namespace NSoup
         IConnection Header(string name, string value);
 
         /// <summary>
-        /// Set a cookie to be sent in the request
+        /// Set a cookie to be sent in the request.
         /// </summary>
         /// <param name="name">name of cookie</param>
         /// <param name="value">value of cookie</param>
@@ -129,28 +130,54 @@ namespace NSoup
         IConnection Cookie(string name, string value);
 
         /// <summary>
+        /// Adds each of the supplied cookies to the request.
+        /// </summary>
+        /// <param name="cookies">Map of cookie name -> value pairs</param>
+        /// <returns>This Connection, for chaining</returns>
+        IConnection Cookies(IDictionary<string, string> cookies);
+
+        /// <summary>
+        /// Provide an alternate parser to use when parsing the response to a Document.
+        /// </summary>
+        /// <param name="parser">Alternate parser</param>
+        /// <returns>This Connection, for chaining</returns>
+        IConnection Parser(Parser parser);
+
+        /// <summary>
         /// Execute the request as a GET, and parse the result.
         /// </summary>
-        /// <returns>parsed Document</returns>
-        /// <exception cref="IOException" />
+        /// <returns>Parsed Document</returns>
+        /// <exception cref="HttpStatusException">If the response is not OK and HTTP response errors are not ignored</exception>
+        /// <exception cref="UnsupportedMimeTypeException">If the response mime type is not supported and those errors are not ignored</exception>
+        /// //@throws java.net.MalformedURLException if the request URL is not a HTTP or HTTPS URL, or is otherwise malformed
+        /// //@throws java.net.SocketTimeoutException if the connection times out
+        /// <exception cref="IOException">On error</exception>
         Document Get();
 
         /// <summary>
         /// Execute the request as a POST, and parse the result.
         /// </summary>
-        /// <returns>parsed Document</returns>
-        /// <exception cref="IOException" />
+        /// <returns>Parsed Document</returns>
+        /// <exception cref="HttpStatusException">If the response is not OK and HTTP response errors are not ignored</exception>
+        /// <exception cref="UnsupportedMimeTypeException">If the response mime type is not supported and those errors are not ignored</exception>
+        /// //@throws java.net.MalformedURLException if the request URL is not a HTTP or HTTPS URL, or is otherwise malformed
+        /// //@throws java.net.SocketTimeoutException if the connection times out
+        /// <exception cref="IOException">On error</exception>
         Document Post();
 
         /// <summary>
         /// Execute the request.
         /// </summary>
         /// <returns>a response object</returns>
-        /// <exception cref="IOException" />
+        /// <exception cref="HttpStatusException">If the response is not OK and HTTP response errors are not ignored</exception>
+        /// <exception cref="UnsupportedMimeTypeException">If the response mime type is not supported and those errors are not ignored</exception>
+        /// //@throws java.net.MalformedURLException if the request URL is not a HTTP or HTTPS URL, or is otherwise malformed
+        /// //@throws java.net.SocketTimeoutException if the connection times out
+        /// <exception cref="IOException">On error</exception>
         IResponse Execute();
 
         /// <summary>
-        /// Get the request object associatated with this IConnection
+        /// Get the request object associated with this IConnection
         /// </summary>
         /// <returns>request</returns>
         IRequest Request();
@@ -169,7 +196,7 @@ namespace NSoup
         IResponse Response();
 
         /// <summary>
-        /// Set the conenction's response
+        /// Set the connection's response
         /// </summary>
         /// <param name="response">new response</param>
         /// <returns>this IConnection, for chaining</returns>
@@ -238,7 +265,7 @@ namespace NSoup
         /// Remove a header by name
         /// </summary>
         /// <param name="name">name of header to remove (case insensitive)</param>
-        /// <returns>this, for chianing</returns>
+        /// <returns>this, for chaining</returns>
         IConnectionBase<T> RemoveHeader(string name);
 
         /// <summary>
@@ -261,7 +288,7 @@ namespace NSoup
         /// </summary>
         /// <param name="name">name of cookie</param>
         /// <param name="value">value of cookie</param>
-        /// <returns>this, for chianing</returns>
+        /// <returns>this, for chaining</returns>
         IConnectionBase<T> Cookie(string name, string value);
 
         /// <summary>
@@ -275,7 +302,7 @@ namespace NSoup
         /// Remove a cookie by name
         /// </summary>
         /// <param name="name">name of cookie to remove</param>
-        /// <returns>this, for chianing</returns>
+        /// <returns>this, for chaining</returns>
         IConnectionBase<T> RemoveCookie(string name);
 
         /// <summary>
@@ -315,7 +342,7 @@ namespace NSoup
         /// Configures the request to (not) follow server redirects. By default this is <b>true</b>.
         /// </summary>
         /// <param name="followRedirects">true if server redirects should be followed.</param>
-        /// <returns>this IConnection, for chaining</returns>
+        /// <returns>This IRequest, for chaining</returns>
         IRequest FollowRedirects(bool followRedirects);
 
         /// <summary>
@@ -328,7 +355,8 @@ namespace NSoup
         /// Configures the request to ignore HTTP errors in the response.
         /// </summary>
         /// <param name="ignoreHttpErrors">set to true to ignore HTTP errors.</param>
-        void IgnoreHttpErrors(bool ignoreHttpErrors);
+        /// <returns>This IRequest, for chaining</returns>
+        IRequest IgnoreHttpErrors(bool ignoreHttpErrors);
 
         /// <summary>
         /// Gets the current IgnoreContentType configuration.
@@ -340,7 +368,8 @@ namespace NSoup
         /// Configures the request to ignore the Content-Type of the response.
         /// </summary>
         /// <param name="ignoreContentType">set to true to ignore the contenet type</param>
-        void IgnoreContentType(bool ignoreContentType);
+        /// <returns>This IRequest, for chaining</returns>
+        IRequest IgnoreContentType(bool ignoreContentType);
 
         /// <summary>
         /// Add a data parameter to the request
@@ -354,6 +383,19 @@ namespace NSoup
         /// </summary>
         /// <returns>collection of keyvals</returns>
         ICollection<KeyVal> Data();
+
+        /// <summary>
+        /// Specify the parser to use when parsing the document.
+        /// </summary>
+        /// <param name="parser">Parser to use.</param>
+        /// <returns>This IRequest, for chaining</returns>
+        IRequest Parser(Parser parser);
+
+        /// <summary>
+        /// Get the current parser to use when parsing the document.
+        /// </summary>
+        /// <returns>Current Parser</returns>
+        Parser Parser();
     }
 
     /// <summary>

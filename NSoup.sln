@@ -1,17 +1,22 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NSoup", "NSoup\NSoup.csproj", "{EA189DC2-2C8D-4B50-BEE8-8964D6BEDF33}"
-EndProject
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C66E2854-5CFF-4DD3-B867-3FE49DE1E96A}"
 	ProjectSection(SolutionItems) = preProject
 		LocalTestRun.testrunconfig = LocalTestRun.testrunconfig
 		NSoup.vsmdi = NSoup.vsmdi
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "Test\Test.csproj", "{76A43BB3-E802-4407-9559-B438C4F22030}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NSoup", "NSoup\NSoup.csproj", "{EA189DC2-2C8D-4B50-BEE8-8964D6BEDF33}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "Test\Test.csproj", "{B9BBCF9A-4E79-4A90-8401-C11D4D7A86B0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApplication1", "ConsoleApplication1\ConsoleApplication1.csproj", "{51AD4E15-891C-45D7-9AA1-B83A69E53B07}"
 EndProject
 Global
+	GlobalSection(TestCaseManagementSettings) = postSolution
+		CategoryFile = NSoup.vsmdi
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
@@ -21,15 +26,16 @@ Global
 		{EA189DC2-2C8D-4B50-BEE8-8964D6BEDF33}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EA189DC2-2C8D-4B50-BEE8-8964D6BEDF33}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EA189DC2-2C8D-4B50-BEE8-8964D6BEDF33}.Release|Any CPU.Build.0 = Release|Any CPU
-		{76A43BB3-E802-4407-9559-B438C4F22030}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{76A43BB3-E802-4407-9559-B438C4F22030}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{76A43BB3-E802-4407-9559-B438C4F22030}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{76A43BB3-E802-4407-9559-B438C4F22030}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9BBCF9A-4E79-4A90-8401-C11D4D7A86B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9BBCF9A-4E79-4A90-8401-C11D4D7A86B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9BBCF9A-4E79-4A90-8401-C11D4D7A86B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9BBCF9A-4E79-4A90-8401-C11D4D7A86B0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{51AD4E15-891C-45D7-9AA1-B83A69E53B07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{51AD4E15-891C-45D7-9AA1-B83A69E53B07}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{51AD4E15-891C-45D7-9AA1-B83A69E53B07}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{51AD4E15-891C-45D7-9AA1-B83A69E53B07}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(TestCaseManagementSettings) = postSolution
-		CategoryFile = NSoup.vsmdi
 	EndGlobalSection
 EndGlobal
