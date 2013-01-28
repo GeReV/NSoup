@@ -90,6 +90,9 @@ namespace Test.Nodes
             withTitle.Title = "Hello";
             Assert.AreEqual("Hello", withTitle.Title);
             Assert.AreEqual("Hello", withTitle.Select("title").First.Text());
+
+            Document normaliseTitle = NSoupClient.Parse("<title>   Hello\nthere   \n   now   \n");
+            Assert.AreEqual("Hello there now", normaliseTitle.Title);
         }
 
         [TestMethod]
@@ -98,13 +101,13 @@ namespace Test.Nodes
             Document doc = NSoup.NSoupClient.Parse("<p title=π>π & < > </p>");
             // default is utf-8
             Assert.AreEqual("<p title=\"π\">π &amp; &lt; &gt; </p>", doc.Body.Html());
-            Assert.AreEqual("UTF-8", doc.Settings.Encoding.WebName.ToUpperInvariant());
+            Assert.AreEqual("UTF-8", doc.OutputSettings().Encoding.WebName.ToUpperInvariant());
 
-            doc.Settings.SetEncoding("ascii");
-            Assert.AreEqual(Entities.EscapeMode.Base, doc.Settings.EscapeMode);
+            doc.OutputSettings().SetEncoding("ascii");
+            Assert.AreEqual(Entities.EscapeMode.Base, doc.OutputSettings().EscapeMode);
             Assert.AreEqual("<p title=\"&#960;\">&#960; &amp; &lt; &gt; </p>", doc.Body.Html());
 
-            doc.Settings.EscapeMode = Entities.EscapeMode.Extended;
+            doc.OutputSettings().EscapeMode = Entities.EscapeMode.Extended;
             Assert.AreEqual("<p title=\"&pi;\">&pi; &amp; &lt; &gt; </p>", doc.Body.Html());
         }
 
@@ -112,7 +115,7 @@ namespace Test.Nodes
         public void testXhtmlReferences()
         {
             Document doc = NSoupClient.Parse("&lt; &gt; &amp; &quot; &apos; &times;");
-            doc.GetOutputSettings().EscapeMode = Entities.EscapeMode.Xhtml;
+            doc.OutputSettings().EscapeMode = Entities.EscapeMode.Xhtml;
             Assert.AreEqual("&lt; &gt; &amp; &quot; &apos; ×", doc.Body.Html());
         }
 

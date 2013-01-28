@@ -63,19 +63,30 @@ namespace Test.Helper
         [TestMethod]
         public void testCharset()
         {
-            Assert.AreEqual("UTF-8", DataUtil.GetCharsetFromContentType("text/html;charset=utf-8 "));
+            Assert.AreEqual("utf-8", DataUtil.GetCharsetFromContentType("text/html;charset=utf-8 "), true);
             Assert.AreEqual("UTF-8", DataUtil.GetCharsetFromContentType("text/html; charset=UTF-8"));
             Assert.AreEqual("ISO-8859-1", DataUtil.GetCharsetFromContentType("text/html; charset=ISO-8859-1"));
             Assert.AreEqual(null, DataUtil.GetCharsetFromContentType("text/html"));
             Assert.AreEqual(null, DataUtil.GetCharsetFromContentType(null));
+            Assert.AreEqual(null, DataUtil.GetCharsetFromContentType("text/html;charset=Unknown"));
+        }
+
+        
+        public void testQuotedCharset()
+        {
+            Assert.AreEqual("utf-8", DataUtil.GetCharsetFromContentType("text/html; charset=\"utf-8\""));
+            Assert.AreEqual("UTF-8", DataUtil.GetCharsetFromContentType("text/html;charset=\"UTF-8\""));
+            Assert.AreEqual("ISO-8859-1", DataUtil.GetCharsetFromContentType("text/html; charset=\"ISO-8859-1\""));
+            Assert.AreEqual(null, DataUtil.GetCharsetFromContentType("text/html; charset=\"Unsupported\""));
         }
 
         [TestMethod]
-        public void testQuotedCharset()
+        public void discardsSpuriousByteOrderMark()
         {
-            Assert.AreEqual("UTF-8", DataUtil.GetCharsetFromContentType("text/html; charset=\"utf-8\""));
-            Assert.AreEqual("UTF-8", DataUtil.GetCharsetFromContentType("text/html;charset=\"utf-8\""));
-            Assert.AreEqual("ISO-8859-1", DataUtil.GetCharsetFromContentType("text/html; charset=\"ISO-8859-1\""));
+            string html = "\uFEFF<html><head><title>One</title></head><body>Two</body></html>";
+            byte[] buffer = Encoding.UTF8.GetBytes(html);
+            Document doc = DataUtil.ParseByteData(buffer, "UTF-8", "http://foo.com/", NSoup.Parse.Parser.HtmlParser());
+            Assert.AreEqual("One", doc.Head.Text());
         }
     }
 }

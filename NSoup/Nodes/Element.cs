@@ -1,23 +1,13 @@
-﻿using System;
+﻿using NSoup.Parse;
+using NSoup.Select;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using NSoup.Parse;
-using NSoup.Select;
-using NSoup.Helper;
 using System.Text.RegularExpressions;
 
 namespace NSoup.Nodes
 {
-    
-    /// <summary>
-    /// A HTML element consists of a tag name, attributes, and child nodes (including text nodes and other elements).
-    /// </summary>
-    /// <remarks>From an Element, you can extract data, traverse the node graph, and manipulate the HTML.</remarks>
-    /// <!--
-    /// Original Author: Jonathan Hedley, jonathan@hedley.net
-    /// Ported to .NET by: Amir Grozki
-    /// -->
     public class Element : Node
     {
         private Tag _tag;
@@ -82,9 +72,9 @@ namespace NSoup.Nodes
             {
                 throw new ArgumentException("Tag name must not be empty.");
             }
-            
+
             _tag = Tag.ValueOf(tagName);
-            
+
             return this;
         }
 
@@ -221,10 +211,57 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
+        /// Gets this element's child text nodes. The list is unmodifiable but the text nodes may be manipulated.
+        /// This is effectively a filter on #ChildNodes to get Text nodes.
+        /// For example, with the input HTML: {@code <p>One <span>Two</span> Three <br> Four</p>} with the {@code p} element selected:
+        /// p.Text = "One Two Three Four"
+        /// p.OwnText} = "One Three Four"
+        /// p.Children = Elements[<span>, <br>]
+        /// p.ChildNodes = List<Node>["One ", <span>, " Three ", <br>, " Four"]
+        /// p.TextNodes = List<TextNode>["One ", " Three ", " Four"]
+        /// </summary>
+        public IList<TextNode> TextNodes
+        {
+            get
+            {
+                List<TextNode> textNodes = new List<TextNode>();
+                foreach (Node node in ChildNodes)
+                {
+                    if (node is TextNode)
+                    {
+                        textNodes.Add((TextNode)node);
+                    }
+                }
+                return textNodes.AsReadOnly();
+            }
+        }
+
+        /// <summary>
+        /// Gets this element's child data nodes. The list is unmodifiable but the data nodes may be manipulated.
+        /// This is effectively a filter on ChildNodes to get Data nodes.
+        /// </summary>
+        /// <seealso cref="Data"/>
+        public IList<DataNode> DataNodes
+        {
+            get
+            {
+                List<DataNode> dataNodes = new List<DataNode>();
+                foreach (Node node in ChildNodes)
+                {
+                    if (node is DataNode)
+                    {
+                        dataNodes.Add((DataNode)node);
+                    }
+                }
+                return dataNodes.AsReadOnly();
+            }
+        }
+
+        /// <summary>
         /// Find elements that match the <see cref="Selector"/> query, with this element as the starting context. Matched elements 
         /// may include this element, or any of its children.
         /// </summary>
-        /// <param name="query">a Selector query</param>
+        /// <param name="cssQuery">a Selector CSS-like query</param>
         /// <returns>elements that match the query (empty if none match)</returns>
         /// <see cref="NSoup.Select.Selector"/>
         /// <remarks>
@@ -236,9 +273,9 @@ namespace NSoup.Nodes
         /// &lt;/ul&gt; 
         /// See the query syntax documentation in <see cref="NSoup.Select.Selector"/>
         /// </remarks>
-        public Elements Select(string query)
+        public Elements Select(string cssQuery)
         {
-            return Selector.Select(query, this);
+            return Selector.Select(cssQuery, this);
         }
 
         /// <summary>
@@ -366,7 +403,7 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
-        /// Insert the specified HTML into the DOM before this element (i.e. as a preceeding sibling).
+        /// Insert the specified HTML into the DOM before this element (as a preceding sibling).
         /// </summary>
         /// <param name="html">HTML to add before this element</param>
         /// <returns>this element, for chaining</returns>
@@ -377,7 +414,7 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
-        /// Insert the specified node into the DOM before this node (i.e. as a preceeding sibling). 
+        /// Insert the specified node into the DOM before this node (as a preceding sibling). 
         /// </summary>
         /// <param name="node">node to add before this element</param>
         /// <returns>this Element, for chaining</returns>
@@ -388,7 +425,7 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
-        /// Insert the specified HTML into the DOM after this element (i.e. as a following sibling).
+        /// Insert the specified HTML into the DOM after this element (as a following sibling).
         /// </summary>
         /// <param name="html">HTML to add after this element</param>
         /// <returns>this element, for chaining</returns>
@@ -399,7 +436,7 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
-        /// Insert the specified node into the DOM after this node (i.e. as a following sibling).
+        /// Insert the specified node into the DOM after this node (as a following sibling).
         /// </summary>
         /// <param name="node">node to add after this element</param>
         /// <returns>this element, for chaining</returns>
@@ -430,11 +467,30 @@ namespace NSoup.Nodes
         }
 
         /// <summary>
-        /// Gets sibling elements.
+        /// Gets sibling elements. If the element has no sibling elements, returns an empty list. An element is not a sibling
+        /// of itself, so will not be included in the returned list.
         /// </summary>
         public Elements SiblingElements
         {
-            get { return Parent.Children; }
+            get
+            {
+                if (ParentNode == null)
+                {
+                    return new Elements(0);
+                }
+
+                IList<Element> elements = Parent.Children;
+                Elements siblings = new Elements(elements.Count - 1);
+
+                foreach (Element el in elements)
+                {
+                    if (el != this)
+                    {
+                        siblings.Add(el);
+                    }
+                }
+                return siblings;
+            }
         }
 
         /// <summary>
@@ -449,6 +505,11 @@ namespace NSoup.Nodes
         {
             get
             {
+                if (ParentNode == null)
+                {
+                    return null;
+                }
+
                 IList<Element> siblings = Parent.Children;
                 int index = siblings.IndexOf(this);
 
@@ -529,7 +590,8 @@ namespace NSoup.Nodes
             }
         }
 
-        private static int? IndexInList<T>(Element search, IList<T> elements) where T : Element {
+        private static int? IndexInList<T>(Element search, IList<T> elements) where T : Element
+        {
 
             if (search == null)
             {
@@ -723,7 +785,7 @@ namespace NSoup.Nodes
         /// Find elements that have attributes whose values match the supplied regular expression.
         /// </summary>
         /// <param name="key">name of the attribute</param>
-        /// <param name="regex">regular expression to match agaisnt attribute values.</param>
+        /// <param name="regex">regular expression to match against attribute values.</param>
         /// <returns>elements that have attributes matching this regular expression</returns>
         public Elements GetElementsByAttributeValueMatching(string key, string regex)
         {
@@ -868,8 +930,9 @@ namespace NSoup.Nodes
         /// Gets the combined text of this element and all its children.
         /// For example, given HTML <code><p>Hello <b>there</b> now!</p></code>, <code>p.Text()</code> returns <code>"Hello there now!"</code>
         /// </summary>
-        /// <returns>unencoded text, or empty string if none.</returns>
+        /// <returns>Unencoded text, or empty string if none.</returns>
         /// <see cref="OwnText()"/>
+        /// <see cref="TextNodes"/>
         public string Text()
         {
             StringBuilder sb = new StringBuilder();
@@ -880,8 +943,8 @@ namespace NSoup.Nodes
         /// <summary>
         /// Set the text of this element. Any existing contents (text or elements) will be cleared
         /// </summary>
-        /// <param name="text">unencoded text</param>
-        /// <returns>this element</returns>
+        /// <param name="text">Unencoded text</param>
+        /// <returns>This element</returns>
         public virtual Element Text(string text)
         {
             if (text == null)
@@ -930,6 +993,7 @@ namespace NSoup.Nodes
         /// </summary>
         /// <returns>unencoded text, or empty string if none.</returns>
         /// <see cref="Text()"/>
+        /// <see cref="TextNodes"/>
         public string OwnText()
         {
             StringBuilder sb = new StringBuilder();
@@ -1018,6 +1082,7 @@ namespace NSoup.Nodes
         /// <summary>
         /// Gets the combined data of this element. Data is e.g. the inside of a <code>script</code> tag.
         /// </summary>
+        /// <see cref="DataNodes"/>
         public string Data
         {
             get
@@ -1081,7 +1146,7 @@ namespace NSoup.Nodes
                 throw new ArgumentNullException("classNames");
             }
 
-            Attributes.Add("class", classNames.Join(" "));
+            Attributes.Add("class", string.Join(" ", classNames.ToArray()));
             return this;
         }
 
@@ -1202,13 +1267,13 @@ namespace NSoup.Nodes
             return this;
         }
 
-        public override void OuterHtmlHead(StringBuilder accum, int depth, Document.OutputSettings output)
+        public override void OuterHtmlHead(StringBuilder accum, int depth, OutputSettings output)
         {
             if (accum.Length > 0 && output.PrettyPrint() && (Tag.FormatAsBlock || (Parent != null && Parent.Tag.FormatAsBlock)))
             {
                 Indent(accum, depth, output);
             }
-            
+
             accum.Append("<")
                  .Append(TagName());
             Attributes.Html(accum, output);
@@ -1223,7 +1288,7 @@ namespace NSoup.Nodes
             }
         }
 
-        public override void OuterHtmlTail(StringBuilder accum, int depth, Document.OutputSettings output)
+        public override void OuterHtmlTail(StringBuilder accum, int depth, OutputSettings output)
         {
             if (!(ChildNodes.Count == 0 && Tag.IsSelfClosing))
             {

@@ -6,7 +6,7 @@ using System.Text;
 namespace NSoup.Helper
 {
     /**
- * A minimal String utility class. Designed for interal jsoup use only.
+ * A minimal String utility class. Designed for internal jsoup use only.
  */
     public static class StringUtil
     {
@@ -98,6 +98,16 @@ namespace NSoup.Helper
             return !(anyNonDigits);
         }
 
+        /// <summary>
+        /// Tests if a code point is "whitespace" as defined in the HTML spec.
+        /// </summary>
+        /// <param name="c">Code point to test</param>
+        /// <returns>True if code point is whitespace, false otherwise</returns>
+        public static bool IsWhiteSpace(char c)
+        {
+            return c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r';
+        }
+
         public static string NormaliseWhitespace(this string s)
         {
             StringBuilder sb = new StringBuilder(s.Length);
@@ -109,7 +119,7 @@ namespace NSoup.Helper
             for (int i = 0; i < l; i++)
             {
                 char c = s[i];
-                if (char.IsWhiteSpace(c))
+                if (IsWhiteSpace(c))
                 {
                     if (lastWasWhite)
                     {

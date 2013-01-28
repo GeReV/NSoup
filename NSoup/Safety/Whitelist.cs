@@ -46,6 +46,7 @@ namespace NSoup.Safety
         private Dictionary<TagName, Dictionary<AttributeKey, AttributeValue>> _enforcedAttributes; // always set these attribute values
         // Originally: Map<TagName, Map<AttributeKey, Set<Protocol>>>.
         private Dictionary<TagName, Dictionary<AttributeKey, HashSet<Protocol>>> _protocols; // allowed URL protocols for attributes
+        private bool _preserveRelativeLinks; // option to preserve relative links
 
         /// <summary>
         /// This whitelist allows only text nodes: all HTML will be stripped.
@@ -165,6 +166,7 @@ namespace NSoup.Safety
             _attributes = new Dictionary<TagName, HashSet<AttributeKey>>();
             _enforcedAttributes = new Dictionary<TagName, Dictionary<AttributeKey, AttributeValue>>();
             _protocols = new Dictionary<TagName, Dictionary<AttributeKey, HashSet<Protocol>>>();
+            _preserveRelativeLinks = false;
         }
 
         /// <summary>
@@ -192,14 +194,15 @@ namespace NSoup.Safety
 
         /// <summary>
         /// Add a list of allowed attributes to a tag. (If an attribute is not allowed on an element, it will be removed.)
+        /// E.g.: AddAttributes("a", "href", "class") allows href and class attributes on a tags.
         /// </summary>
         /// <remarks>
         /// To make an attribute valid for <b>all tags</b>, use the pseudo tag <code>:all</code>, e.g. 
         /// <code>AddAttributes(":all", "class")</code>.
         /// </remarks>
-        /// <param name="tag">The tag the attributes are for</param>
-        /// <param name="keys">List of valid attributes for the tag</param>
-        /// <returns>this (for chaining)</returns>
+        /// <param name="tag">The tag the attributes are for. The tag will be added to the allowed tag list if necessary.</param>
+        /// <param name="keys">List of valid attributes for the tag.</param>
+        /// <returns>This (for chaining)</returns>
         public Whitelist AddAttributes(string tag, params string[] keys)
         {
             if (string.IsNullOrEmpty(tag))
@@ -210,8 +213,16 @@ namespace NSoup.Safety
             {
                 throw new ArgumentNullException("keys");
             }
+            if (keys.Length <= 0)
+            {
+                throw new ArgumentException("No attributes supplied.");
+            }
 
             TagName tagName = TagName.ValueOf(tag);
+            if (!_tagNames.Contains(tagName))
+            {
+                _tagNames.Add(tagName);
+            }
             HashSet<AttributeKey> attributeSet = new HashSet<AttributeKey>();
             foreach (string key in keys)
             {
@@ -243,7 +254,7 @@ namespace NSoup.Safety
         /// </summary>
         /// <remarks>E.g.: <code>AddEnforcedAttribute("a", "rel", "nofollow")</code> will make all <code>a</code> tags output as 
         /// <code>&lt;a href="..." rel="nofollow"&gt;</code></remarks>
-        /// <param name="tag">The tag the enforced attribute is for</param>
+        /// <param name="tag">The tag the enforced attribute is for. The tag will be added to the allowed tag list if necessary.</param>
         /// <param name="key">The attribute key</param>
         /// <param name="value">The enforced attribute value</param>
         /// <returns>this (for chaining)</returns>
@@ -263,6 +274,10 @@ namespace NSoup.Safety
             }
 
             TagName tagName = TagName.ValueOf(tag);
+            if (!_tagNames.Contains(tagName))
+            {
+                _tagNames.Add(tagName);
+            }
             AttributeKey attrKey = AttributeKey.ValueOf(key);
             AttributeValue attrVal = AttributeValue.ValueOf(value);
 
@@ -276,6 +291,25 @@ namespace NSoup.Safety
                 attrMap.Add(attrKey, attrVal);
                 _enforcedAttributes.Add(tagName, attrMap);
             }
+            return this;
+        }
+
+        /// <summary>
+        /// Configure this Whitelist to preserve relative links in an element's URL attribute, or convert them to absolute
+        /// links. By default, this is false: URLs will be  made absolute (e.g. start with an allowed protocol, like
+        /// e.g. "http://".
+        /// 
+        /// Note that when handling relative links, the input document must have an appropriate base URI set when
+        /// parsing, so that the link's protocol can be confirmed. Regardless of the setting of the preserve relative
+        /// links option, the link must be resolvable against the base URI to an allowed protocol; otherwise the attribute
+        /// will be removed.
+        /// </summary>
+        /// <param name="preserve">True to allow relative links, false (default) to deny</param>
+        /// <returns>This Whitelist, for chaining.</returns>
+        /// <see cref="AddProtocols()"/>
+        public Whitelist PreserveRelativeLinks(bool preserve)
+        {
+            _preserveRelativeLinks = preserve;
             return this;
         }
 
@@ -365,19 +399,24 @@ namespace NSoup.Safety
                     }
                 }
             }
-            else
-            { // no attributes defined for tag, try :all tag
-                return !tagName.Equals(":all") && IsSafeAttribute(":all", el, attr);
-            }
-            return false;
+
+            // no attributes defined for tag, try :all tag
+            return !tagName.Equals(":all") && IsSafeAttribute(":all", el, attr);
         }
 
         private bool TestValidProtocol(Element el, NSoup.Nodes.Attribute attr, HashSet<Protocol> protocols)
         {
-            // resolve relative urls to abs, and update the attribute so output html has abs.
+            // try to resolve relative urls to abs, and optionally update the attribute so output html has abs.
             // rels without a baseuri get removed
             string value = el.AbsUrl(attr.Key);
-            attr.Value = value;
+            if (value.Length == 0)
+            {
+                value = attr.Value; // if it could not be made abs, run as-is to allow custom unknown protocols
+            }
+            if (!_preserveRelativeLinks)
+            {
+                attr.Value = value;
+            }
 
             foreach (Protocol protocol in protocols)
             {

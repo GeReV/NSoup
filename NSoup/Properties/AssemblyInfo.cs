@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("NSoup")]
-[assembly: AssemblyCopyright("Copyright ©  2011 Amir Grozki")]
+[assembly: AssemblyCopyright("Copyright ©  2012 Amir Grozki")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -25,7 +25,7 @@ using System.Runtime.InteropServices;
 // Added by popular demand.
 [assembly: System.Security.AllowPartiallyTrustedCallers]
 
-[assembly: InternalsVisibleTo("Test, PublicKey=00240000048000009400000006020000002400005253413100040000010001005b1b4bb52563854dda2123dd92730d22d7629f84b22f86c55ed1ad699ed3989fcf502b686c88b884c7d5de2f25b1ed8519847d47df6a59fdb2206d1a402469c285dec5702a0d0228f7b998a7a6bffd0385f63c8a5a97d802f466900221d75545ea479d936b6d0d54681f1b906a92d15f15e7d92da1b1dbf81ca839e19fe122ab")]
+[assembly: InternalsVisibleTo("Test, PublicKey=0024000004800000940000000602000000240000525341310004000001000100ff2769904d9601c999569e2ebea98b0822f0c58cb1a59d26ac1b3f0a9361cc58217d8c119b0cd0b8b16cb74e470f1b3c50334cefee49b3a0f9ca5830f418584c7ae8f9860a5fe91cdc2a51e8db16d8d1575c053c2e24bca46f644dcf12b3633829077a0ff5e68e4ca0491b9fbba3b19a06eb2887251bcb186486e2d2ddcbb3b5")]
 
 // Version information for an assembly consists of the following four values:
 //
@@ -37,5 +37,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("0.7.1.0")]
-[assembly: AssemblyFileVersion("0.7.1.0")]
+[assembly: AssemblyVersion("0.8.0.0")]
+[assembly: AssemblyFileVersion("0.8.0.0")]

@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -14,6 +14,11 @@
     <FileAlignment>512</FileAlignment>
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>NSoup.snk</AssemblyOriginatorKeyFile>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <OldToolsVersion>3.5</OldToolsVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -53,6 +58,7 @@
     <Compile Include="Helper\HttpConnection.cs" />
     <Compile Include="Helper\LinkedHashSet.cs" />
     <Compile Include="Helper\StringUtil.cs" />
+    <Compile Include="HttpStatusException.cs" />
     <Compile Include="IConnection.cs" />
     <Compile Include="Nodes\Attribute.cs" />
     <Compile Include="Nodes\Attributes.cs" />
@@ -64,11 +70,14 @@
     <Compile Include="Nodes\Entities.cs" />
     <Compile Include="Parse\CharacterReader.cs" />
     <Compile Include="Parse\ParseError.cs" />
+    <Compile Include="Parse\ParseErrorList.cs" />
     <Compile Include="Parse\Token.cs" />
     <Compile Include="Parse\Tokeniser.cs" />
     <Compile Include="Parse\TokeniserState.cs" />
+    <Compile Include="Parse\HtmlTreeBuilder.cs" />
+    <Compile Include="Parse\HtmlTreeBuilderState.cs" />
     <Compile Include="Parse\TreeBuilder.cs" />
-    <Compile Include="Parse\TreeBuilderState.cs" />
+    <Compile Include="Parse\XmlTreeBuilder.cs" />
     <Compile Include="Select\Evaluator.cs" />
     <Compile Include="Nodes\Node.cs" />
     <Compile Include="Nodes\TextNode.cs" />
@@ -88,9 +97,14 @@
     <Compile Include="Select\QueryParser.cs" />
     <Compile Include="Select\Selector.cs" />
     <Compile Include="Select\StructuralEvaluator.cs" />
+    <Compile Include="UnsupportedMimeTypeException.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="NSoup.snk" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Nodes\entities-base.txt" />
+    <EmbeddedResource Include="Nodes\entities-full.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -116,6 +116,11 @@ namespace NSoup.Select
                 Element parent = element.Parent;
                 return parent != null && _evaluator.Matches(root, parent);
             }
+
+            public override string ToString()
+            {
+                return string.Format(":ImmediateParent{0}", _evaluator);
+            }
         }
 
         public class PreviousSibling : StructuralEvaluator

@@ -34,11 +34,24 @@ namespace NSoup
         }
 
         /// <summary>
+        /// Parse HTML into a Document, using the provided Parser. You can provide an alternate parser, such as a simple XML
+        /// (non-HTML) parser.
+        /// </summary>
+        /// <param name="html">HTML to parse.</param>
+        /// <param name="baseUri">The URL where the HTML was retrieved from. Used to resolve relative URLs to absolute URLs, that occur before the HTML declares a &lt;base href&gt; tag.</param>
+        /// <param name="parser">Alternate parser to use.</param>
+        /// <returns>Sane HTML.</returns>
+        public static Document Parse(string html, string baseUri, Parser parser)
+        {
+            return parser.ParseInput(html, baseUri);
+        }
+
+        /// <summary>
         /// Parse HTML into a Document. As no base URI is specified, absolute URL detection relies on the HTML including a 
         /// <code>&lt;base href&gt;</code> tag.
         /// </summary>
         /// <param name="html">HTML to parse</param>
-        /// <returns>sane HTML</returns>
+        /// <returns>Sane HTML</returns>
         /// <seealso cref="Parse(string, string)"/>
         public static Document Parse(string html)
         {
@@ -50,7 +63,7 @@ namespace NSoup
         /// Use examples:
         /// <ul>
         /// <li><code>Document doc = NSoupClient.Connect("http://example.com").UserAgent("Mozilla").Data("name", "jsoup").Get();</code></li>
-        /// <li><code>Document doc = NSoupClient.Connect("http://example.com").Cookie("auth", "token").Post();
+        /// <li><code>Document doc = NSoupClient.Connect("http://example.com").Cookie("auth", "token").Post();</code></li>
         /// </ul>
         /// </summary>
         /// <param name="url">URL to connect to. The protocol must be <code>http</code> or <code>https</code>.</param>
@@ -102,6 +115,22 @@ namespace NSoup
         }
 
         /// <summary>
+        /// Read an input stream, and parse it to a Document. You can provide an alternate parser, such as a simple XML
+        /// (non-HTML) parser.
+        /// </summary>
+        /// <param name="input">Input stream to read. Make sure to close it after parsing.</param>
+        /// <param name="charsetName">(Optional) Character set of file contents. Set to null to determine from http-equiv meta tag, if
+        /// present, or fall back to UTF-8 (which is often safe to do).</param>
+        /// <param name="baseUri">The URL where the HTML was retrieved from, to resolve relative links against.</param>
+        /// <param name="parser">Alternate parser to use.</param>
+        /// <returns>Sane HTML</returns>
+        /// <exception cref="IOException">If the file could not be found, or read, or if the charsetName is invalid.</exception>
+        public static Document Parse(Stream input, string charsetName, string baseUri, Parser parser)
+        {
+            return DataUtil.Load(input, charsetName, baseUri, parser);
+        }
+
+        /// <summary>
         /// Parse a fragment of HTML, with the assumption that it forms the {@code body} of the HTML.
         /// </summary>
         /// <param name="bodyHtml">body HTML fragment</param>
@@ -132,7 +161,11 @@ namespace NSoup
         /// <param name="timeoutMillis">Connection and read timeout, in milliseconds. If exceeded, IOException is thrown.</param>
         /// <returns>The parsed HTML.</returns>
         /// <seealso cref="Connect(string)"/>
-        /// <exception cref="IOException">If the final server response != 200 OK (redirects are followed), or if there's an error reading the response stream.</exception>
+        /// <exception cref="HttpStatusException">If the response is not OK and HTTP response errors are not ignored.</exception>
+        /// <exception cref="UnsupportedMimeTypeException">If the response mime type is not supported and those errors are not ignored.</exception>
+        /// <exception cref="IOException">If a connection or read error occurs.</exception>
+        //@throws java.net.MalformedURLException if the request URL is not a HTTP or HTTPS URL, or is otherwise malformed
+        //@throws java.net.SocketTimeoutException if the connection times out
         public static Document Parse(Uri url, int timeoutMillis)
         {
             IConnection con = HttpConnection.Connect(url);
@@ -144,10 +177,10 @@ namespace NSoup
         /// Get safe HTML from untrusted input HTML, by parsing input HTML and filtering it through a white-list of permitted 
         /// tags and attributes.
         /// </summary>
-        /// <param name="bodyHtml">input untrusted HTML</param>
+        /// <param name="bodyHtml">Input untrusted HTML (body fragment)</param>
         /// <param name="baseUri">URL to resolve relative URLs against</param>
-        /// <param name="whitelist">white-list of permitted HTML elements</param>
-        /// <returns>safe HTML</returns>
+        /// <param name="whitelist">White-list of permitted HTML elements</param>
+        /// <returns>Safe HTML (body fragment)</returns>
         /// <seealso cref="Cleaner.Clean(Document)"/>
         public static string Clean(string bodyHtml, string baseUri, Whitelist whitelist)
         {
@@ -161,13 +194,32 @@ namespace NSoup
         /// Get safe HTML from untrusted input HTML, by parsing input HTML and filtering it through a white-list of permitted 
         /// tags and attributes.
         /// </summary>
-        /// <param name="bodyHtml">input untrusted HTML</param>
-        /// <param name="whitelist">white-list of permitted HTML elements</param>
-        /// <returns>safe HTML</returns>
+        /// <param name="bodyHtml">Input untrusted HTML (body fragment)</param>
+        /// <param name="whitelist">White-list of permitted HTML elements</param>
+        /// <returns>Safe HTML (body fragment)</returns>
         /// <seealso cref="Cleaner.Clean(Document)"/>
         public static string Clean(string bodyHtml, Whitelist whitelist)
         {
             return Clean(bodyHtml, string.Empty, whitelist);
+        }
+
+        /// <summary>
+        /// Get safe HTML from untrusted input HTML, by parsing input HTML and filtering it through a white-list of
+        /// permitted tags and attributes.
+        /// </summary>
+        /// <param name="bodyHtml">Input untrusted HTML (body fragment)</param>
+        /// <param name="baseUri">URL to resolve relative URLs against</param>
+        /// <param name="whitelist">White-list of permitted HTML elements</param>
+        /// <param name="outputSettings">Document output settings; use to control pretty-printing and entity escape modes</param>
+        /// <returns>Safe HTML (body fragment)</returns>
+        /// <see cref="Cleaner.Clean(Document)"/>
+        public static string Clean(string bodyHtml, string baseUri, Whitelist whitelist, OutputSettings outputSettings)
+        {
+            Document dirty = ParseBodyFragment(bodyHtml, baseUri);
+            Cleaner cleaner = new Cleaner(whitelist);
+            Document clean = cleaner.Clean(dirty);
+            clean.OutputSettings(outputSettings);
+            return clean.Body.Html();
         }
 
         /// <summary>

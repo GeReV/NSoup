@@ -38,7 +38,7 @@ namespace NSoup.Nodes
             get { return "#doctype"; }
         }
 
-        public override void OuterHtmlHead(StringBuilder accum, int depth, Document.OutputSettings output)
+        public override void OuterHtmlHead(StringBuilder accum, int depth, OutputSettings output)
         {
             accum.Append("<!DOCTYPE ").Append(Attr("name"));
             
@@ -55,7 +55,7 @@ namespace NSoup.Nodes
             accum.Append('>');
         }
 
-        public override void OuterHtmlTail(StringBuilder accum, int depth, Document.OutputSettings output)
+        public override void OuterHtmlTail(StringBuilder accum, int depth, OutputSettings output)
         {
         }
     }

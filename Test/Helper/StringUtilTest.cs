@@ -103,6 +103,20 @@ namespace Test.Helper
         }
 
         [TestMethod]
+        public void isWhitespace()
+        {
+            Assert.IsTrue(StringUtil.IsWhiteSpace('\t'));
+            Assert.IsTrue(StringUtil.IsWhiteSpace('\n'));
+            Assert.IsTrue(StringUtil.IsWhiteSpace('\r'));
+            Assert.IsTrue(StringUtil.IsWhiteSpace('\f'));
+            Assert.IsTrue(StringUtil.IsWhiteSpace(' '));
+
+            Assert.IsFalse(StringUtil.IsWhiteSpace('\u00a0'));
+            Assert.IsFalse(StringUtil.IsWhiteSpace('\u2000'));
+            Assert.IsFalse(StringUtil.IsWhiteSpace('\u3000'));
+        }
+
+        [TestMethod]
         public void normaliseWhiteSpace()
         {
             Assert.AreEqual(" ", StringUtil.NormaliseWhitespace("    \r \n \r\n"));
@@ -122,6 +136,17 @@ namespace Test.Helper
             Assert.IsTrue(check1 == StringUtil.NormaliseWhitespace(check1));
             Assert.IsTrue(check2 != StringUtil.NormaliseWhitespace(check2));
             Assert.IsTrue(check3 != StringUtil.NormaliseWhitespace(check3));
+        }
+
+        [TestMethod]
+        public void normaliseWhiteSpaceHandlesHighSurrogates()
+        {
+            string test71540chars = "\ud869\udeb2\u304b\u309a  1";
+            string test71540charsExpectedSingleWhitespace = "\ud869\udeb2\u304b\u309a 1";
+
+            Assert.AreEqual(test71540charsExpectedSingleWhitespace, StringUtil.NormaliseWhitespace(test71540chars));
+            String extractedText = NSoupClient.Parse(test71540chars).Text();
+            Assert.AreEqual(test71540charsExpectedSingleWhitespace, extractedText);
         }
     }
 }

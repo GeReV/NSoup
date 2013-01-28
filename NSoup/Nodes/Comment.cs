@@ -44,7 +44,7 @@ namespace NSoup.Nodes
             return Attributes.GetValue(COMMENT_KEY);
         }
 
-        public override void OuterHtmlHead(StringBuilder accum, int depth, Document.OutputSettings output)
+        public override void OuterHtmlHead(StringBuilder accum, int depth, OutputSettings output)
         {
             if (output.PrettyPrint())
             {
@@ -57,7 +57,7 @@ namespace NSoup.Nodes
                 .Append("-->");
         }
 
-        public override void OuterHtmlTail(StringBuilder accum, int depth, Document.OutputSettings output)
+        public override void OuterHtmlTail(StringBuilder accum, int depth, OutputSettings output)
         {
         }
 

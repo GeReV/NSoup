@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NSoup.Helper;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -171,7 +172,7 @@ namespace NSoup.Parse
         /// <returns>if starts with whitespace</returns>
         public bool MatchesWhitespace()
         {
-            return !IsEmpty && char.IsWhiteSpace(_queue[_pos]);
+            return !IsEmpty && StringUtil.IsWhiteSpace(_queue[_pos]);
         }
 
         /// <summary>

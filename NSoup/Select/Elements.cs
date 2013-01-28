@@ -25,6 +25,11 @@ namespace NSoup.Select
             _contents = new List<Element>();
         }
 
+        public Elements(int initialCapacity)
+        {
+            _contents = new List<Element>(initialCapacity);
+        }
+
         public Elements(ICollection<Element> elements)
         {
             _contents = new List<Element>(elements);
@@ -487,7 +492,7 @@ namespace NSoup.Select
         }
 
         /// <summary>
-        /// Remove elements from this list that do not match the <see cref="Selector"/> query.
+        /// Remove elements from this list that match the <see cref="Selector"/> query.
         /// E.g. HTML: <code>&lt;div class=logo&gt;One&lt;/div&gt; &lt;div&gt;Two&lt;/div&gt;</code>
         /// <code>Elements divs = doc.Select("div").Not("#logo");</code>
         /// Result: <code>divs: [&lt;div&gt;Two&lt;/div&gt;]</code>
@@ -556,6 +561,25 @@ namespace NSoup.Select
         public Element Last
         {
             get { return _contents.Count <= 0 ? null : _contents[_contents.Count - 1]; }
+        }
+
+        /// <summary>
+        /// Perform a depth-first traversal on each of the selected elements.
+        /// </summary>
+        /// <param name="nodeVisitor">The visitor callbacks to perform on each node</param>
+        /// <returns>This, for chaining</returns>
+        public Elements Traverse(NodeVisitor nodeVisitor)
+        {
+            if (nodeVisitor == null)
+            {
+                throw new ArgumentNullException("nodeVisitor");
+            }
+            NodeTraversor traversor = new NodeTraversor(nodeVisitor);
+            foreach (Element el in _contents)
+            {
+                traversor.Traverse(el);
+            }
+            return this;
         }
 
         // implements List<Element> delegates:

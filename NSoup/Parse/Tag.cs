@@ -56,15 +56,17 @@ namespace NSoup.Parse
             {
                 throw new ArgumentNullException("tagName");
             }
-            tagName = tagName.Trim().ToLowerInvariant();
-            if (string.IsNullOrEmpty(tagName))
-            {
-                throw new ArgumentException("tagName");
-            }
+            Tag tag = null;
+            _tags.TryGetValue(tagName, out tag);
 
-            lock (_tags)
+            if (tag == null)
             {
-                Tag tag = null;
+                tagName = tagName.Trim().ToLowerInvariant();
+                if (string.IsNullOrEmpty(tagName))
+                {
+                    throw new ArgumentException("tagName cannot be empty.", "tagName");
+                }
+
                 _tags.TryGetValue(tagName, out tag);
                 if (tag == null)
                 {
@@ -73,8 +75,8 @@ namespace NSoup.Parse
                     tag._isBlock = false;
                     tag._canContainBlock = true;
                 }
-                return tag;
             }
+            return tag;
         }
 
         /// <summary>
@@ -226,9 +228,9 @@ namespace NSoup.Parse
             "device"
     };
         private static readonly string[] formatAsInlineTags = {
-            "title", "a", "p", "h1", "h2", "h3", "h4", "h5", "h6", "pre", "address", "li", "th", "td"
+            "title", "a", "p", "h1", "h2", "h3", "h4", "h5", "h6", "pre", "address", "li", "th", "td", "script", "style"
     };
-        private static readonly string[] preserveWhitespaceTags = { "pre", "plaintext", "title" };
+        private static readonly string[] preserveWhitespaceTags = { "pre", "plaintext", "title", "textarea" };
 
         static void Initialize()
         {
@@ -297,20 +299,16 @@ namespace NSoup.Parse
 
         #endregion
 
-        private static Tag Register(Tag tag)
+        private static void Register(Tag tag)
         {
-            lock (_tags)
+            if (_tags.ContainsKey(tag._tagName))
             {
-                if (_tags.ContainsKey(tag._tagName))
-                {
-                    _tags[tag._tagName] = tag;
-                }
-                else
-                {
-                    _tags.Add(tag._tagName, tag);
-                }
+                _tags[tag._tagName] = tag;
             }
-            return tag;
+            else
+            {
+                _tags.Add(tag._tagName, tag);
+            }
         }
     }
 }

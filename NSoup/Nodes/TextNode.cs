@@ -118,7 +118,7 @@ namespace NSoup.Nodes
             return tailNode;
         }
 
-        public override void OuterHtmlHead(StringBuilder accum, int depth, Document.OutputSettings output)
+        public override void OuterHtmlHead(StringBuilder accum, int depth, OutputSettings output)
         {
             string html = Entities.Escape(GetWholeText(), output);
             if (output.PrettyPrint() && ParentNode is Element && !((Element)ParentNode).PreserveWhitespace)
@@ -133,7 +133,7 @@ namespace NSoup.Nodes
             accum.Append(html);
         }
 
-        public override void OuterHtmlTail(StringBuilder accum, int depth, Document.OutputSettings output) { }
+        public override void OuterHtmlTail(StringBuilder accum, int depth, OutputSettings output) { }
 
         public override string ToString()
         {

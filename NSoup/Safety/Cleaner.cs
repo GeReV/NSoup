@@ -49,13 +49,16 @@ namespace NSoup.Safety
             }
 
             Document clean = Document.CreateShell(dirtyDocument.BaseUri);
-            CopySafeNodes(dirtyDocument.Body, clean.Body);
+            if (dirtyDocument.Body != null) // frameset documents won't have a body. the clean doc will have empty body.
+            {
+                CopySafeNodes(dirtyDocument.Body, clean.Body);
+            }
 
             return clean;
         }
 
         /// <summary>
-        /// Dertmines if the input document is valid, against the whitelist. It is considered valid if all the tags and attributes 
+        /// Determines if the input document is valid, against the whitelist. It is considered valid if all the tags and attributes 
         /// in the input HTML are allowed by the whitelist.
         /// </summary>
         /// <remarks>

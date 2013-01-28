@@ -9,7 +9,7 @@ namespace NSoup.Parse
 /// <summary>
 /// Parse tokens for the Tokeniser.
 /// </summary>
-    internal abstract class Token
+    public abstract class Token
     {
         TokenType _type;
 
@@ -17,7 +17,12 @@ namespace NSoup.Parse
         {
         }
 
-        internal class Doctype : Token
+        public string TokenTypeName()
+        {
+            return this.GetType().Name;
+        }
+
+        public class Doctype : Token
         {
             readonly StringBuilder _name = new StringBuilder();
             readonly StringBuilder _publicIdentifier = new StringBuilder();
@@ -51,29 +56,41 @@ namespace NSoup.Parse
             }
         }
 
-        internal abstract class Tag : Token
+        public abstract class Tag : Token
         {
             protected string _tagName;
-            private string _pendingAttributeName;
-            private string _pendingAttributeValue;
+            private string _pendingAttributeName; // attribute names are generally caught in one hop, not accumulated
+            private StringBuilder _pendingAttributeValue; // but values are accumulated, from e.g. & in hrefs
 
             private bool _selfClosing = false;
-            protected Attributes _attributes = new Attributes(); // todo: allow nodes to not have attributes
+            protected Attributes _attributes; // start tags get attributes on construction. End tags get attributes on first new attribute (but only for parser convenience, not used).
 
             public void NewAttribute()
             {
+                if (_attributes == null)
+                {
+                    _attributes = new Attributes();
+                }
+
                 if (_pendingAttributeName != null)
                 {
+                    NSoup.Nodes.Attribute attribute;
                     if (_pendingAttributeValue == null)
                     {
-                        _pendingAttributeValue = string.Empty;
+                        attribute = new NSoup.Nodes.Attribute(_pendingAttributeName, "");
+                    }
+                    else
+                    {
+                        attribute = new NSoup.Nodes.Attribute(_pendingAttributeName, _pendingAttributeValue.ToString());
                     }
 
-                    NSoup.Nodes.Attribute attribute = new NSoup.Nodes.Attribute(_pendingAttributeName, _pendingAttributeValue);
                     _attributes.Add(attribute);
                 }
                 _pendingAttributeName = null;
-                _pendingAttributeValue = null;
+                if (_pendingAttributeValue != null)
+                {
+                    _pendingAttributeValue.Remove(0, _pendingAttributeValue.Length);
+                }
             }
 
             public void FinaliseTag()
@@ -135,7 +152,7 @@ namespace NSoup.Parse
 
             public void AppendAttributeValue(string append)
             {
-                _pendingAttributeValue = _pendingAttributeValue == null ? append : string.Concat(_pendingAttributeValue, append);
+                _pendingAttributeValue = _pendingAttributeValue == null ? new StringBuilder(append) : _pendingAttributeValue.Append(append);
             }
 
             public void AppendAttributeValue(char append)
@@ -144,11 +161,12 @@ namespace NSoup.Parse
             }
         }
 
-        internal class StartTag : Tag
+        public class StartTag : Tag
         {
             public StartTag()
                 : base()
             {
+                _attributes = new Nodes.Attributes();
                 _type = TokenType.StartTag;
             }
 
@@ -167,11 +185,16 @@ namespace NSoup.Parse
 
             public override string ToString()
             {
-                return string.Format("<{0} {1}>", Name(), Attributes.ToString());
+                if (_attributes != null && _attributes.Count > 0)
+                {
+                    return string.Format("<{0} {1}>", Name(), Attributes.ToString());
+                }
+                
+                return string.Format("<{0}>", Name());
             }
         }
 
-        internal class EndTag : Tag
+        public class EndTag : Tag
         {
             public EndTag()
                 : base()
@@ -187,11 +210,11 @@ namespace NSoup.Parse
 
             public override string ToString()
             {
-                return string.Format("</{0} {1}>", Name(), Attributes.ToString());
+                return string.Format("</{0}>", Name());
             }
         }
 
-        internal class Comment : Token
+        public class Comment : Token
         {
             private readonly StringBuilder data = new StringBuilder();
 
@@ -211,7 +234,7 @@ namespace NSoup.Parse
             }
         }
 
-        internal class Character : Token
+        public class Character : Token
         {
             private readonly string data;
 
@@ -232,7 +255,7 @@ namespace NSoup.Parse
             }
         }
 
-        internal class EOF : Token
+        public class EOF : Token
         {
             public EOF()
             {
@@ -300,7 +323,7 @@ namespace NSoup.Parse
             get { return _type; }
         }
 
-        internal enum TokenType
+        public enum TokenType
         {
             Doctype,
             StartTag,
