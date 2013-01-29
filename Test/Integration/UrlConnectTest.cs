@@ -190,7 +190,7 @@ namespace Test.Integration
                     .Data("Argument", "Riposte")
                     .Method(NSoup.Method.Post);
             IResponse res = con.Execute();
-            Assert.AreEqual("http://jsoup.org", res.Url().ToString());
+            Assert.AreEqual("http://jsoup.org/", res.Url().ToString());
             Assert.AreEqual(NSoup.Method.Get, res.Method());
         }
 
@@ -224,7 +224,7 @@ namespace Test.Integration
             catch (HttpStatusException e)
             {
                 threw = true;
-                Assert.AreEqual("org.jsoup.HttpStatusException: HTTP error fetching URL. Status=404, URL=http://direct.infohound.net/tools/404", e.ToString());
+                Assert.AreEqual("HTTP error fetching URL. Status=404, URL=http://direct.infohound.net/tools/404", string.Format("{0}. Status={1}, URL={2}", e.Message.ToString(), e.StatusCode, e.Url));
                 Assert.AreEqual(url, e.Url);
                 Assert.AreEqual(404, e.StatusCode);
             }
@@ -241,13 +241,13 @@ namespace Test.Integration
             IResponse res = con.Execute();
             Document doc = res.Parse();
             Assert.AreEqual(System.Net.HttpStatusCode.NotFound, res.StatusCode());
-            Assert.AreEqual("Not Found", doc.Select("h1").First.Text());
+            Assert.AreEqual("404 Not Found", doc.Select("h1").First.Text());
         }
 
         [TestMethod]
         public void doesntRedirectIfSoConfigured()
         {
-            IConnection con = NSoupClient.Connect("http://direct.infohound.net/tools/302.pl").FollowRedirects(false);
+            IConnection con = NSoupClient.Connect("http://direct.infohound.net/tools/302.pl").FollowRedirects(false).IgnoreContentType(true);
             IResponse res = con.Execute();
             Assert.IsTrue(res.StatusCode() == (System.Net.HttpStatusCode)302);
         }
@@ -259,7 +259,7 @@ namespace Test.Integration
             IResponse res = con.Execute();
             Assert.AreEqual("asdfg123", res.Cookie("token")); // confirms that cookies set on 1st hit are presented in final result
             Document doc = res.Parse();
-            Assert.AreEqual("uid=jhy; token=asdfg123", ihVal("HTTP_COOKIE", doc)); // confirms that redirected hit saw cookie
+            Assert.AreEqual("token=asdfg123; uid=jhy", ihVal("HTTP_COOKIE", doc)); // confirms that redirected hit saw cookie
         }
 
         [TestMethod]
@@ -291,7 +291,7 @@ namespace Test.Integration
 
             // send those cookies into the echo URL by map:
             Document doc = NSoupClient.Connect(echoURL).Cookies(cookies).Get();
-            Assert.AreEqual("uid=jhy; token=asdfg123", ihVal("HTTP_COOKIE", doc));
+            Assert.AreEqual("token=asdfg123; uid=jhy", ihVal("HTTP_COOKIE", doc));
         }
 
         [TestMethod]
