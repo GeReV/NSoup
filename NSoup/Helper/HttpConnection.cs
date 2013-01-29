@@ -523,24 +523,41 @@ namespace NSoup.Helper
             }
 
             HttpWebRequest conn = CreateConnection(req);
-            Response res;
-
-
-
-            if (req.Method() == NSoup.Method.Post)
+            HttpWebResponse response = null;
+            
+            try
             {
-                conn.ContentType = "application/x-www-form-urlencoded";
-                WritePost(req.Data(), conn.GetRequestStream());
+                if (req.Method() == NSoup.Method.Post)
+                {
+                    conn.ContentType = "application/x-www-form-urlencoded";
+                    WritePost(req.Data(), conn.GetRequestStream());
+                }
+
+                response = (HttpWebResponse)conn.GetResponse();
+            }
+            catch (WebException e)
+            {
+                response = e.Response as HttpWebResponse;
+
+                if (response != null)
+                {
+                    return ProcessResponse(response, req, previousResponse);
+                }
             }
 
-            HttpWebResponse response = (HttpWebResponse)conn.GetResponse();
+            return ProcessResponse(response, req, previousResponse);
+        }
 
-            HttpStatusCode status = response.StatusCode;
+        private static Response ProcessResponse(HttpWebResponse response, IRequest req, IResponse previousResponse)
+        {
             bool needsRedirect = false;
+            HttpStatusCode status = response.StatusCode;
+
             if (status != HttpStatusCode.OK)
             {
-                if (status == HttpStatusCode.Moved || status == HttpStatusCode.MovedPermanently || status == HttpStatusCode.SeeOther)
+                if (status == HttpStatusCode.Found || status == HttpStatusCode.MovedPermanently || status == HttpStatusCode.SeeOther)
                 {
+                    // In .NET (4.0+ ?), Moved and MovedPermanently have the same value.
                     needsRedirect = true;
                 }
                 else if (!req.IgnoreHttpErrors())
@@ -549,7 +566,7 @@ namespace NSoup.Helper
                 }
             }
 
-            res = new Response(previousResponse);
+            Response res = new Response(previousResponse);
             res.SetupFromConnection(response, previousResponse);
 
             if (needsRedirect && req.FollowRedirects())
@@ -565,6 +582,7 @@ namespace NSoup.Helper
 
                 return Execute(req, res);
             }
+
             res.req = req;
 
             // check that we can handle the returned content type; if not, abort before fetching it
@@ -591,6 +609,7 @@ namespace NSoup.Helper
             }
 
             res._executed = true;
+
             return res;
         }
 
@@ -739,18 +758,19 @@ namespace NSoup.Helper
                     continue; // http/1.1 line
                 }
 
-                string[] values = resHeaders[name].Split(';');
+                string value = resHeaders[name]; //.Split(';');
 
                 if (name.Equals("Set-Cookie", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    foreach (string value in values)
+                    string[] values = resHeaders["Set-Cookie"].Split(';', ',');
+                    foreach (string v in values)
                     {
-                        if (value == null)
+                        if (v == null)
                         {
                             continue;
                         }
 
-                        TokenQueue cd = new TokenQueue(value);
+                        TokenQueue cd = new TokenQueue(v);
                         string cookieName = cd.ChompTo("=").Trim();
                         string cookieVal = cd.ConsumeTo(";").Trim();
 
@@ -775,9 +795,9 @@ namespace NSoup.Helper
                 }
                 else
                 { // only take the first instance of each header
-                    if (values.Length > 1)
+                    if (/*values.Length > 0*/ !string.IsNullOrEmpty(value))
                     {
-                        Header(name, values[0]);
+                        Header(name, /*values[0]*/ value);
                     }
                 }
             }
@@ -841,8 +861,8 @@ namespace NSoup.Helper
                 .Append(input.Scheme)
                 .Append("://")
                 .Append(input.Authority) // includes host, port
-                .Append(input.AbsolutePath);
-                //.Append("?");
+                .Append(input.AbsolutePath)
+                .Append("?");
 
             if (!string.IsNullOrEmpty(input.Query))
             {
