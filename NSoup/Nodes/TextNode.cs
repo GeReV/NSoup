@@ -34,7 +34,7 @@ namespace NSoup.Nodes
         /// <seealso cref="CreateFromEncoded(string, string)"/>
         public TextNode(string text, string baseUri)
         {
-            this.BaseUri = baseUri;
+            this._baseUri = baseUri;
             this.text = text;
         }
 
@@ -62,9 +62,9 @@ namespace NSoup.Nodes
         public TextNode Text(string text)
         {
             this.text = text;
-            if (Attributes != null)
+            if (_attributes != null)
             {
-                Attributes[TEXT_KEY] = text;
+                _attributes[TEXT_KEY] = text;
             }
             return this;
         }
@@ -75,7 +75,7 @@ namespace NSoup.Nodes
         /// <returns>text</returns>
         public string GetWholeText()
         {
-            return Attributes == null ? text : Attributes.GetValue(TEXT_KEY);
+            return _attributes == null ? text : _attributes.GetValue(TEXT_KEY);
         }
 
         /// <summary>
