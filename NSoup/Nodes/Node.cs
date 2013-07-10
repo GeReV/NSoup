@@ -21,7 +21,7 @@ namespace NSoup.Nodes
         private Node _parentNode = null;
         protected IList<Node> _childNodes;
         protected Attributes _attributes;
-        private string _baseUri;
+        protected string _baseUri;
         private int _siblingIndex;
 
         /// <summary>
