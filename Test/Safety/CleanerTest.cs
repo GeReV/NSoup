@@ -244,7 +244,7 @@ namespace Test.Safety
             // test that one can override the default document output settings
             OutputSettings os = new OutputSettings();
             os.PrettyPrint(false);
-            os.EscapeMode = Entities.EscapeMode.Extended;
+            os.SetEscapeMode(Entities.EscapeMode.Extended);
 
             string html = "<div><p>&bernou;</p></div>";
             string customOut = NSoupClient.Clean(html, "http://foo.com/", Whitelist.Relaxed, os);
@@ -256,8 +256,8 @@ namespace Test.Safety
                 " <p>ג„¬</p>\n" +
                 "</div>", defaultOut);
 
-            os.Encoding = Encoding.ASCII;
-            os.EscapeMode = Entities.EscapeMode.Base;
+            os.SetEncoding(Encoding.ASCII);
+            os.SetEscapeMode(Entities.EscapeMode.Base);
             String customOut2 = NSoupClient.Clean(html, "http://foo.com/", Whitelist.Relaxed, os);
             Assert.AreEqual("<div><p>&#8492;</p></div>", customOut2);
         }
