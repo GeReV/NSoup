@@ -10,143 +10,149 @@ using NSoup.Helper;
 namespace Test.Helper
 {
 
-    [TestClass]
-    public class StringUtilTest
-    {
-        public StringUtilTest()
-        {
-            //
-            // TODO: Add constructor logic here
-            //
-        }
+	[TestClass]
+	public class StringUtilTest
+	{
+		public StringUtilTest()
+		{
+			//
+			// TODO: Add constructor logic here
+			//
+		}
 
-        private TestContext testContextInstance;
+		private TestContext testContextInstance;
 
-        /// <summary>
-        ///Gets or sets the test context which provides
-        ///information about and functionality for the current test run.
-        ///</summary>
-        public TestContext TestContext
-        {
-            get
-            {
-                return testContextInstance;
-            }
-            set
-            {
-                testContextInstance = value;
-            }
-        }
+		/// <summary>
+		///Gets or sets the test context which provides
+		///information about and functionality for the current test run.
+		///</summary>
+		public TestContext TestContext
+		{
+			get
+			{
+				return testContextInstance;
+			}
+			set
+			{
+				testContextInstance = value;
+			}
+		}
 
-        #region Additional test attributes
-        //
-        // You can use the following additional attributes as you write your tests:
-        //
-        // Use ClassInitialize to run code before running the first test in the class
-        // [ClassInitialize()]
-        // public static void MyClassInitialize(TestContext testContext) { }
-        //
-        // Use ClassCleanup to run code after all tests in a class have run
-        // [ClassCleanup()]
-        // public static void MyClassCleanup() { }
-        //
-        // Use TestInitialize to run code before running each test 
-        // [TestInitialize()]
-        // public void MyTestInitialize() { }
-        //
-        // Use TestCleanup to run code after each test has run
-        // [TestCleanup()]
-        // public void MyTestCleanup() { }
-        //
-        #endregion
+		#region Additional test attributes
+		//
+		// You can use the following additional attributes as you write your tests:
+		//
+		// Use ClassInitialize to run code before running the first test in the class
+		// [ClassInitialize()]
+		// public static void MyClassInitialize(TestContext testContext) { }
+		//
+		// Use ClassCleanup to run code after all tests in a class have run
+		// [ClassCleanup()]
+		// public static void MyClassCleanup() { }
+		//
+		// Use TestInitialize to run code before running each test 
+		// [TestInitialize()]
+		// public void MyTestInitialize() { }
+		//
+		// Use TestCleanup to run code after each test has run
+		// [TestCleanup()]
+		// public void MyTestCleanup() { }
+		//
+		#endregion
 
-        [TestMethod]
-        public void join()
-        {
-            Assert.AreEqual("", StringUtil.Join(new List<string>() { "" }, " "));
-            Assert.AreEqual("one", StringUtil.Join(new List<string>() { "one" }, " "));
-            Assert.AreEqual("one two three", StringUtil.Join(new List<string>() { "one", "two", "three" }, " "));
-        }
+		[TestMethod]
+		public void join()
+		{
+			Assert.AreEqual("", StringUtil.Join(new List<string>() { "" }, " "));
+			Assert.AreEqual("one", StringUtil.Join(new List<string>() { "one" }, " "));
+			Assert.AreEqual("one two three", StringUtil.Join(new List<string>() { "one", "two", "three" }, " "));
+		}
 
-        [TestMethod]
-        public void padding()
-        {
-            Assert.AreEqual("", StringUtil.Padding(0));
-            Assert.AreEqual(" ", StringUtil.Padding(1));
-            Assert.AreEqual("  ", StringUtil.Padding(2));
-            Assert.AreEqual("               ", StringUtil.Padding(15));
-        }
+		[TestMethod]
+		public void padding()
+		{
+			Assert.AreEqual("", StringUtil.Padding(0));
+			Assert.AreEqual(" ", StringUtil.Padding(1));
+			Assert.AreEqual("  ", StringUtil.Padding(2));
+			Assert.AreEqual("               ", StringUtil.Padding(15));
+		}
 
-        [TestMethod]
-        public void isBlank()
-        {
-            Assert.IsTrue(StringUtil.IsBlank(null));
-            Assert.IsTrue(StringUtil.IsBlank(""));
-            Assert.IsTrue(StringUtil.IsBlank("      "));
-            Assert.IsTrue(StringUtil.IsBlank("   \r\n  "));
+		[TestMethod]
+		public void isBlank()
+		{
+			Assert.IsTrue(StringUtil.IsBlank(null));
+			Assert.IsTrue(StringUtil.IsBlank(""));
+			Assert.IsTrue(StringUtil.IsBlank("      "));
+			Assert.IsTrue(StringUtil.IsBlank("   \r\n  "));
 
-            Assert.IsFalse(StringUtil.IsBlank("hello"));
-            Assert.IsFalse(StringUtil.IsBlank("   hello   "));
-        }
+			Assert.IsFalse(StringUtil.IsBlank("hello"));
+			Assert.IsFalse(StringUtil.IsBlank("   hello   "));
+		}
 
-        [TestMethod]
-        public void isNumeric()
-        {
-            Assert.IsFalse(StringUtil.IsNumeric(null));
-            Assert.IsFalse(StringUtil.IsNumeric(" "));
-            Assert.IsFalse(StringUtil.IsNumeric("123 546"));
-            Assert.IsFalse(StringUtil.IsNumeric("hello"));
-            Assert.IsFalse(StringUtil.IsNumeric("123.334"));
+		[TestMethod]
+		public void isNumeric()
+		{
+			Assert.IsFalse(StringUtil.IsNumeric(null));
+			Assert.IsFalse(StringUtil.IsNumeric(" "));
+			Assert.IsFalse(StringUtil.IsNumeric("123 546"));
+			Assert.IsFalse(StringUtil.IsNumeric("hello"));
+			Assert.IsFalse(StringUtil.IsNumeric("123.334"));
 
-            Assert.IsTrue(StringUtil.IsNumeric("1"));
-            Assert.IsTrue(StringUtil.IsNumeric("1234"));
-        }
+			Assert.IsTrue(StringUtil.IsNumeric("1"));
+			Assert.IsTrue(StringUtil.IsNumeric("1234"));
+		}
 
-        [TestMethod]
-        public void isWhitespace()
-        {
-            Assert.IsTrue(StringUtil.IsWhiteSpace('\t'));
-            Assert.IsTrue(StringUtil.IsWhiteSpace('\n'));
-            Assert.IsTrue(StringUtil.IsWhiteSpace('\r'));
-            Assert.IsTrue(StringUtil.IsWhiteSpace('\f'));
-            Assert.IsTrue(StringUtil.IsWhiteSpace(' '));
+		[TestMethod]
+		public void isWhitespace()
+		{
+			Assert.IsTrue(StringUtil.IsWhiteSpace('\t'));
+			Assert.IsTrue(StringUtil.IsWhiteSpace('\n'));
+			Assert.IsTrue(StringUtil.IsWhiteSpace('\r'));
+			Assert.IsTrue(StringUtil.IsWhiteSpace('\f'));
+			Assert.IsTrue(StringUtil.IsWhiteSpace(' '));
 
-            Assert.IsFalse(StringUtil.IsWhiteSpace('\u00a0'));
-            Assert.IsFalse(StringUtil.IsWhiteSpace('\u2000'));
-            Assert.IsFalse(StringUtil.IsWhiteSpace('\u3000'));
-        }
+			Assert.IsFalse(StringUtil.IsWhiteSpace('\u00a0'));
+			Assert.IsFalse(StringUtil.IsWhiteSpace('\u2000'));
+			Assert.IsFalse(StringUtil.IsWhiteSpace('\u3000'));
+		}
 
-        [TestMethod]
-        public void normaliseWhiteSpace()
-        {
-            Assert.AreEqual(" ", StringUtil.NormaliseWhitespace("    \r \n \r\n"));
-            Assert.AreEqual(" hello there ", StringUtil.NormaliseWhitespace("   hello   \r \n  there    \n"));
-            Assert.AreEqual("hello", StringUtil.NormaliseWhitespace("hello"));
-            Assert.AreEqual("hello there", StringUtil.NormaliseWhitespace("hello\nthere"));
-        }
+		[TestMethod]
+		public void normaliseWhiteSpace()
+		{
+			Assert.AreEqual(" ", StringUtil.NormaliseWhitespace("    \r \n \r\n"));
+			Assert.AreEqual(" hello there ", StringUtil.NormaliseWhitespace("   hello   \r \n  there    \n"));
+			Assert.AreEqual("hello", StringUtil.NormaliseWhitespace("hello"));
+			Assert.AreEqual("hello there", StringUtil.NormaliseWhitespace("hello\nthere"));
+		}
 
-        [TestMethod]
-        public void normaliseWhiteSpaceModified()
-        {
-            String check1 = "Hello there";
-            String check2 = "Hello\nthere";
-            String check3 = "Hello  there";
+		[TestMethod]
+		public void normaliseWhiteSpaceHandlesHighSurrogates()
+		{
+			string test71540chars = "\ud869\udeb2\u304b\u309a  1";
+			string test71540charsExpectedSingleWhitespace = "\ud869\udeb2\u304b\u309a 1";
 
-            // does not create new string no mods done
-            Assert.IsTrue(check1 == StringUtil.NormaliseWhitespace(check1));
-            Assert.IsTrue(check2 != StringUtil.NormaliseWhitespace(check2));
-            Assert.IsTrue(check3 != StringUtil.NormaliseWhitespace(check3));
-        }
+			Assert.AreEqual(test71540charsExpectedSingleWhitespace, StringUtil.NormaliseWhitespace(test71540chars));
+			var extractedText = NSoupClient.Parse(test71540chars).Text();
+			Assert.AreEqual(test71540charsExpectedSingleWhitespace, extractedText);
+		}
 
-        [TestMethod]
-        public void normaliseWhiteSpaceHandlesHighSurrogates()
-        {
-            string test71540chars = "\ud869\udeb2\u304b\u309a  1";
-            string test71540charsExpectedSingleWhitespace = "\ud869\udeb2\u304b\u309a 1";
-
-            Assert.AreEqual(test71540charsExpectedSingleWhitespace, StringUtil.NormaliseWhitespace(test71540chars));
-            String extractedText = NSoupClient.Parse(test71540chars).Text();
-            Assert.AreEqual(test71540charsExpectedSingleWhitespace, extractedText);
-        }
-    }
+		[TestMethod]
+		public void resolvesRelativeUrls()
+		{
+			Assert.AreEqual("http://example.com/one/two?three", StringUtil.Resolve("http://example.com", "./one/two?three"));
+			Assert.AreEqual("http://example.com/one/two?three", StringUtil.Resolve("http://example.com?one", "./one/two?three"));
+			Assert.AreEqual("http://example.com/one/two?three#four", StringUtil.Resolve("http://example.com", "./one/two?three#four"));
+			Assert.AreEqual("https://example.com/one", StringUtil.Resolve("http://example.com/", "https://example.com/one"));
+			Assert.AreEqual("http://example.com/one/two.html", StringUtil.Resolve("http://example.com/two/", "../one/two.html"));
+			Assert.AreEqual("https://example2.com/one", StringUtil.Resolve("https://example.com/", "//example2.com/one"));
+			Assert.AreEqual("https://example.com:8080/one", StringUtil.Resolve("https://example.com:8080", "./one"));
+			Assert.AreEqual("https://example2.com/one", StringUtil.Resolve("http://example.com/", "https://example2.com/one"));
+			Assert.AreEqual("https://example.com/one", StringUtil.Resolve("wrong", "https://example.com/one"));
+			Assert.AreEqual("https://example.com/one", StringUtil.Resolve("https://example.com/one", ""));
+			Assert.AreEqual("", StringUtil.Resolve("wrong", "also wrong"));
+			Assert.AreEqual("ftp://example.com/one", StringUtil.Resolve("ftp://example.com/two/", "../one"));
+			Assert.AreEqual("ftp://example.com/one/two.c", StringUtil.Resolve("ftp://example.com/one/", "./two.c"));
+			Assert.AreEqual("ftp://example.com/one/two.c", StringUtil.Resolve("ftp://example.com/one/", "two.c"));
+		}
+	}
 }

@@ -107,7 +107,7 @@ namespace Test.Nodes
             Assert.AreEqual(Entities.EscapeMode.Base, doc.OutputSettings().EscapeMode);
             Assert.AreEqual("<p title=\"&#960;\">&#960; &amp; &lt; &gt; </p>", doc.Body.Html());
 
-            doc.OutputSettings().EscapeMode = Entities.EscapeMode.Extended;
+            doc.OutputSettings().SetEscapeMode(Entities.EscapeMode.Extended);
             Assert.AreEqual("<p title=\"&pi;\">&pi; &amp; &lt; &gt; </p>", doc.Body.Html());
         }
 
@@ -115,7 +115,7 @@ namespace Test.Nodes
         public void testXhtmlReferences()
         {
             Document doc = NSoupClient.Parse("&lt; &gt; &amp; &quot; &apos; &times;");
-            doc.OutputSettings().EscapeMode = Entities.EscapeMode.Xhtml;
+            doc.OutputSettings().SetEscapeMode(Entities.EscapeMode.Xhtml);
             Assert.AreEqual("&lt; &gt; &amp; &quot; &apos; ×", doc.Body.Html());
         }
 

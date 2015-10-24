@@ -948,7 +948,7 @@ namespace Test.Parser
             // extended entities need a ; at the end to match, base does not
             string html = "&amp &quot &reg &icy &hopf &icy; &hopf;";
             Document doc = NSoupClient.Parse(html);
-            doc.OutputSettings().EscapeMode = Entities.EscapeMode.Extended; // modifies output only to clarify test
+            doc.OutputSettings().SetEscapeMode(Entities.EscapeMode.Extended); // modifies output only to clarify test
             Assert.AreEqual(StringUtil.NormaliseWhitespace("&amp; &quot; &reg; &amp;icy &amp;hopf &icy; &hopf;"), doc.Body.Html());
         }
     }

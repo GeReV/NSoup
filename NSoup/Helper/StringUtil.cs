@@ -5,154 +5,163 @@ using System.Text;
 
 namespace NSoup.Helper
 {
-    /**
+	/**
  * A minimal String utility class. Designed for internal jsoup use only.
  */
-    public static class StringUtil
-    {
-        // memoised padding up to 10
-        private static readonly string[] padding = { "", " ", "  ", "   ", "    ", "     ", "      ", "       ", "        ", "         ", "          " };
+	public static class StringUtil
+	{
+		// memoised padding up to 10
+		private static readonly string[] padding = { "", " ", "  ", "   ", "    ", "     ", "      ", "       ", "        ", "         ", "          " };
 
-        /// <summary>
-        /// Join a collection of strings by a seperator
-        /// </summary>
-        /// <param name="strings">collection of string objects</param>
-        /// <param name="sep">string to place between strings</param>
-        /// <returns>joined string</returns>
-        public static string Join(this ICollection<string> strings, string sep)
-        {
-            return string.Join(sep, strings.ToArray());
-        }
+		/// <summary>
+		/// Join a collection of strings by a seperator
+		/// </summary>
+		/// <param name="strings">collection of string objects</param>
+		/// <param name="sep">string to place between strings</param>
+		/// <returns>joined string</returns>
+		public static string Join(this ICollection<string> strings, string sep)
+		{
+			return string.Join(sep, strings.ToArray());
+		}
 
-        /**
-         * Join a collection of strings by a seperator
-         * @param strings iterator of string objects
-         * @param sep string to place between strings
-         * @return joined string
-         */
-        /*public static String join(Iterator<String> strings, String sep) {
-            if (!strings.hasNext())
-                return "";
+		public static string Join(IEnumerator<string> iterator, string sep)
+		{
+			if (!iterator.MoveNext())
+			{
+				return string.Empty;
+			}
 
-            String start = strings.next();
-            if (!strings.hasNext()) // only one, avoid builder
-                return start;
+			var start = iterator.Current;
+			if (!iterator.MoveNext())
+			{
+				return start;
+			}
 
-            StringBuilder sb = new StringBuilder(64).append(start);
-            while (strings.hasNext()) {
-                sb.append(sep);
-                sb.append(strings.next());
-            }
-            return sb.toString();
-        }*/
+			var sb = new StringBuilder(64).Append(start);
+			while (iterator.MoveNext())
+			{
+				sb.Append(sep);
+				sb.Append(iterator.Current);
+			}
 
-        /// <summary>
-        /// Returns space padding
-        /// </summary>
-        /// <param name="width">amount of padding desired</param>
-        /// <returns>string of spaces * width</returns>
-        public static string Padding(int width)
-        {
-            if (width < 0)
-            {
-                throw new ArgumentException("width must be > 0");
-            }
+			return sb.ToString();
+		}
 
-            if (width < padding.Length)
-            {
-                return padding[width];
-            }
+		/// <summary>
+		/// Returns space padding
+		/// </summary>
+		/// <param name="width">amount of padding desired</param>
+		/// <returns>string of spaces * width</returns>
+		public static string Padding(int width)
+		{
+			if (width < 0)
+			{
+				throw new ArgumentException("width must be > 0");
+			}
 
-            return string.Empty.PadLeft(width);
-        }
+			if (width < padding.Length)
+			{
+				return padding[width];
+			}
 
-        /**
-         * Tests if a string is blank: null, emtpy, or only whitespace (" ", \r\n, \t, etc)
-         * @param string string to test
-         * @return if string is blank
-         */
-        public static bool IsBlank(this string s)
-        {
-            if (string.IsNullOrEmpty(s))
-            {
-                return true;
-            }
+			return string.Empty.PadLeft(width);
+		}
 
-            return s.Trim().Length == 0;
-        }
+		public static bool IsBlank(this string s)
+		{
+			return string.IsNullOrWhiteSpace(s) ? true : s.Trim().Length == 0;
+		}
 
-        /**
-         * Tests if a string is numeric, i.e. contains only digit characters
-         * @param string string to test
-         * @return true if only digit chars, false if empty or null or contains non-digit chrs
-         */
-        public static bool IsNumeric(this string s)
-        {
-            if (string.IsNullOrEmpty(s))
-            {
-                return false;
-            }
+		public static bool IsNumeric(this string s)
+		{
+			if (string.IsNullOrEmpty(s))
+			{
+				return false;
+			}
 
-            bool anyNonDigits = s.ToCharArray().Any(c => !char.IsDigit(c)); // Check if there are any non-digits. Used this so algorithm won't have to run on all chars.
+			var anyNonDigits = s.ToCharArray().Any(c => !char.IsDigit(c));
+			return !(anyNonDigits);
+		}
 
-            return !(anyNonDigits);
-        }
+		/// <summary>
+		/// Tests if a code point is "whitespace" as defined in the HTML spec.
+		/// </summary>
+		/// <param name="c">Code point to test</param>
+		/// <returns>True if code point is whitespace, false otherwise</returns>
+		public static bool IsWhiteSpace(char c)
+		{
+			return c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r';
+		}
 
-        /// <summary>
-        /// Tests if a code point is "whitespace" as defined in the HTML spec.
-        /// </summary>
-        /// <param name="c">Code point to test</param>
-        /// <returns>True if code point is whitespace, false otherwise</returns>
-        public static bool IsWhiteSpace(char c)
-        {
-            return c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r';
-        }
+		public static string NormaliseWhitespace(this string s)
+		{
+			var sb = new StringBuilder(s.Length);
 
-        public static string NormaliseWhitespace(this string s)
-        {
-            StringBuilder sb = new StringBuilder(s.Length);
+			var lastWasWhite = false;
+			var reachedNonWhite = false;
 
-            bool lastWasWhite = false;
-            bool modified = false;
+			var l = s.Length;
+			for (var i = 0; i < l; i++)
+			{
+				var c = s[i];
+				if (IsWhiteSpace(c))
+				{
+					if (lastWasWhite) { continue; }
+					sb.Append(' ');
+					lastWasWhite = true;
+				}
+				else
+				{
+					sb.Append(c);
+					lastWasWhite = false;
+					reachedNonWhite = true;
+				}
+			}
 
-            int l = s.Length;
-            for (int i = 0; i < l; i++)
-            {
-                char c = s[i];
-                if (IsWhiteSpace(c))
-                {
-                    if (lastWasWhite)
-                    {
-                        modified = true;
-                        continue;
-                    }
-                    if (c != ' ')
-                    {
-                        modified = true;
-                    }
-                    sb.Append(' ');
-                    lastWasWhite = true;
-                }
-                else
-                {
-                    sb.Append(c);
-                    lastWasWhite = false;
-                }
-            }
-            return modified ? sb.ToString() : s;
-        }
+			return sb.ToString();
+		}
 
-        public static bool In(string needle, params string[] haystack)
-        {
-            foreach (string hay in haystack)
-            {
-                if (hay.Equals(needle))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-    }
+		public static bool In(string needle, params string[] haystack)
+		{
+			foreach (string hay in haystack)
+			{
+				if (hay.Equals(needle))
+				{
+					return true;
+				}
+			}
+			return false;
+		}
 
+		public static bool InSorted(string needle, params string[] haystack)
+		{
+			return Array.BinarySearch(haystack, needle) >= 0;
+		}
+
+		public static Uri Resolve(Uri url, string relUrl)
+		{
+			Uri resultUri = null;
+			if (relUrl.IndexOf('.') == 0 && url.PathAndQuery.IndexOf('/') != 0)
+			{
+				url = new Uri(url.Scheme + url.Host + url.Port + "/" + url.PathAndQuery);
+			}
+
+			Uri.TryCreate(url, relUrl, out resultUri);
+			return resultUri;
+		}
+
+		public static string Resolve(string url, string relUrl)
+		{
+			Uri baseUri = null;
+			var validUri = Uri.TryCreate(url, UriKind.RelativeOrAbsolute, out baseUri);
+			if (validUri)
+			{
+				var resultUri = Resolve(baseUri, relUrl);
+				return resultUri == null ? string.Empty : resultUri.ToString();
+			}
+
+			validUri = Uri.TryCreate(relUrl, UriKind.RelativeOrAbsolute, out baseUri);
+			return baseUri == null ? string.Empty : baseUri.ToString();
+		}
+	}
 }
