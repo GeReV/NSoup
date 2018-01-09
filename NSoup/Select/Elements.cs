@@ -1,8 +1,8 @@
-﻿using System;
+﻿using NSoup.Nodes;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using NSoup.Nodes;
 
 namespace NSoup.Select
 {
@@ -327,7 +327,8 @@ namespace NSoup.Select
         /// <param name="tagName">the new tag name</param>
         /// <returns>this, for chaining</returns>
         /// <see cref="Element.TagName(string)"/>
-        public Elements TagName(string tagName) {
+        public Elements TagName(string tagName)
+        {
             foreach (Element element in _contents)
             {
                 element.TagName(tagName);

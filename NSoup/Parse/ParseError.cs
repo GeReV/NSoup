@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace NSoup.Parse
+﻿namespace NSoup.Parse
 {
     /// <summary>
     /// A Parse Error records an error in the input HTML that occurs in either the tokenisation or the tree building phase.
@@ -11,7 +6,7 @@ namespace NSoup.Parse
     // todo: currently not ready for public consumption. revisit api, and exposure methods
     public class ParseError
     {
-        
+
         private int _pos;
         private string _errorMsg;
 

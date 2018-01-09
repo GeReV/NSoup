@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Web;
 
 namespace NSoup.Nodes
 {
-    
+
     /// <summary>
     /// A single key + value attribute. Keys are trimmed and normalised to lower-case.
     /// </summary>

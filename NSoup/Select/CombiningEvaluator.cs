@@ -1,8 +1,6 @@
-﻿using System;
+﻿using NSoup.Nodes;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using NSoup.Nodes;
 
 namespace NSoup.Select
 {
@@ -89,7 +87,7 @@ namespace NSoup.Select
 
             public Or()
                 : base()
-            {}
+            { }
 
             public void Add(Evaluator e)
             {

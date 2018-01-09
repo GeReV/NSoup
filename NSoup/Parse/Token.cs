@@ -1,14 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using NSoup.Nodes;
+using System;
 using System.Text;
-using NSoup.Nodes;
 
 namespace NSoup.Parse
 {
-/// <summary>
-/// Parse tokens for the Tokeniser.
-/// </summary>
+    /// <summary>
+    /// Parse tokens for the Tokeniser.
+    /// </summary>
     public abstract class Token
     {
         TokenType _type;
@@ -189,7 +187,7 @@ namespace NSoup.Parse
                 {
                     return string.Format("<{0} {1}>", Name(), Attributes.ToString());
                 }
-                
+
                 return string.Format("<{0}>", Name());
             }
         }

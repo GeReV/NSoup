@@ -1,8 +1,7 @@
-﻿using System;
+﻿using NSoup.Parse;
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using NSoup.Parse;
 using System.Text.RegularExpressions;
 
 namespace NSoup.Select
@@ -95,17 +94,19 @@ namespace NSoup.Select
             Evaluator newEval = Parse(subQuery); // the evaluator to add into target evaluator
             bool replaceRightMost = false;
 
-            if (_evals.Count == 1) {
-            rootEval = currentEval = _evals[0];
-            // make sure OR (,) has precedence:
-            if (rootEval is CombiningEvaluator.Or && combinator != ',')
+            if (_evals.Count == 1)
             {
-                currentEval = ((CombiningEvaluator.Or)currentEval).RightMostEvaluator();
-                replaceRightMost = true;
+                rootEval = currentEval = _evals[0];
+                // make sure OR (,) has precedence:
+                if (rootEval is CombiningEvaluator.Or && combinator != ',')
+                {
+                    currentEval = ((CombiningEvaluator.Or)currentEval).RightMostEvaluator();
+                    replaceRightMost = true;
+                }
             }
-        }
-        else {
-            rootEval = currentEval = new CombiningEvaluator.And(_evals);
+            else
+            {
+                rootEval = currentEval = new CombiningEvaluator.And(_evals);
             }
             _evals.Clear();
 

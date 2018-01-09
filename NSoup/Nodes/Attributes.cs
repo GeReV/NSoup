@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
-using System.Collections.ObjectModel;
 
 namespace NSoup.Nodes
 {
@@ -231,7 +231,7 @@ namespace NSoup.Nodes
                 return true;
             }
 
-            if (that.attributes != null && 
+            if (that.attributes != null &&
                 attributes != null &&
                 attributes.Keys.SequenceEqual(that.attributes.Keys) &&
                 attributes.Values.SequenceEqual(that.attributes.Values))

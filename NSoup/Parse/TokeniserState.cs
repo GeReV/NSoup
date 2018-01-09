@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace NSoup.Parse
+﻿namespace NSoup.Parse
 {
     /**
      * States and Transition activations for the Tokeniser.
@@ -262,7 +257,7 @@ namespace NSoup.Parse
                         t.EofError(this);
                         t.Transition(Data);
                         break;
-                    // no default, as covered with above ConsumeToAny
+                        // no default, as covered with above ConsumeToAny
                 }
             }
         };
@@ -722,7 +717,7 @@ namespace NSoup.Parse
                     string name = r.ConsumeLetterSequence();
                     t.TagPending.AppendTagName(name.ToLowerInvariant());
                     t.DataBuffer.Append(name);
-                    
+
                     return;
                 }
 
@@ -1043,7 +1038,7 @@ namespace NSoup.Parse
                         t.Error(this);
                         t.TagPending.AppendAttributeName(c);
                         break;
-                    // no default, as covered in ConsumeToAny
+                        // no default, as covered in ConsumeToAny
                 }
             }
         };
@@ -1183,7 +1178,7 @@ namespace NSoup.Parse
                         t.EofError(this);
                         t.Transition(Data);
                         break;
-                    // no default, handled in Consume to any above
+                        // no default, handled in Consume to any above
                 }
             }
         };
@@ -1222,7 +1217,7 @@ namespace NSoup.Parse
                         t.EofError(this);
                         t.Transition(Data);
                         break;
-                    // no default, handled in Consume to any above
+                        // no default, handled in Consume to any above
                 }
             }
         };
@@ -1277,7 +1272,7 @@ namespace NSoup.Parse
                         t.Error(this);
                         t.TagPending.AppendAttributeValue(c);
                         break;
-                    // no default, handled in Consume to any above
+                        // no default, handled in Consume to any above
                 }
 
             }
@@ -2119,7 +2114,7 @@ namespace NSoup.Parse
                         t.Error(this);
                         t.Transition(BogusDoctype);
                         break;
-                    // NOT force quirks
+                        // NOT force quirks
                 }
             }
         };

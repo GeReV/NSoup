@@ -1,15 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using NSoup.Nodes;
+using System;
 using System.Text;
-using NSoup.Nodes;
 
 namespace NSoup.Parse
 {
 
-/// <summary>
-/// Readers the input stream into tokens.
-/// </summary>
+    /// <summary>
+    /// Readers the input stream into tokens.
+    /// </summary>
     public class Tokeniser
     {
         public const char ReplacementChar = '\uFFFD'; // replaces null character
