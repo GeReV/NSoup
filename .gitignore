@@ -110,3 +110,4 @@ UpgradeLog*.XML
 .sass-cache
 .sass-cache/*
 /.vs/NSoup/v15/Server/sqlite3
+/.vs

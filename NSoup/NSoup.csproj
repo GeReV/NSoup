@@ -2,9 +2,24 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <SignAssembly>false</SignAssembly>
-    <Version>2.0.0</Version>
+    <SignAssembly>true</SignAssembly>
+    <Version>2.0.1</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <AssemblyOriginatorKeyFile>NSoup.snk</AssemblyOriginatorKeyFile>
+    <PackageId>NSoup.Standard</PackageId>
+    <Company />
+    <Product />
+    <Authors>milenstack</Authors>
+    <AssemblyVersion>2.0.0.1</AssemblyVersion>
+    <FileVersion>2.0.0.1</FileVersion>
+    <AssemblyName>NSoup.Standard</AssemblyName>
+    <Description>NSoup is a .NET port of the jsoup (http://jsoup.org) HTML parser and sanitizer originally written in Java.</Description>
+    <PackageProjectUrl>https://github.com/milenstack/NSoup</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/GeReV/NSoup/blob/master/LICENSE</PackageLicenseUrl>
+    <Copyright></Copyright>
+    <PackageReleaseNotes>forked from https://github.com/GeReV/NSoup
+update .NET Standard 2.0
+source: https://github.com/milenstack/NSoup</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
