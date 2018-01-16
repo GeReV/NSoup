@@ -1,5 +1,9 @@
+# Nuget
+
+> Install-Package [NSoup.Standard](https://www.nuget.org/packages/NSoup.Standard/)
+
 # NSoup
-NSoup is a .NET port of the jsoup (https://github.com/jhy/jsoup) HTML parser and sanitizer originally written in Java.
+NSoup is a .NET port of the [jsoup](https://github.com/jhy/jsoup) HTML parser and sanitizer originally written in Java.
 
 jsoup originally written by [Jonathan Hedley](https://github.com/jhy).
 Ported to .NET by Amir Grozki.
