@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using NSoup.Helper;
 using NSoup.Nodes;
 using NSoup.Parse;
-using System.IO;
 using NSoup.Safety;
-using NSoup.Helper;
+using System;
+using System.IO;
 
 namespace NSoup
 {

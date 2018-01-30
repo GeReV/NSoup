@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using NSoup.Nodes;
+﻿using NSoup.Nodes;
 using NSoup.Parse;
+using System;
+using System.Collections.Generic;
 
 namespace NSoup.Safety
 {

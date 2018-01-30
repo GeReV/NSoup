@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using NSoup.Helper;
+using System;
 using System.Text;
-using System.Web;
-using System.Text.RegularExpressions;
-using NSoup.Helper;
 
 namespace NSoup.Nodes
 {
@@ -106,7 +102,7 @@ namespace NSoup.Nodes
 
             string head = GetWholeText().Substring(0, offset);
             string tail = GetWholeText().Substring(offset);
-            
+
             Text(head);
 
             TextNode tailNode = new TextNode(tail, this.BaseUri);

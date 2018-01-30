@@ -1,8 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Collections;
 
 namespace NSoup
 {
@@ -148,7 +147,7 @@ namespace NSoup
             return _hashSet.Contains(item);
         }
 
-        
+
         /// <summary>
         /// Copies the elements of a NSoup.LinkedHashSet<T> object to 
         /// an array, starting at the specified array index.

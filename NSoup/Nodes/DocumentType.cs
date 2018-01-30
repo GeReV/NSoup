@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using NSoup.Helper;
+using System;
 using System.Text;
-using NSoup.Helper;
 
 namespace NSoup.Nodes
 {
@@ -41,12 +39,12 @@ namespace NSoup.Nodes
         public override void OuterHtmlHead(StringBuilder accum, int depth, OutputSettings output)
         {
             accum.Append("<!DOCTYPE ").Append(Attr("name"));
-            
+
             if (!StringUtil.IsBlank(Attr("publicId")))
             {
                 accum.Append(" PUBLIC \"").Append(Attr("publicId")).Append("\"");
             }
-            
+
             if (!StringUtil.IsBlank(Attr("systemId")))
             {
                 accum.Append(" \"").Append(Attr("systemId")).Append("\"");

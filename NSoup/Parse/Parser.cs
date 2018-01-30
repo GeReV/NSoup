@@ -1,8 +1,7 @@
-﻿using System;
+﻿using NSoup.Nodes;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using NSoup.Nodes;
 
 namespace NSoup.Parse
 {
@@ -16,7 +15,7 @@ namespace NSoup.Parse
     public class Parser
     {
         private static readonly int DEFAULT_MAX_ERRORS = 0; // by default, error tracking is disabled.
-    
+
         private TreeBuilder _treeBuilder;
         private int _maxErrors = DEFAULT_MAX_ERRORS;
         private ParseErrorList _errors;
@@ -25,11 +24,13 @@ namespace NSoup.Parse
         /// Create a new Parser, using the specified TreeBuilder
         /// </summary>
         /// <param name="treeBuilder">TreeBuilder to use to parse input into Documents.</param>
-        private Parser(TreeBuilder treeBuilder) {
+        private Parser(TreeBuilder treeBuilder)
+        {
             this._treeBuilder = treeBuilder;
         }
-    
-        public Document ParseInput(string html, string baseUri) {
+
+        public Document ParseInput(string html, string baseUri)
+        {
             _errors = IsTrackErrors ? ParseErrorList.Tracking(_maxErrors) : ParseErrorList.NoTracking();
             Document doc = _treeBuilder.Parse(html, baseUri, _errors);
             return doc;
@@ -49,7 +50,8 @@ namespace NSoup.Parse
         /// </summary>
         /// <param name="treeBuilder">Current TreeBuilder</param>
         /// <returns>this, for chaining</returns>
-        public Parser TreeBuilder(TreeBuilder treeBuilder) {
+        public Parser TreeBuilder(TreeBuilder treeBuilder)
+        {
             this._treeBuilder = treeBuilder;
             return this;
         }
@@ -67,7 +69,8 @@ namespace NSoup.Parse
         /// </summary>
         /// <param name="maxErrors">The maximum number of errors to track. Set to 0 to disable.</param>
         /// <returns>this, for chaining</returns>
-        public Parser SetTrackErrors(int maxErrors) {
+        public Parser SetTrackErrors(int maxErrors)
+        {
             this._maxErrors = maxErrors;
             return this;
         }
@@ -76,7 +79,8 @@ namespace NSoup.Parse
         /// Retrieve the parse errors, if any, from the last parse.
         /// </summary>
         /// <returns>List of parse errors, up to the size of the maximum errors tracked.</returns>
-        public List<ParseError> GetErrors() {
+        public List<ParseError> GetErrors()
+        {
             return _errors;
         }
 
@@ -134,7 +138,8 @@ namespace NSoup.Parse
         /// <param name="s">HTML escaped string</param>
         /// <param name="inAttribute">If the string is to be escaped in strict mode (as attributes are)</param>
         /// <returns>An unescaped string</returns>
-        public static string UnescapeEntities(string s, bool inAttribute) {
+        public static string UnescapeEntities(string s, bool inAttribute)
+        {
             Tokeniser tokeniser = new Tokeniser(new CharacterReader(s), ParseErrorList.NoTracking());
             return tokeniser.UnescapeEntities(inAttribute);
         }

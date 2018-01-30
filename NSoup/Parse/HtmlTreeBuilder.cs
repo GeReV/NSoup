@@ -1,9 +1,8 @@
-﻿using System;
+﻿using NSoup.Helper;
+using NSoup.Nodes;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using NSoup.Nodes;
-using NSoup.Helper;
 
 namespace NSoup.Parse
 {
@@ -36,7 +35,7 @@ namespace NSoup.Parse
             _state = HtmlTreeBuilderState.Initial;
             return base.Parse(input, baseUri, errors);
         }
-        
+
 
         public IList<Node> ParseFragment(string inputFragment, Element context, string baseUri, ParseErrorList errors)
         {
@@ -395,21 +394,23 @@ namespace NSoup.Parse
             ClearStackToContext("tr");
         }
 
-        private void ClearStackToContext(params string[] nodeNames) {
+        private void ClearStackToContext(params string[] nodeNames)
+        {
             LinkedListNode<Element> node = _stack.Last;
-        while (node != null) {
-            Element next = node.Value;
-            if (StringUtil.In(next.NodeName, nodeNames) || next.NodeName.Equals("html"))
+            while (node != null)
             {
-                break;
-            }
-            else
-            {
-                _stack.Remove(node);
-                node = node.Previous;
+                Element next = node.Value;
+                if (StringUtil.In(next.NodeName, nodeNames) || next.NodeName.Equals("html"))
+                {
+                    break;
+                }
+                else
+                {
+                    _stack.Remove(node);
+                    node = node.Previous;
+                }
             }
         }
-    }
 
         public Element AboveOnStack(Element el)
         {
@@ -451,7 +452,7 @@ namespace NSoup.Parse
             while (it.MoveNext())
             {
                 Element node = it.Current;
-                
+
                 if (_stack.FindLast(node).Previous == null)
                 {
                     last = true;
@@ -713,7 +714,7 @@ namespace NSoup.Parse
         {
             // same if: same namespace, tag, and attributes. Element.equals only checks tag, might in future check children
             return a.NodeName.Equals(b.NodeName) &&
-                // a.namespace().equals(b.namespace()) &&
+                    // a.namespace().equals(b.namespace()) &&
                     a.Attributes.Equals(b.Attributes);
             // todo: namespaces
         }
@@ -766,7 +767,7 @@ namespace NSoup.Parse
 
                 // 11
                 if (pos == size - 1) // if not last entry in list, jump to 7
-                { 
+                {
                     break;
                 }
             }

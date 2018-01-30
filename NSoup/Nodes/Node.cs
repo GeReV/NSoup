@@ -1,11 +1,10 @@
-﻿using System;
+﻿using NSoup.Helper;
+using NSoup.Parse;
+using NSoup.Select;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Collections.ObjectModel;
-using NSoup.Select;
-using NSoup.Helper;
-using NSoup.Parse;
 
 namespace NSoup.Nodes
 {
@@ -230,20 +229,20 @@ namespace NSoup.Nodes
                         baseUrl = new Uri(_baseUri);
 
                         // System.Uri will parse invalid schemes (for example, wtf://). An extra validation is added.
-                        string[] schemes = new [] { 
-                            Uri.UriSchemeFile, 
-                            Uri.UriSchemeFtp, 
-                            Uri.UriSchemeGopher, 
-                            Uri.UriSchemeHttp, 
-                            Uri.UriSchemeHttps, 
-                            Uri.UriSchemeMailto, 
-                            Uri.UriSchemeNetPipe, 
-                            Uri.UriSchemeNetTcp, 
-                            Uri.UriSchemeNews, 
+                        string[] schemes = new[] {
+                            Uri.UriSchemeFile,
+                            Uri.UriSchemeFtp,
+                            Uri.UriSchemeGopher,
+                            Uri.UriSchemeHttp,
+                            Uri.UriSchemeHttps,
+                            Uri.UriSchemeMailto,
+                            Uri.UriSchemeNetPipe,
+                            Uri.UriSchemeNetTcp,
+                            Uri.UriSchemeNews,
                             Uri.UriSchemeNntp
                         };
 
-                        if (!schemes.Contains(baseUrl.Scheme)) 
+                        if (!schemes.Contains(baseUrl.Scheme))
                         {
                             throw new UriFormatException("Invalid URI scheme.");
                         }
@@ -523,7 +522,7 @@ namespace NSoup.Nodes
                 return el;
             }
         }
-        
+
         /// <summary>
         /// Replace this node in the DOM with the supplied node.
         /// </summary>
@@ -796,7 +795,8 @@ namespace NSoup.Nodes
             return DoClone(null);
         }
 
-        protected Node DoClone(Node parent) {
+        protected Node DoClone(Node parent)
+        {
             Node clone;
             try
             {
