@@ -89,6 +89,12 @@ namespace NSoup.Helper
 						doc = null;
 					}
 				}
+                else
+                {
+                    charsetName = _defaultEncoding.HeaderName;
+                    docData = Encoding.GetEncoding(charsetName).GetString(data);
+                    doc = null;
+                }
 			}
 			else
 			{

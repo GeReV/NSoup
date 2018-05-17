@@ -98,7 +98,6 @@ namespace NSoup.Helper
 			var sb = new StringBuilder(s.Length);
 
 			var lastWasWhite = false;
-			var reachedNonWhite = false;
 
 			var l = s.Length;
 			for (var i = 0; i < l; i++)
@@ -114,7 +113,6 @@ namespace NSoup.Helper
 				{
 					sb.Append(c);
 					lastWasWhite = false;
-					reachedNonWhite = true;
 				}
 			}
 

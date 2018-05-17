@@ -939,7 +939,7 @@ namespace Test.Parser
             // (as defined in html5.) However in practise that lead to spurious matches against the author's intent.
             string html = "One &clubsuite; &clubsuit;";
             Document doc = NSoupClient.Parse(html);
-            Assert.AreEqual(StringUtil.NormaliseWhitespace("One &amp;clubsuite; ג™£"), doc.Body.Html());
+            Assert.AreEqual(StringUtil.NormaliseWhitespace("One &amp;clubsuite; \u2663"), doc.Body.Html());
         }
 
         [TestMethod]
