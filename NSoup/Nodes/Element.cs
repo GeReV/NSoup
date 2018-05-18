@@ -532,6 +532,8 @@ namespace NSoup.Nodes
         {
             get
             {
+                if (Parent == null) { return null; }
+
                 IList<Element> siblings = Parent.Children;
                 int index = siblings.IndexOf(this);
 

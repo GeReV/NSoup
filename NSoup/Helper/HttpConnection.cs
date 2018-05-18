@@ -914,7 +914,6 @@ namespace NSoup.Helper
 		private bool ignoreHttpErrors = false;
 		private bool ignoreContentType = false;
 		private Parser parser;
-		private bool parserDefined = false; // called parser(...) vs initialized in ctor
 		private bool validateTSLCertificates = true;
 		private string postDataCharset = DataUtil.DefaultEncoding.ToString();
 

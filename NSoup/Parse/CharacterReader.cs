@@ -26,7 +26,7 @@ namespace NSoup.Parse
                 throw new ArgumentNullException("input");
             }
 
-            input = Regex.Replace(input, "\r\n?", "\n"); // normalise carriage returns to newlines
+            //input = Regex.Replace(input, "\r\n?", "\n"); // normalise carriage returns to newlines
 
             this._input = input.ToCharArray();
             this._length = input.Length;
