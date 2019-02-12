@@ -569,6 +569,7 @@ namespace NSoup.Helper
 				{
 					return ProcessResponse(response, req, previousResponse);
 				}
+			    throw;
 			}
 
 			return ProcessResponse(response, req, previousResponse);

@@ -31,6 +31,12 @@ namespace NSoup.Nodes
             {
                 return this._map;
             }
+
+            internal EscapeMode Clone()
+            {
+                return new EscapeMode(new Dictionary<char, string>(_map));
+            }
+
         }
 
         private static readonly Dictionary<string, char> _full;

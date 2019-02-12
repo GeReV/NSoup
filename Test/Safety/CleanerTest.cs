@@ -253,7 +253,7 @@ namespace Test.Safety
 
             Assert.AreEqual("<div><p>&bernou;</p></div>", customOut);
             Assert.AreEqual("<div>\n" +
-                " <p>ג„¬</p>\n" +
+                " <p>ℬ</p>\n" +
                 "</div>", defaultOut);
 
             os.SetEncoding(Encoding.ASCII);
@@ -278,7 +278,20 @@ namespace Test.Safety
         [TestMethod]
         public void cleansInternationalText()
         {
-            Assert.AreEqual("׀¿ׁ€׀¸׀²׀µׁ‚", NSoupClient.Clean("׀¿ׁ€׀¸׀²׀µׁ‚", Whitelist.None));
+            var result = NSoupClient.Clean("׀¿ׁ€׀¸׀²׀µׁ‚", Whitelist.None);
+            Assert.AreEqual("׀&iquest;ׁ€׀&cedil;׀&sup2;׀&micro;ׁ‚", result);
+        }
+
+
+        [TestMethod]
+        public void cleansInternationalTextNoEscaping()
+        {
+            
+            var outputSettings = new OutputSettings();
+            outputSettings = (OutputSettings) outputSettings.Clone();
+            outputSettings.EscapeMode.GetMap().Clear();
+            var result = NSoupClient.Clean("׀¿ׁ€׀¸׀²׀µׁ‚", "", Whitelist.None, outputSettings);
+            Assert.AreEqual("׀¿ׁ€׀¸׀²׀µׁ‚", result);
         }
     }
 }

@@ -90,7 +90,7 @@ namespace Test.Parser
             string html = "<a\r\nfoo='bar\r\nqux'\r\nbar\r\n=\r\ntwo>One</a>";
             Element el = NSoupClient.Parse(html).Select("a").First;
             Assert.AreEqual(2, el.Attributes.Count);
-            Assert.AreEqual("bar\r\nqux", el.Attr("foo")); // currently preserves newlines in quoted attributes. todo confirm if should.
+            Assert.AreEqual("bar\nqux", el.Attr("foo"));
             Assert.AreEqual("two", el.Attr("bar"));
         }
 
