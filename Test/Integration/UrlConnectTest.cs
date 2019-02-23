@@ -17,7 +17,7 @@ namespace Test.Integration
     /// Ported to .NET by: Amir Grozki
     /// -->
     [TestClass]
-    //[Ignore] // ignored by default so tests don't require network access. comment out to enable.
+    [Ignore] // Integration tests (needs internet)
     public class UrlConnectTest
     {
         public UrlConnectTest()

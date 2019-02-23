@@ -365,7 +365,7 @@ namespace NSoup.Nodes
 	public class OutputSettings : ICloneable
 	{
 		private Entities.EscapeMode _escapeMode = Entities.EscapeMode.Base;
-		private Encoding _encoding = Encoding.UTF8;
+        private Encoding _encoding = Encoding.UTF8;
 		private Encoder _encoder = null;
 		private bool _prettyPrint = true;
 		private bool _outline = false;
@@ -377,14 +377,14 @@ namespace NSoup.Nodes
 			_encoder = _encoding.GetEncoder();
 		}
 
-		/// <summary>
-		/// Gets or sets the document's current HTML escape mode: <code>base</code>, which provides a limited set of named HTML 
-		/// entities and escapes other characters as numbered entities for maximum compatibility; or <code>extended</code>, 
-		/// which uses the complete set of HTML named entities. 
-		/// <p> 
-		/// The default escape mode is <code>base</code>. 
-		/// </summary>
-		public Entities.EscapeMode EscapeMode
+        /// <summary>
+        /// Gets or sets the document's current HTML escape mode: <code>base</code>, which provides a limited set of named HTML 
+        /// entities and escapes other characters as numbered entities for maximum compatibility; or <code>extended</code>, 
+        /// which uses the complete set of HTML named entities. 
+        /// <p> 
+        /// The default escape mode is <code>base</code>. 
+        /// </summary>
+        public Entities.EscapeMode EscapeMode
 		{
 			get { return _escapeMode; }
 		}
@@ -518,7 +518,7 @@ namespace NSoup.Nodes
 			OutputSettings clone = new OutputSettings();
 
 			clone.SetEncoding(_encoding.WebName); // new charset and charset encoder
-			clone.SetEscapeMode(_escapeMode);
+			clone.SetEscapeMode(_escapeMode.Clone());
 			clone.PrettyPrint(_prettyPrint);
 			clone.IndentAmount(_indentAmount);
 
